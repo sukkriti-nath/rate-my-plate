@@ -2,11 +2,19 @@
   "crons": [
     {
       "path": "/api/menu/sync?secret=${CRON_SECRET}",
-      "schedule": "0 8 * * 1"
+      "schedule": "0 16 * * 1"
+    },
+    {
+      "path": "/api/slack/post-daily?secret=${CRON_SECRET}",
+      "schedule": "30 21 * * 1-4"
+    },
+    {
+      "path": "/api/slack/power-rankings?secret=${CRON_SECRET}",
+      "schedule": "0 17 * * 5"
     },
     {
       "path": "/api/slack/remind?secret=${CRON_SECRET}",
-      "schedule": "0 20 * * 1-4"
+      "schedule": "0 23 * * 1-4"
     }
   ]
 }

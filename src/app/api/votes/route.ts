@@ -46,11 +46,46 @@ export async function POST(request: Request) {
     ratingProtein1,
     ratingProtein2,
     comment,
+    commentStarch,
+    commentVeganProtein,
+    commentVeg,
+    commentProtein1,
+    commentProtein2,
   } = body;
 
-  if (!date || !ratingOverall || ratingOverall < 1 || ratingOverall > 5) {
+  if (!date) {
     return NextResponse.json(
-      { error: "date and ratingOverall (1-5) are required" },
+      { error: "date is required" },
+      { status: 400 }
+    );
+  }
+
+  // Validate ratings are in range if provided (null/undefined = N/A)
+  const validateRating = (r: unknown): number | null => {
+    if (r === null || r === undefined || r === "na") return null;
+    const n = Number(r);
+    if (isNaN(n) || n < 1 || n > 5) return null;
+    return n;
+  };
+
+  const parsedOverall = validateRating(ratingOverall);
+  const parsedStarch = validateRating(ratingStarch);
+  const parsedVeganProtein = validateRating(ratingVeganProtein);
+  const parsedVeg = validateRating(ratingVeg);
+  const parsedProtein1 = validateRating(ratingProtein1);
+  const parsedProtein2 = validateRating(ratingProtein2);
+
+  // At least one rating must be provided
+  if (
+    parsedOverall === null &&
+    parsedStarch === null &&
+    parsedVeganProtein === null &&
+    parsedVeg === null &&
+    parsedProtein1 === null &&
+    parsedProtein2 === null
+  ) {
+    return NextResponse.json(
+      { error: "At least one rating is required" },
       { status: 400 }
     );
   }
@@ -68,13 +103,18 @@ export async function POST(request: Request) {
     menuDate: date,
     userName: session.displayName,
     userEmail: session.email,
-    ratingOverall,
-    ratingStarch: ratingStarch || null,
-    ratingVeganProtein: ratingVeganProtein || null,
-    ratingVeg: ratingVeg || null,
-    ratingProtein1: ratingProtein1 || null,
-    ratingProtein2: ratingProtein2 || null,
+    ratingOverall: parsedOverall,
+    ratingStarch: parsedStarch,
+    ratingVeganProtein: parsedVeganProtein,
+    ratingVeg: parsedVeg,
+    ratingProtein1: parsedProtein1,
+    ratingProtein2: parsedProtein2,
     comment: comment || null,
+    commentStarch: commentStarch || null,
+    commentVeganProtein: commentVeganProtein || null,
+    commentVeg: commentVeg || null,
+    commentProtein1: commentProtein1 || null,
+    commentProtein2: commentProtein2 || null,
   });
 
   const stats = getVoteStatsForDate(date);

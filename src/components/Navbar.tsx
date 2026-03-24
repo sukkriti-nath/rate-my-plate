@@ -16,9 +16,10 @@ export default function Navbar() {
   }, []);
 
   const links = [
-    { href: "/", label: "Today" },
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/history", label: "History" },
+    { href: "/", label: "Today", emoji: "🍽️" },
+    { href: "/dashboard", label: "Dashboard", emoji: "📊" },
+    { href: "/rankings", label: "Rankings", emoji: "🏆" },
+    { href: "/history", label: "History", emoji: "📅" },
   ];
 
   async function handleLogout() {
@@ -27,35 +28,41 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-kikoff-dark sticky top-0 z-50">
+    <nav className="bg-kikoff-dark sticky top-0 z-50 shadow-lg">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="font-bold text-lg text-white">
+        <Link href="/" className="flex items-center gap-1.5">
+          <span className="text-xl">🍽️</span>
+          <span className="font-display text-lg text-white tracking-tight">
             Rate<span className="text-kikoff">My</span>Plate
-          </Link>
-          <div className="flex gap-1">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === link.href
-                    ? "bg-kikoff text-kikoff-dark"
-                    : "text-gray-400 hover:text-white hover:bg-white/10"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
+          </span>
+        </Link>
+
+        <div className="flex items-center bg-white/10 rounded-full p-1">
+          {links.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
+                pathname === link.href
+                  ? "bg-kikoff text-kikoff-dark shadow-sm"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <span className="hidden sm:inline mr-1">{link.emoji}</span>
+              {link.label}
+            </Link>
+          ))}
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-2">
           {user ? (
             <>
-              <span className="text-sm text-gray-300">{user.displayName}</span>
+              <div className="w-7 h-7 rounded-full bg-kikoff flex items-center justify-center text-kikoff-dark text-xs font-bold">
+                {user.displayName.charAt(0)}
+              </div>
               <button
                 onClick={handleLogout}
-                className="text-xs text-gray-500 hover:text-gray-300"
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
               >
                 Logout
               </button>
@@ -63,7 +70,7 @@ export default function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="text-sm font-medium text-kikoff hover:text-kikoff-hover"
+              className="text-sm font-medium bg-kikoff text-kikoff-dark px-4 py-1.5 rounded-full hover:bg-kikoff-hover transition-all"
             >
               Sign in
             </Link>

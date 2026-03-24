@@ -19,21 +19,22 @@ export default async function Home() {
 
   if (!menu) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+        <div className="text-6xl mb-4">🍽️</div>
+        <h1 className="font-display text-3xl text-gray-900 mb-3">
           No menu for today
         </h1>
-        <p className="text-gray-500 mb-6">
-          The menu hasn&apos;t been synced yet, or there&apos;s no lunch today.
+        <p className="text-gray-400 mb-8 max-w-sm mx-auto">
+          The menu hasn&apos;t been synced yet, or there&apos;s no lunch service today.
         </p>
         <a
           href="/api/menu/sync"
-          className="inline-block px-6 py-3 bg-kikoff text-kikoff-dark font-semibold rounded-xl hover:bg-kikoff-hover transition-colors"
+          className="inline-block px-8 py-3.5 bg-kikoff text-kikoff-dark font-bold rounded-2xl hover:bg-kikoff-hover hover:shadow-lg hover:shadow-kikoff/20 transition-all active:scale-[0.98]"
         >
-          Sync Menu from Sheet
+          Sync Menu from Sheet ↗
         </a>
-        <p className="text-xs text-gray-400 mt-3">
-          This fetches the latest menu from the Google Sheet
+        <p className="text-xs text-gray-300 mt-3">
+          Pulls the latest menu from the Google Sheet
         </p>
       </div>
     );
@@ -52,13 +53,23 @@ export default async function Home() {
     existingVote = getUserVoteForDate(session.email, today) as Record<string, unknown> | null;
   }
 
+  const dayName = menu.day_name as string;
+  const greeting = getTimeGreeting();
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      {/* Greeting */}
+      {session && (
+        <div className="animate-slide-up">
+          <span className="text-sm text-gray-400">{greeting}</span>
+          <h1 className="font-display text-2xl text-gray-900">
+            {dayName}&apos;s Lineup
+          </h1>
+        </div>
+      )}
+
       {/* Today's Menu */}
-      <section>
-        <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
-          Today&apos;s Menu
-        </h2>
+      <section className="animate-slide-up" style={{ animationDelay: "0.05s" }}>
         <MenuCard
           menu={{
             date: menu.date as string,
@@ -77,11 +88,12 @@ export default async function Home() {
 
       {/* Rating Section */}
       {!(menu.no_service as number) && (
-        <section>
-          <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
-            Rate It
-          </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="text-xl">✍️</span>
+              <h2 className="font-display text-xl text-gray-900">Rate It</h2>
+            </div>
             {session ? (
               <RatingForm
                 date={today}
@@ -89,13 +101,14 @@ export default async function Home() {
                 existingVote={existingVote}
               />
             ) : (
-              <div className="text-center py-4">
-                <p className="text-gray-500 mb-3">
+              <div className="text-center py-6">
+                <div className="text-3xl mb-3">🔒</div>
+                <p className="text-gray-500 mb-4">
                   Sign in to rate today&apos;s lunch
                 </p>
                 <Link
                   href="/login"
-                  className="inline-block px-6 py-3 bg-kikoff text-kikoff-dark font-semibold rounded-xl hover:bg-kikoff-hover transition-all"
+                  className="inline-block px-8 py-3 bg-kikoff text-kikoff-dark font-bold rounded-2xl hover:bg-kikoff-hover transition-all"
                 >
                   Sign in with Kikoff Email
                 </Link>
@@ -106,14 +119,28 @@ export default async function Home() {
       )}
 
       {/* Live Results */}
-      <section>
-        <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
-          Live Results
-        </h2>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <section className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📊</span>
+              <h2 className="font-display text-xl text-gray-900">Live Results</h2>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-kikoff animate-pulse-glow" />
+              live
+            </div>
+          </div>
           <LiveResults date={today} />
         </div>
       </section>
     </div>
   );
+}
+
+function getTimeGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning! ☀️";
+  if (hour < 17) return "Good afternoon! 🌤️";
+  return "Good evening! 🌙";
 }

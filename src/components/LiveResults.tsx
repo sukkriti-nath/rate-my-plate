@@ -86,13 +86,13 @@ export default function LiveResults({
     );
   }
 
-  const dishEntries: { key: keyof Stats["dishRatings"]; label: string; name: string | undefined }[] = [
-    { key: "starch", label: "Starch", name: menu?.starch?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-    { key: "veganProtein", label: "Vegan Protein", name: menu?.vegan_protein?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-    { key: "veg", label: "Veg", name: menu?.veg?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-    { key: "protein1", label: "Protein 1", name: menu?.protein_1?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-    { key: "protein2", label: "Protein 2", name: menu?.protein_2?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-  ].filter((d) => d.name);
+  const dishEntries = ([
+    { key: "starch" as const, label: "Starch", name: menu?.starch?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
+    { key: "veganProtein" as const, label: "Vegan Protein", name: menu?.vegan_protein?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
+    { key: "veg" as const, label: "Veg", name: menu?.veg?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
+    { key: "protein1" as const, label: "Protein 1", name: menu?.protein_1?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
+    { key: "protein2" as const, label: "Protein 2", name: menu?.protein_2?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
+  ] as const).filter((d) => d.name);
 
   const rankedDishes = dishEntries
     .filter((d) => stats.dishRatings[d.key] && stats.dishRatings[d.key].votes > 0)

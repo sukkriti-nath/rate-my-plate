@@ -16,13 +16,19 @@ export interface Vote {
   menuDate: string;
   userName: string;
   userEmail: string;
-  ratingOverall: number;
+  slackUserId: string | null;
+  ratingOverall: number | null;
   ratingStarch: number | null;
   ratingVeganProtein: number | null;
   ratingVeg: number | null;
   ratingProtein1: number | null;
   ratingProtein2: number | null;
   comment: string | null;
+  commentStarch: string | null;
+  commentVeganProtein: string | null;
+  commentVeg: string | null;
+  commentProtein1: string | null;
+  commentProtein2: string | null;
   createdAt: string;
 }
 

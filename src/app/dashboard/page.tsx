@@ -143,12 +143,12 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-1">
+          <h1 className="font-display text-5xl mb-1">
             Rate<span className="text-kikoff">My</span>Plate
           </h1>
           <div className="flex items-center justify-center gap-2 text-gray-500">
             <span className="inline-block w-2 h-2 rounded-full bg-kikoff animate-pulse-glow" />
-            <span className="text-sm">Live Dashboard</span>
+            <span className="text-sm">Live Dashboard — auto-refreshes every 5s</span>
           </div>
         </div>
 

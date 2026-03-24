@@ -14,6 +14,15 @@ interface MenuCardProps {
   compact?: boolean;
 }
 
+const DISH_EMOJIS: Record<string, string> = {
+  Starch: "🍚",
+  "Vegan Protein": "🌱",
+  Veg: "🥦",
+  "Protein 1": "🍗",
+  "Protein 2": "🥩",
+  Sides: "🫙",
+};
+
 function DietTag({ text }: { text: string }) {
   const tags: string[] = [];
   if (text.includes("(V)")) tags.push("V");
@@ -28,7 +37,7 @@ function DietTag({ text }: { text: string }) {
           key={tag}
           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
             tag === "V"
-              ? "bg-green-100 text-green-700"
+              ? "bg-kikoff/20 text-green-700"
               : "bg-amber-100 text-amber-700"
           }`}
         >
@@ -42,12 +51,17 @@ function DietTag({ text }: { text: string }) {
 export default function MenuCard({ menu, compact = false }: MenuCardProps) {
   if (menu.no_service) {
     return (
-      <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${compact ? "p-4" : "p-6"}`}>
+      <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 ${compact ? "p-4" : "p-6"}`}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-lg text-gray-900">{menu.day_name}</h3>
-          <span className="text-sm text-gray-500">{formatDate(menu.date)}</span>
+          <h3 className="font-display text-xl text-gray-900">{menu.day_name}</h3>
+          <span className="text-sm text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+            {formatDate(menu.date)}
+          </span>
         </div>
-        <p className="text-gray-400 italic">No Lunch Service</p>
+        <div className="text-center py-6">
+          <div className="text-3xl mb-2">🏖️</div>
+          <p className="text-gray-400 italic">No Lunch Service — touch grass!</p>
+        </div>
       </div>
     );
   }
@@ -62,22 +76,41 @@ export default function MenuCard({ menu, compact = false }: MenuCardProps) {
   ].filter((i) => i.value);
 
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${compact ? "p-4" : "p-6"}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-lg text-gray-900">{menu.day_name}</h3>
-        <span className="text-sm text-gray-500">{formatDate(menu.date)}</span>
-      </div>
-      <div className="space-y-2">
-        {items.map(({ label, value }) => (
-          <div key={label} className="flex items-start gap-3">
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider w-24 shrink-0 pt-0.5">
-              {label}
-            </span>
-            <span className="text-gray-700 text-sm">
-              <DietTag text={value!} />
-            </span>
+    <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden ${compact ? "p-4" : ""}`}>
+      {/* Header with green accent bar */}
+      {!compact && (
+        <div className="bg-kikoff-dark px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📋</span>
+            <h3 className="font-display text-xl text-white">{menu.day_name}&apos;s Menu</h3>
           </div>
-        ))}
+          <span className="text-sm text-gray-400 bg-white/10 px-3 py-1 rounded-full">
+            {formatDate(menu.date)}
+          </span>
+        </div>
+      )}
+      <div className={compact ? "" : "px-6 py-4"}>
+        <div className="space-y-2.5">
+          {items.map(({ label, value }, i) => (
+            <div
+              key={label}
+              className="flex items-start gap-3 animate-slide-up"
+              style={{ animationDelay: `${i * 0.04}s` }}
+            >
+              <span className="text-lg w-7 text-center shrink-0 pt-0.5">
+                {DISH_EMOJIS[label] || "🍴"}
+              </span>
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  {label}
+                </span>
+                <div className="text-gray-800 text-sm font-medium">
+                  <DietTag text={value!} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-
-const FOOD_EMOJIS = ["🍕", "🍜", "🥗", "🌮", "🍱", "🥘", "🍲", "🧆", "🥙", "🍛"];
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -11,17 +9,6 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; emoji: string; x: number; delay: number }[]>([]);
-
-  useEffect(() => {
-    const emojis = Array.from({ length: 8 }, (_, i) => ({
-      id: i,
-      emoji: FOOD_EMOJIS[Math.floor(Math.random() * FOOD_EMOJIS.length)],
-      x: 10 + Math.random() * 80,
-      delay: Math.random() * 3,
-    }));
-    setFloatingEmojis(emojis);
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,54 +41,49 @@ function LoginContent() {
 
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center px-4 relative overflow-hidden">
-      {/* Floating food emojis in background */}
-      <div className="absolute inset-0 pointer-events-none">
-        {floatingEmojis.map((e) => (
-          <div
-            key={e.id}
-            className="absolute text-4xl opacity-10"
-            style={{
-              left: `${e.x}%`,
-              top: `${20 + e.id * 10}%`,
-              animationDelay: `${e.delay}s`,
-            }}
-          >
-            {e.emoji}
-          </div>
-        ))}
-      </div>
+      {/* Background pattern */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23131413' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+      }} />
 
       <div className="max-w-sm w-full relative z-10">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-4">🍽️</div>
-          <h1 className="text-3xl font-bold mb-2 text-kikoff-dark">
-            Rate<span className="bg-kikoff px-1.5 py-0.5 rounded-lg">My</span>Plate
+        {/* Hero */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 bg-kikoff/20 text-kikoff-dark px-4 py-1.5 rounded-full text-sm font-medium mb-5">
+            <span>🔥</span> New at Kikoff
+          </div>
+          <h1 className="font-display text-5xl text-kikoff-dark mb-3 leading-tight">
+            Rate<span className="bg-kikoff px-2 py-0.5 rounded-xl mx-1">My</span>Plate
           </h1>
-          <p className="text-gray-500">Your voice shapes tomorrow&apos;s menu</p>
+          <p className="text-gray-500 text-lg">
+            Your voice shapes tomorrow&apos;s menu
+          </p>
         </div>
 
         {(error || loginError) && (
-          <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">
-            {loginError || `Authentication failed: ${error}`}
+          <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-2xl border border-red-100">
+            {loginError || `Oops! ${error}`}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="relative">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="yourname@kikoff.com"
               required
-              className="w-full px-4 py-3.5 rounded-xl border border-gray-200 text-center text-gray-700 focus:outline-none focus:ring-2 focus:ring-kikoff focus:border-transparent text-lg"
+              className="w-full px-5 py-4 rounded-2xl border-2 border-gray-200 text-center text-gray-700 text-lg
+                focus:outline-none focus:ring-0 focus:border-kikoff
+                transition-colors"
             />
           </div>
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3.5 px-4 rounded-xl font-semibold transition-all text-lg
-              bg-kikoff text-kikoff-dark hover:bg-kikoff-hover
+            className="w-full py-4 px-4 rounded-2xl font-bold transition-all text-lg
+              bg-kikoff text-kikoff-dark hover:bg-kikoff-hover hover:shadow-lg hover:shadow-kikoff/20
               disabled:opacity-40 disabled:cursor-not-allowed
               active:scale-[0.98]"
           >
@@ -110,8 +92,24 @@ function LoginContent() {
         </form>
 
         <p className="text-xs text-gray-400 mt-6 text-center">
-          Just use your @kikoff.com email. No password needed.
+          Just your @kikoff.com email. No password needed. <span className="text-gray-300">Easy peasy.</span>
         </p>
+
+        {/* Fun stats teaser */}
+        <div className="mt-10 flex items-center justify-center gap-6 text-center">
+          <div>
+            <div className="text-2xl">🥇</div>
+            <div className="text-[10px] text-gray-400 mt-1">Power<br/>Rankings</div>
+          </div>
+          <div>
+            <div className="text-2xl">📊</div>
+            <div className="text-[10px] text-gray-400 mt-1">Live<br/>Results</div>
+          </div>
+          <div>
+            <div className="text-2xl">🌶️</div>
+            <div className="text-[10px] text-gray-400 mt-1">Hot<br/>Takes</div>
+          </div>
+        </div>
       </div>
     </div>
   );

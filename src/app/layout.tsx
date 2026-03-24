@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "RateMyPlate - Kikoff Lunch Ratings",
-  description: "Rate your daily Kikoff lunch",
+  description: "Your voice shapes tomorrow's menu. Rate your daily Kikoff lunch.",
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({
@@ -28,6 +29,12 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-gray-50">
         <Navbar />
         <main className="flex-1">{children}</main>
