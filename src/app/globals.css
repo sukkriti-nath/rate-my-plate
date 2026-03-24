@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --foreground: #131413;
+  --kikoff: #b5fc4f;
+  --kikoff-hover: #94cf40;
+  --kikoff-dark: #131413;
+  --kikoff-lavender: #eeefee;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-kikoff: var(--kikoff);
+  --color-kikoff-hover: var(--kikoff-hover);
+  --color-kikoff-dark: var(--kikoff-dark);
+  --color-kikoff-lavender: var(--kikoff-lavender);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Slider thumb */
+.slider-rating::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #131413;
+  border: 3px solid #b5fc4f;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider-rating::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #131413;
+  border: 3px solid #b5fc4f;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider-rating::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+}
+
+/* Confetti animation */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall 2.5s ease-out forwards;
+}
+
+/* Pulse glow for live indicator */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px #b5fc4f; }
+  50% { opacity: 0.5; box-shadow: 0 0 12px #b5fc4f; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Count up animation */
+@keyframes count-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.animate-count-pop {
+  animation: count-pop 0.3s ease-out;
+}
+
+/* Slide in from bottom */
+@keyframes slide-up {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
+/* Emoji float */
+@keyframes emoji-float {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-60px) scale(1.5); opacity: 0; }
+}
+
+.animate-emoji-float {
+  animation: emoji-float 1s ease-out forwards;
+}
