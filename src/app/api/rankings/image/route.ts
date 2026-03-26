@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import satori from "satori";
 import sharp from "sharp";
 import { getWeeklyRankings, type WeeklyDayRanking } from "@/lib/db";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 // Kikoff brand colors
 const KIKOFF_GREEN = "#b5fc4f";
@@ -46,7 +48,7 @@ function buildRankingsJsx(rankings: WeeklyDayRanking[], startDate: string, endDa
         height: 675,
         backgroundColor: DARK_BG,
         padding: 48,
-        fontFamily: "Inter, sans-serif",
+        fontFamily: "Geist, sans-serif",
         color: TEXT_WHITE,
       },
       children: [
@@ -302,7 +304,7 @@ function buildRankingsJsx(rankings: WeeklyDayRanking[], startDate: string, endDa
                             type: "div",
                             props: {
                               style: { fontSize: 14, color: GOLD, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 },
-                              children: "FAN FAVORITES",
+                              children: "HALL OF FAME",
                             },
                           },
                           ...topDishes.map((dish, i) => ({
@@ -370,7 +372,7 @@ function buildRankingsJsx(rankings: WeeklyDayRanking[], startDate: string, endDa
                                 type: "div",
                                 props: {
                                   style: { fontSize: 14, color: "#ff6b6b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 },
-                                  children: "NEEDS SOME LOVE",
+                                  children: "HALL OF SHAME",
                                 },
                               },
                               {
@@ -478,23 +480,23 @@ export async function GET(request: Request) {
     const rankings = getWeeklyRankings(startDate, endDate);
     const element = buildRankingsJsx(rankings, startDate, endDate);
 
-    // Load a font for satori - use the built-in Inter from Google Fonts
-    const fontData = await fetch(
-      "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKv0E.woff"
-    ).then((res) => res.arrayBuffer());
+    // Load font from local file system
+    const fontPath = join(process.cwd(), "public", "fonts", "Geist-Regular.ttf");
+    const fontBuffer = readFileSync(fontPath);
+    const fontData = fontBuffer.buffer.slice(fontBuffer.byteOffset, fontBuffer.byteOffset + fontBuffer.byteLength);
 
     const svg = await satori(element as React.ReactNode, {
       width: 1200,
       height: 675,
       fonts: [
         {
-          name: "Inter",
+          name: "Geist",
           data: fontData,
           weight: 400,
           style: "normal",
         },
         {
-          name: "Inter",
+          name: "Geist",
           data: fontData,
           weight: 700,
           style: "normal",

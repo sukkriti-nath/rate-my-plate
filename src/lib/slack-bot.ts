@@ -400,7 +400,7 @@ export function buildPowerRankingsBlocks(rankings: WeeklyDayRanking[]): object[]
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*🌟 Fan Favorite Dishes*",
+        text: "*🏛️ Hall of Fame*",
       },
     });
 

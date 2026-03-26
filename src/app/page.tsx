@@ -1,7 +1,6 @@
 import { getMenuForDate } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getUserVoteForDate } from "@/lib/db";
-import MenuCard from "@/components/MenuCard";
 import RatingForm from "@/components/RatingForm";
 import LiveResults from "@/components/LiveResults";
 import Link from "next/link";
@@ -67,24 +66,6 @@ export default async function Home() {
           </h1>
         </div>
       )}
-
-      {/* Today's Menu */}
-      <section className="animate-slide-up" style={{ animationDelay: "0.05s" }}>
-        <MenuCard
-          menu={{
-            date: menu.date as string,
-            day_name: menu.day_name as string,
-            breakfast: menu.breakfast as string,
-            starch: menu.starch as string,
-            vegan_protein: menu.vegan_protein as string,
-            veg: menu.veg as string,
-            protein_1: menu.protein_1 as string,
-            protein_2: menu.protein_2 as string,
-            sauce_sides: menu.sauce_sides as string,
-            no_service: menu.no_service as number,
-          }}
-        />
-      </section>
 
       {/* Rating Section */}
       {!(menu.no_service as number) && (

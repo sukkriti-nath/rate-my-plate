@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 
 interface DayStats {
   date: string;
@@ -33,7 +33,6 @@ function cleanName(name: string): string {
 export default function RankingsPage() {
   const [days, setDays] = useState<DayStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchAll() {
@@ -97,25 +96,31 @@ export default function RankingsPage() {
   const topDishes = allDishes.slice(0, 3);
   const bottomDish = allDishes.length > 3 ? allDishes[allDishes.length - 1] : null;
 
-  async function handleDownload() {
-    if (!cardRef.current) return;
+  const [downloading, setDownloading] = useState(false);
 
-    // Use html2canvas if available, otherwise offer a screenshot tip
+  async function handleDownload() {
+    if (downloading) return;
+    setDownloading(true);
+
     try {
-      // Dynamic import
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        backgroundColor: "#131413",
-        useCORS: true,
-      });
-      const link = document.createElement("a");
-      link.download = "ratemyplate-power-rankings.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    } catch {
-      alert("Tip: Take a screenshot of the card below to save as PNG!");
+      const dates = getWeekDates();
+      const start = dates[0];
+      const end = dates[dates.length - 1];
+      const res = await fetch(`/api/rankings/image?start=${start}&end=${end}`);
+      if (!res.ok) throw new Error("Server image generation failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ratemyplate-power-rankings.png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PNG download failed:", err);
     }
+    setDownloading(false);
   }
 
   const weekLabel = days.length > 0
@@ -153,7 +158,6 @@ export default function RankingsPage() {
 
       {/* Downloadable Card */}
       <div
-        ref={cardRef}
         className="bg-kikoff-dark rounded-3xl p-8 text-white mb-6 overflow-hidden"
       >
         {/* Card Header */}
@@ -206,7 +210,7 @@ export default function RankingsPage() {
         {topDishes.length > 0 && (
           <div className="mb-8">
             <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1">
-              👑 Fan Favorites — Top Dishes
+              🏛️ Hall of Fame
             </h3>
             <div className="space-y-2">
               {topDishes.map((dish, i) => (
@@ -232,7 +236,7 @@ export default function RankingsPage() {
         {bottomDish && (
           <div>
             <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1">
-              🫣 Needs Work
+              💀 Hall of Shame
             </h3>
             <div className="bg-gray-800/50 rounded-xl px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -255,17 +259,15 @@ export default function RankingsPage() {
         </div>
       </div>
 
-      {/* Download Button */}
+      {/* Share Button */}
       <div className="text-center">
         <button
           onClick={handleDownload}
-          className="px-8 py-3.5 bg-kikoff text-kikoff-dark font-bold rounded-2xl hover:bg-kikoff-hover hover:shadow-lg hover:shadow-kikoff/20 transition-all active:scale-[0.98] text-lg"
+          disabled={downloading}
+          className="px-8 py-3.5 bg-kikoff text-kikoff-dark font-bold rounded-2xl hover:bg-kikoff-hover hover:shadow-lg hover:shadow-kikoff/20 transition-all active:scale-[0.98] text-lg disabled:opacity-60 disabled:cursor-wait"
         >
-          Download PNG for All Hands 📸
+          {downloading ? "Generating..." : "Share It 🔗"}
         </button>
-        <p className="text-xs text-gray-400 mt-2">
-          Saves a 2x resolution image for presentations
-        </p>
       </div>
     </div>
   );

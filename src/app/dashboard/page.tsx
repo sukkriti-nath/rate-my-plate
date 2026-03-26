@@ -55,13 +55,13 @@ function RatingBar({ value, max = 5 }: { value: number; max?: number }) {
   const pct = (value / max) * 100;
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-2.5 bg-gray-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-kikoff to-kikoff-hover rounded-full transition-all duration-1000"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-kikoff font-bold text-sm w-8 text-right">
+      <span className="text-kikoff-dark font-bold text-sm w-8 text-right">
         {value.toFixed(1)}
       </span>
     </div>
@@ -139,7 +139,7 @@ export default function DashboardPage() {
   const bottomDish = rankedDishes.length > 1 ? rankedDishes[rankedDishes.length - 1] : null;
 
   return (
-    <div className="min-h-screen bg-kikoff-dark text-white p-6 md:p-8">
+    <div className="min-h-screen bg-white text-gray-900 p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -156,18 +156,18 @@ export default function DashboardPage() {
         {todayData && todayData.stats.totalVotes > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             {/* Overall Score */}
-            <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center">
+            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center">
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Overall</div>
-              <div className={`text-5xl font-bold text-kikoff ${voteFlash ? "animate-count-pop" : ""}`}>
+              <div className={`text-5xl font-bold text-kikoff-dark ${voteFlash ? "animate-count-pop" : ""}`}>
                 {todayData.stats.averageOverall.toFixed(1)}
               </div>
               <div className="text-xl mt-1">{ratingEmoji(todayData.stats.averageOverall)}</div>
             </div>
 
             {/* Vote Count */}
-            <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center">
+            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center">
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Votes In</div>
-              <div className={`text-5xl font-bold text-white ${voteFlash ? "animate-count-pop" : ""}`}>
+              <div className={`text-5xl font-bold text-kikoff-dark ${voteFlash ? "animate-count-pop" : ""}`}>
                 {todayData.stats.totalVotes}
               </div>
               <div className="text-xs text-gray-500 mt-2">Kiksters voted</div>
@@ -175,20 +175,20 @@ export default function DashboardPage() {
 
             {/* Top Dish */}
             {topDish && (
-              <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center">
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fan Favorite</div>
                 <div className="text-2xl mb-1">👑</div>
-                <div className="text-sm text-white font-medium truncate">{topDish.name}</div>
+                <div className="text-sm text-gray-800 font-medium truncate">{topDish.name}</div>
                 <div className="text-kikoff font-bold text-lg">{topDish.rating?.avg.toFixed(1)}</div>
               </div>
             )}
 
             {/* Bottom Dish */}
             {bottomDish && bottomDish.key !== topDish?.key && (
-              <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center">
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Needs Work</div>
                 <div className="text-2xl mb-1">🫣</div>
-                <div className="text-sm text-white font-medium truncate">{bottomDish.name}</div>
+                <div className="text-sm text-gray-800 font-medium truncate">{bottomDish.name}</div>
                 <div className="text-amber-400 font-bold text-lg">{bottomDish.rating?.avg.toFixed(1)}</div>
               </div>
             )}
@@ -201,8 +201,8 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <span className="text-2xl">🏆</span>
               <div>
-                <div className="text-sm text-kikoff font-medium">Best Day This Week</div>
-                <div className="text-white font-semibold">
+                <div className="text-sm text-emerald-600 font-medium">Best Day This Week</div>
+                <div className="text-gray-900 font-semibold">
                   {new Date(bestDay[0] + "T12:00:00").toLocaleDateString("en-US", {
                     weekday: "long",
                     month: "short",
@@ -212,17 +212,17 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-right">
-              <span className="text-3xl font-bold text-kikoff">
+              <span className="text-3xl font-bold text-kikoff-dark">
                 {bestDay[1].stats.averageOverall.toFixed(1)}
               </span>
-              <span className="text-gray-500 text-sm ml-1">/ 5</span>
+              <span className="text-gray-400 text-sm ml-1">/ 5</span>
             </div>
           </div>
         )}
 
         {/* Dish Leaderboard */}
         {rankedDishes.length > 0 && (
-          <div className="bg-gray-900 rounded-3xl p-6 mb-6 border border-gray-800">
+          <div className="bg-white rounded-3xl p-6 mb-6 border border-gray-200 shadow-sm">
             <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
               Today&apos;s Dish Leaderboard
             </h2>
@@ -230,7 +230,7 @@ export default function DashboardPage() {
               {rankedDishes.map((dish, i) => (
                 <div
                   key={dish.key}
-                  className="bg-gray-800/50 rounded-xl px-5 py-3 flex items-center gap-4 animate-slide-up"
+                  className="bg-kikoff-lavender rounded-xl px-5 py-3 flex items-center gap-4 animate-slide-up"
                   style={{ animationDelay: `${i * 0.08}s` }}
                 >
                   <span className="text-2xl w-8 text-center">
@@ -245,7 +245,7 @@ export default function DashboardPage() {
                         {dish.rating?.votes} vote{dish.rating?.votes !== 1 ? "s" : ""}
                       </span>
                     </div>
-                    <div className="text-sm text-white font-medium mb-1">{dish.name}</div>
+                    <div className="text-sm text-gray-800 font-medium mb-1">{dish.name}</div>
                     <RatingBar value={dish.rating?.avg || 0} />
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export default function DashboardPage() {
 
         {/* Distribution */}
         {todayData && todayData.stats.totalVotes > 0 && (
-          <div className="bg-gray-900 rounded-3xl p-6 mb-6 border border-gray-800">
+          <div className="bg-white rounded-3xl p-6 mb-6 border border-gray-200 shadow-sm">
             <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
               Overall Rating Breakdown
             </h2>
@@ -272,7 +272,7 @@ export default function DashboardPage() {
                   <div key={star} className="flex items-center gap-3 text-sm">
                     <span className="w-4 text-gray-400 text-right">{star}</span>
                     <span className="w-6 text-center">{emoji}</span>
-                    <div className="flex-1 h-6 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-kikoff to-kikoff-hover rounded-full transition-all duration-1000 flex items-center justify-end pr-2"
                         style={{ width: `${Math.max(pct, count > 0 ? 8 : 0)}%` }}
@@ -312,8 +312,8 @@ export default function DashboardPage() {
                 key={date}
                 className={`rounded-2xl p-4 border overflow-hidden ${
                   isToday
-                    ? "bg-gray-900 border-kikoff/50"
-                    : "bg-gray-900/50 border-gray-800"
+                    ? "bg-white border-kikoff/50 shadow-sm"
+                    : "bg-gray-50 border-gray-200"
                 } ${isBest ? "ring-2 ring-kikoff/30" : ""}`}
               >
                 <div className="flex items-center gap-1 mb-0.5">
@@ -329,12 +329,12 @@ export default function DashboardPage() {
                 {data && data.stats.totalVotes > 0 ? (
                   <>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-white">
+                      <span className="text-2xl font-bold text-gray-900">
                         {avg.toFixed(1)}
                       </span>
                       <span className="text-sm">{ratingEmoji(avg)}</span>
                     </div>
-                    <div className="mt-1.5 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="mt-1.5 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-kikoff rounded-full transition-all duration-700"
                         style={{ width: `${(avg / 5) * 100}%` }}
@@ -345,7 +345,7 @@ export default function DashboardPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="text-gray-600 text-sm mt-2">
+                  <div className="text-gray-400 text-sm mt-2">
                     {new Date(date + "T12:00:00") > new Date() ? "Upcoming" : "No votes"}
                   </div>
                 )}
@@ -355,7 +355,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-xs text-gray-600">
+        <div className="text-center mt-8 text-xs text-gray-400">
           Auto-refreshes every 5 seconds • Built with 💚 at Kikoff
         </div>
       </div>

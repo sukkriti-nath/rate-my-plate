@@ -30,7 +30,7 @@ export default function SliderRating({
           value={isNA ? 0 : value}
           disabled={isNA}
           onChange={(e) => onChange(Number(e.target.value))}
-          className={`flex-1 h-2 rounded-full appearance-none cursor-pointer slider-rating transition-opacity ${
+          className={`flex-1 rounded-full cursor-pointer slider-rating transition-opacity ${
             isNA ? "opacity-30 cursor-not-allowed" : ""
           }`}
           style={{

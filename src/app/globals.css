@@ -35,17 +35,35 @@ body {
   font-family: "DM Serif Display", Georgia, serif;
 }
 
-/* Slider thumb */
+/* Slider */
+.slider-rating {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 24px;
+  background: transparent;
+  outline: none;
+  margin: 0;
+  padding: 0;
+}
+
+.slider-rating::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: inherit;
+}
+
 .slider-rating::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #131413;
   border: 3px solid #b5fc4f;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  margin-top: -8px;
   transition: transform 0.15s ease;
 }
 
@@ -53,19 +71,20 @@ body {
   transform: scale(1.2);
 }
 
+.slider-rating::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: inherit;
+}
+
 .slider-rating::-moz-range-thumb {
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #131413;
   border: 3px solid #b5fc4f;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.slider-rating::-webkit-slider-runnable-track {
-  height: 8px;
-  border-radius: 9999px;
 }
 
 /* Confetti animation */
