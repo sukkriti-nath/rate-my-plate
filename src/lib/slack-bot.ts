@@ -93,6 +93,16 @@ export function buildDailyMenuBlocks(date: string): object[] | null {
           action_id: "open_rating_modal",
           value: date,
         },
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "🌐 Rate on Web",
+            emoji: true,
+          },
+          url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+          action_id: "open_web_rating",
+        },
       ],
     },
     {
@@ -427,7 +437,7 @@ export function buildPowerRankingsBlocks(rankings: WeeklyDayRanking[]): object[]
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*😬 Needs Some Love*\n${worstDish.name} (${worstDish.category}, ${worstDish.dayName}) — ${starRating(worstDish.avg)} ${worstDish.avg.toFixed(1)}/5.0\n_Better luck next time!_`,
+        text: `*💀 Hall of Shame*\n${worstDish.name} (${worstDish.category}, ${worstDish.dayName}) — ${starRating(worstDish.avg)} ${worstDish.avg.toFixed(1)}/5.0\n_Better luck next time!_`,
       },
     });
   }
