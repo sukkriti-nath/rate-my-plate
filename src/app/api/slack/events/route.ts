@@ -108,12 +108,46 @@ async function handleBlockAction(payload: Record<string, unknown>) {
   }
 
   const action = actions[0];
+  const triggerId = payload.trigger_id as string;
 
-  if (action.action_id === "open_rating_modal") {
-    const date = action.value;
-    const triggerId = payload.trigger_id as string;
+  // ─── Handle emoji rating buttons (1🙁 through 5🤩) ───────────────────
+  // Kate's flow: tap emoji button in channel → records overall rating → opens modal
+  const overallRatingMatch = action.action_id.match(/^rate_overall_(\d|na)$/);
+  if (overallRatingMatch) {
+    let parsed: { date: string; rating: number | null };
+    try {
+      parsed = JSON.parse(action.value);
+    } catch {
+      return NextResponse.json({ ok: true });
+    }
+
+    const { date, rating } = parsed;
 
     // Verify the menu exists
+    const menu = getMenuForDate(date);
+    if (!menu) {
+      return NextResponse.json({ ok: true });
+    }
+
+    try {
+      const slack = getSlackClient();
+      const modal = buildRatingModal(date, rating);
+
+      await slack.views.open({
+        trigger_id: triggerId,
+        view: modal as never,
+      });
+    } catch (err) {
+      console.error("Failed to open modal:", err);
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  // ─── Legacy: handle old "open_rating_modal" button (from reminders) ───
+  if (action.action_id === "open_rating_modal") {
+    const date = action.value;
+
     const menu = getMenuForDate(date);
     if (!menu) {
       return NextResponse.json({ ok: true });
@@ -134,7 +168,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     return NextResponse.json({ ok: true });
   }
 
-  // For select actions inside the modal, just acknowledge
+  // For other actions (radio buttons in modal, web link button, etc.), just acknowledge
   return NextResponse.json({ ok: true });
 }
 
@@ -170,7 +204,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       console.error("Failed to fetch user email from Slack:", err);
     }
 
-    // Check that at least one rating was provided
+    // Check that at least one rating was provided (overall from button OR a dish rating)
     if (
       parsed.ratingOverall === null &&
       parsed.ratingStarch === null &&
@@ -182,8 +216,8 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       return NextResponse.json({
         response_action: "errors",
         errors: {
-          rating_overall:
-            "Please rate at least the overall meal or one dish!",
+          comment_general:
+            "Please rate at least one dish before submitting!",
         },
       });
     }
@@ -210,12 +244,15 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
     // Send a DM confirmation to the user
     try {
       const slack = getSlackClient();
+      const emoji = parsed.ratingOverall
+        ? ({ 1: "🙁", 2: "😕", 3: "😐", 4: "😋", 5: "🤩" }[parsed.ratingOverall] || "")
+        : "";
       const overallText = parsed.ratingOverall
-        ? `${"⭐".repeat(parsed.ratingOverall)}`
+        ? `${parsed.ratingOverall} ${emoji}`
         : "N/A";
       await slack.chat.postMessage({
         channel: slackUserId,
-        text: `Thanks for rating today's lunch! ${overallText}\nYour feedback helps us improve the menu. 🙏`,
+        text: `Thanks for rating today's lunch! Your overall: ${overallText}\nYour feedback helps us improve the menu. 🙏`,
       });
     } catch (err) {
       console.error("Failed to send confirmation DM:", err);
@@ -225,7 +262,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
     return NextResponse.json({
       response_action: "errors",
       errors: {
-        rating_overall: "Something went wrong saving your rating. Try again!",
+        comment_general: "Something went wrong saving your rating. Try again!",
       },
     });
   }

@@ -14,7 +14,25 @@ const DISH_CATEGORIES = [
   { key: "veg", field: "veg", emoji: "🥦", label: "Veg" },
   { key: "protein_1", field: "protein_1", emoji: "🍗", label: "Protein 1" },
   { key: "protein_2", field: "protein_2", emoji: "🥩", label: "Protein 2" },
+  { key: "sauce_sides", field: "sauce_sides", emoji: "🫙", label: "Sauce/Sides" },
 ] as const;
+
+// Emoji scale matching Kate's mockup
+const RATING_EMOJIS: Record<number, string> = {
+  1: "🙁",
+  2: "😕",
+  3: "😐",
+  4: "😋",
+  5: "🤩",
+};
+
+const RATING_LABELS: Record<number, string> = {
+  5: "Outstanding",
+  4: "Really good",
+  3: "Decent",
+  2: "Below average",
+  1: "Did not enjoy",
+};
 
 function starRating(n: number): string {
   const full = Math.round(n);
@@ -32,7 +50,17 @@ function getDayEmoji(dayName: string): string {
   return emojis[dayName] || "🍽️";
 }
 
+function formatDateHeader(date: string): string {
+  const d = new Date(date + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 // ─── Daily Rating Message ───────────────────────────────────────────────────
+// Kate's design: emoji buttons in-channel for overall rating (1🙁 - 5🤩 + N/A)
 
 export function buildDailyMenuBlocks(date: string): object[] | null {
   const menu = getMenuForDate(date);
@@ -42,6 +70,7 @@ export function buildDailyMenuBlocks(date: string): object[] | null {
   const dayEmoji = getDayEmoji(dayName);
 
   const dishLines = DISH_CATEGORIES
+    .filter((cat) => cat.key !== "sauce_sides") // show sauce separately
     .map((cat) => {
       const val = menu[cat.field] as string | null;
       if (!val) return null;
@@ -76,32 +105,32 @@ export function buildDailyMenuBlocks(date: string): object[] | null {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "What do you think? Rate today's lunch and help us crown the weekly champion!",
+        text: "*How was today's meal overall?*\nTap a rating — then rate each dish:",
       },
     },
+    // Emoji rating buttons row (Kate's design)
     {
       type: "actions",
       elements: [
+        ...[1, 2, 3, 4, 5].map((n) => ({
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: `${n} ${RATING_EMOJIS[n]}`,
+            emoji: true,
+          },
+          action_id: `rate_overall_${n}`,
+          value: JSON.stringify({ date, rating: n }),
+        })),
         {
           type: "button",
           text: {
             type: "plain_text",
-            text: "⭐ Rate Today's Lunch",
+            text: "N/A",
             emoji: true,
           },
-          style: "primary",
-          action_id: "open_rating_modal",
-          value: date,
-        },
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: "🌐 Rate on Web",
-            emoji: true,
-          },
-          url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-          action_id: "open_web_rating",
+          action_id: "rate_overall_na",
+          value: JSON.stringify({ date, rating: null }),
         },
       ],
     },
@@ -110,7 +139,7 @@ export function buildDailyMenuBlocks(date: string): object[] | null {
       elements: [
         {
           type: "mrkdwn",
-          text: `📅 ${date} • Ratings are anonymous-ish (we see your name but won't judge... much 😏)`,
+          text: `📅 ${formatDateHeader(date)} • <${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}|Rate on web instead>`,
         },
       ],
     },
@@ -120,115 +149,77 @@ export function buildDailyMenuBlocks(date: string): object[] | null {
 }
 
 // ─── Rating Modal ───────────────────────────────────────────────────────────
+// Kate's design: radio buttons per dish, shows overall rating confirmation,
+// "Submit Ratings" / "Skip", general comments at bottom
 
-export function buildRatingModal(date: string): object {
+export function buildRatingModal(date: string, overallRating?: number | null): object {
   const menu = getMenuForDate(date);
   if (!menu) throw new Error(`No menu found for date ${date}`);
 
   const blocks: object[] = [];
 
-  // Overall rating
+  // Header with date
   blocks.push({
-    type: "section",
+    type: "header",
     text: {
-      type: "mrkdwn",
-      text: "*🍽️ Overall Meal Rating*\nHow was today's lunch overall?",
-    },
-  });
-  blocks.push({
-    type: "actions",
-    block_id: "rating_overall",
-    elements: [
-      {
-        type: "static_select",
-        action_id: "select_rating_overall",
-        placeholder: {
-          type: "plain_text",
-          text: "Pick a rating",
-        },
-        options: [
-          ...([1, 2, 3, 4, 5].map((n) => ({
-            text: { type: "plain_text" as const, text: `${"⭐".repeat(n)} (${n})`, emoji: true },
-            value: String(n),
-          }))),
-          {
-            text: { type: "plain_text" as const, text: "N/A - Didn't try", emoji: true },
-            value: "na",
-          },
-        ],
-      },
-    ],
-  });
-
-  // Overall comment
-  blocks.push({
-    type: "input",
-    block_id: "comment_overall",
-    optional: true,
-    element: {
-      type: "plain_text_input",
-      action_id: "input_comment_overall",
-      multiline: true,
-      placeholder: {
-        type: "plain_text",
-        text: "Any overall thoughts? Chef's kiss or needs work?",
-      },
-    },
-    label: {
       type: "plain_text",
-      text: "💬 Overall Comments",
-      emoji: true,
+      text: `${formatDateHeader(date)} - Dish Ratings`,
     },
   });
 
-  blocks.push({ type: "divider" });
-
-  blocks.push({
-    type: "section",
-    text: {
-      type: "mrkdwn",
-      text: "*🍳 Rate Each Dish*\nHelp us know exactly what hit and what missed!",
-    },
-  });
-
-  // Per-dish ratings
-  for (const cat of DISH_CATEGORIES) {
-    const dishName = menu[cat.field] as string | null;
-    if (!dishName) continue;
-
+  // Overall rating confirmation (if provided from button click)
+  if (overallRating && overallRating >= 1 && overallRating <= 5) {
     blocks.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `${cat.emoji} *${cat.label}:* ${dishName}`,
+        text: `You rated today's meal a *${overallRating} ${RATING_EMOJIS[overallRating]}* — nice! Now tell us how you felt about each dish.`,
+      },
+    });
+  } else {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: "Tell us how you felt about each dish!",
+      },
+    });
+  }
+
+  blocks.push({ type: "divider" });
+
+  // Radio button options (matching Kate's mockup exactly)
+  const ratingOptions = [
+    { text: { type: "plain_text" as const, text: "5 🤩  Outstanding", emoji: true }, value: "5" },
+    { text: { type: "plain_text" as const, text: "4 😋  Really good", emoji: true }, value: "4" },
+    { text: { type: "plain_text" as const, text: "3 😐  Decent", emoji: true }, value: "3" },
+    { text: { type: "plain_text" as const, text: "2 😕  Below average", emoji: true }, value: "2" },
+    { text: { type: "plain_text" as const, text: "1 🙁  Did not enjoy", emoji: true }, value: "1" },
+    { text: { type: "plain_text" as const, text: "N/A - Didn't try it", emoji: true }, value: "na" },
+  ];
+
+  // Per-dish ratings with radio buttons
+  for (const cat of DISH_CATEGORIES) {
+    const dishName = menu[cat.field] as string | null;
+    if (!dishName) continue;
+
+    // Radio buttons for this dish (Kate's format: "Dish Name (Category)")
+    blocks.push({
+      type: "input",
+      block_id: `rating_${cat.key}`,
+      optional: true,
+      label: {
+        type: "plain_text",
+        text: `${dishName} (${cat.label})`,
+      },
+      element: {
+        type: "radio_buttons",
+        action_id: `radio_rating_${cat.key}`,
+        options: ratingOptions,
       },
     });
 
-    blocks.push({
-      type: "actions",
-      block_id: `rating_${cat.key}`,
-      elements: [
-        {
-          type: "static_select",
-          action_id: `select_rating_${cat.key}`,
-          placeholder: {
-            type: "plain_text",
-            text: "Pick a rating",
-          },
-          options: [
-            ...([1, 2, 3, 4, 5].map((n) => ({
-              text: { type: "plain_text" as const, text: `${"⭐".repeat(n)} (${n})`, emoji: true },
-              value: String(n),
-            }))),
-            {
-              text: { type: "plain_text" as const, text: "N/A - Didn't try", emoji: true },
-              value: "na",
-            },
-          ],
-        },
-      ],
-    });
-
+    // Comment field for this dish
     blocks.push({
       type: "input",
       block_id: `comment_${cat.key}`,
@@ -238,33 +229,54 @@ export function buildRatingModal(date: string): object {
         action_id: `input_comment_${cat.key}`,
         placeholder: {
           type: "plain_text",
-          text: `Thoughts on the ${dishName.toLowerCase()}?`,
+          text: "Any thoughts on this dish?",
         },
       },
       label: {
         type: "plain_text",
-        text: `💬 ${cat.label} Comment`,
-        emoji: true,
+        text: `${dishName} comments (optional)`,
       },
     });
+
+    blocks.push({ type: "divider" });
   }
+
+  // General comments at the bottom (Kate's design)
+  blocks.push({
+    type: "input",
+    block_id: "comment_general",
+    optional: true,
+    element: {
+      type: "plain_text_input",
+      action_id: "input_comment_general",
+      multiline: true,
+      placeholder: {
+        type: "plain_text",
+        text: "Any other thoughts about today's lunch?",
+      },
+    },
+    label: {
+      type: "plain_text",
+      text: "General Comments (optional)",
+    },
+  });
 
   return {
     type: "modal",
     callback_id: "rating_submission",
-    private_metadata: JSON.stringify({ date }),
+    private_metadata: JSON.stringify({ date, overallRating: overallRating ?? null }),
     title: {
       type: "plain_text",
-      text: "Rate My Plate 🍽️",
+      text: "Rate My Plate",
       emoji: true,
     },
     submit: {
       type: "plain_text",
-      text: "Submit Rating",
+      text: "Submit Ratings",
     },
     close: {
       type: "plain_text",
-      text: "Cancel",
+      text: "Skip",
     },
     blocks,
   };
@@ -272,7 +284,7 @@ export function buildRatingModal(date: string): object {
 
 // ─── Parse Modal Submission ─────────────────────────────────────────────────
 
-interface ParsedRating {
+export interface ParsedRating {
   date: string;
   ratingOverall: number | null;
   ratingStarch: number | null;
@@ -288,7 +300,7 @@ interface ParsedRating {
   commentProtein2: string | null;
 }
 
-function extractRating(stateValues: Record<string, Record<string, unknown>>, blockId: string, actionId: string): number | null {
+function extractRadioRating(stateValues: Record<string, Record<string, unknown>>, blockId: string, actionId: string): number | null {
   const block = stateValues[blockId];
   if (!block) return null;
   const action = block[actionId] as { selected_option?: { value?: string } } | undefined;
@@ -310,15 +322,18 @@ export function parseModalSubmission(view: Record<string, unknown>): ParsedRatin
   const metadata = JSON.parse(view.private_metadata as string);
   const stateValues = (view.state as { values: Record<string, Record<string, unknown>> }).values;
 
+  // Overall rating comes from the channel button click (stored in metadata)
+  const overallFromButton = metadata.overallRating;
+
   return {
     date: metadata.date,
-    ratingOverall: extractRating(stateValues, "rating_overall", "select_rating_overall"),
-    ratingStarch: extractRating(stateValues, "rating_starch", "select_rating_starch"),
-    ratingVeganProtein: extractRating(stateValues, "rating_vegan_protein", "select_rating_vegan_protein"),
-    ratingVeg: extractRating(stateValues, "rating_veg", "select_rating_veg"),
-    ratingProtein1: extractRating(stateValues, "rating_protein_1", "select_rating_protein_1"),
-    ratingProtein2: extractRating(stateValues, "rating_protein_2", "select_rating_protein_2"),
-    comment: extractText(stateValues, "comment_overall", "input_comment_overall"),
+    ratingOverall: overallFromButton ?? null,
+    ratingStarch: extractRadioRating(stateValues, "rating_starch", "radio_rating_starch"),
+    ratingVeganProtein: extractRadioRating(stateValues, "rating_vegan_protein", "radio_rating_vegan_protein"),
+    ratingVeg: extractRadioRating(stateValues, "rating_veg", "radio_rating_veg"),
+    ratingProtein1: extractRadioRating(stateValues, "rating_protein_1", "radio_rating_protein_1"),
+    ratingProtein2: extractRadioRating(stateValues, "rating_protein_2", "radio_rating_protein_2"),
+    comment: extractText(stateValues, "comment_general", "input_comment_general"),
     commentStarch: extractText(stateValues, "comment_starch", "input_comment_starch"),
     commentVeganProtein: extractText(stateValues, "comment_vegan_protein", "input_comment_vegan_protein"),
     commentVeg: extractText(stateValues, "comment_veg", "input_comment_veg"),
@@ -404,7 +419,7 @@ export function buildPowerRankingsBlocks(rankings: WeeklyDayRanking[]): object[]
 
   blocks.push({ type: "divider" });
 
-  // Top 3 dishes
+  // Hall of Fame - Top 3 dishes
   if (sortedDishes.length > 0) {
     blocks.push({
       type: "section",
@@ -428,7 +443,7 @@ export function buildPowerRankingsBlocks(rankings: WeeklyDayRanking[]): object[]
     }
   }
 
-  // Needs work (bottom dish)
+  // Hall of Shame (bottom dish)
   if (sortedDishes.length > 1) {
     blocks.push({ type: "divider" });
 
