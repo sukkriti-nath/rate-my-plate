@@ -117,7 +117,7 @@ async function initDb() {
 export async function upsertMenuDay(menu: {
   date: string;
   dayName: string;
-  breakfast: string;
+  breakfast: string | null;
   starch: string | null;
   veganProtein: string | null;
   veg: string | null;
