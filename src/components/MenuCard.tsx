@@ -51,10 +51,10 @@ function DietTag({ text }: { text: string }) {
 export default function MenuCard({ menu, compact = false }: MenuCardProps) {
   if (menu.no_service) {
     return (
-      <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 ${compact ? "p-4" : "p-6"}`}>
+      <div className={`bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] ${compact ? "p-4" : "p-6"}`}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-display text-xl text-gray-900">{menu.day_name}</h3>
-          <span className="text-sm text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+          <h3 className="font-display text-xl text-gray-900 font-bold">{menu.day_name}</h3>
+          <span className="text-sm text-gray-400 bg-gray-50 px-3 py-1 rounded-xl border-2 border-black">
             {formatDate(menu.date)}
           </span>
         </div>
@@ -76,15 +76,15 @@ export default function MenuCard({ menu, compact = false }: MenuCardProps) {
   ].filter((i) => i.value);
 
   return (
-    <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden ${compact ? "p-4" : ""}`}>
+    <div className={`bg-white rounded-xl border-2 border-black shadow-[8px_8px_0px_0px_#000] overflow-hidden ${compact ? "p-4" : ""}`}>
       {/* Header with green accent bar */}
       {!compact && (
-        <div className="bg-kikoff-dark px-6 py-4 flex items-center justify-between">
+        <div className="bg-kikoff-dark px-6 py-4 flex items-center justify-between border-b-2 border-black">
           <div className="flex items-center gap-2">
             <span className="text-xl">📋</span>
-            <h3 className="font-display text-xl text-white">{menu.day_name}&apos;s Menu</h3>
+            <h3 className="font-display text-xl text-white font-bold">{menu.day_name}&apos;s Menu</h3>
           </div>
-          <span className="text-sm text-gray-400 bg-white/10 px-3 py-1 rounded-full">
+          <span className="text-sm text-gray-400 bg-white/10 px-3 py-1 rounded-xl border-2 border-black">
             {formatDate(menu.date)}
           </span>
         </div>

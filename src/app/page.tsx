@@ -55,7 +55,7 @@ export default async function Home({ searchParams }: PageProps) {
             <>
               <a
                 href="/api/menu/sync"
-                className="inline-block px-8 py-3.5 bg-kikoff text-kikoff-dark font-bold rounded-2xl hover:bg-kikoff-hover hover:shadow-lg hover:shadow-kikoff/20 transition-all active:scale-[0.98]"
+                className="inline-block px-8 py-3.5 bg-kikoff text-kikoff-dark font-bold rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
               >
                 Sync Menu from Sheet ↗
               </a>
@@ -121,10 +121,10 @@ export default async function Home({ searchParams }: PageProps) {
 
       {/* Rating Section */}
       <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <div className="flex items-center gap-2 mb-5">
             <span className="text-xl">✍️</span>
-            <h2 className="font-display text-xl text-gray-900">Rate It</h2>
+            <h2 className="font-display text-xl text-gray-900 font-bold">Rate It</h2>
           </div>
           {session ? (
             <RatingForm
@@ -140,7 +140,7 @@ export default async function Home({ searchParams }: PageProps) {
               </p>
               <Link
                 href="/login"
-                className="inline-block px-8 py-3 bg-kikoff text-kikoff-dark font-bold rounded-2xl hover:bg-kikoff-hover transition-all"
+                className="inline-block px-8 py-3 bg-kikoff text-kikoff-dark font-bold rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
               >
                 Sign in with Kikoff Email
               </Link>
@@ -151,11 +151,11 @@ export default async function Home({ searchParams }: PageProps) {
 
       {/* Live Results */}
       <section className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-xl">📊</span>
-              <h2 className="font-display text-xl text-gray-900">{isToday ? "Live Results" : "Results"}</h2>
+              <h2 className="font-display text-xl text-gray-900 font-bold">{isToday ? "Live Results" : "Results"}</h2>
             </div>
             {isToday && (
               <div className="flex items-center gap-1.5 text-xs text-gray-400">

@@ -55,9 +55,9 @@ function RatingBar({ value, max = 5 }: { value: number; max?: number }) {
   const pct = (value / max) * 100;
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden">
+      <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden border border-black">
         <div
-          className="h-full bg-gradient-to-r from-kikoff to-kikoff-hover rounded-full transition-all duration-1000"
+          className="h-full bg-kikoff rounded-full transition-all duration-1000"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -142,8 +142,8 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-white text-gray-900 p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="font-display text-5xl mb-1">
+        <div className="text-center mb-8 pb-6 border-b-2 border-black">
+          <h1 className="font-display text-5xl mb-1 font-extrabold">
             Rate<span className="text-kikoff">My</span>Plate
           </h1>
           <div className="flex items-center justify-center gap-2 text-gray-500">
@@ -156,7 +156,7 @@ export default function DashboardPage() {
         {todayData && todayData.stats.totalVotes > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             {/* Overall Score */}
-            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center">
+            <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Overall</div>
               <div className={`text-5xl font-bold text-kikoff-dark ${voteFlash ? "animate-count-pop" : ""}`}>
                 {todayData.stats.averageOverall.toFixed(1)}
@@ -165,7 +165,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Vote Count */}
-            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center">
+            <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Votes In</div>
               <div className={`text-5xl font-bold text-kikoff-dark ${voteFlash ? "animate-count-pop" : ""}`}>
                 {todayData.stats.totalVotes}
@@ -175,7 +175,7 @@ export default function DashboardPage() {
 
             {/* Top Dish */}
             {topDish && (
-              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center">
+              <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fan Favorite</div>
                 <div className="text-2xl mb-1">👑</div>
                 <div className="text-sm text-gray-800 font-medium truncate">{topDish.name}</div>
@@ -185,7 +185,7 @@ export default function DashboardPage() {
 
             {/* Bottom Dish */}
             {bottomDish && bottomDish.key !== topDish?.key && (
-              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center">
+              <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Needs Work</div>
                 <div className="text-2xl mb-1">🫣</div>
                 <div className="text-sm text-gray-800 font-medium truncate">{bottomDish.name}</div>
@@ -197,8 +197,9 @@ export default function DashboardPage() {
 
         {/* Best Day Banner */}
         {bestDay && bestDay[1].stats.totalVotes >= 1 && (
-          <div className="bg-kikoff/10 border border-kikoff/30 rounded-2xl px-6 py-4 mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="bg-kikoff border-2 border-black rounded-xl px-6 py-4 mb-6 flex items-center justify-between shadow-[4px_4px_0px_0px_#000] relative overflow-hidden">
+            <div className="neo-dots" />
+            <div className="flex items-center gap-3 relative z-10">
               <span className="text-2xl">🏆</span>
               <div>
                 <div className="text-sm text-emerald-600 font-medium">Best Day This Week</div>
@@ -211,7 +212,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-right relative z-10">
               <span className="text-3xl font-bold text-kikoff-dark">
                 {bestDay[1].stats.averageOverall.toFixed(1)}
               </span>
@@ -222,15 +223,15 @@ export default function DashboardPage() {
 
         {/* Dish Leaderboard */}
         {rankedDishes.length > 0 && (
-          <div className="bg-white rounded-3xl p-6 mb-6 border border-gray-200 shadow-sm">
-            <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
+          <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 pb-3 border-b-2 border-black">
               Today&apos;s Dish Leaderboard
             </h2>
             <div className="space-y-3">
               {rankedDishes.map((dish, i) => (
                 <div
                   key={dish.key}
-                  className="bg-kikoff-lavender rounded-xl px-5 py-3 flex items-center gap-4 animate-slide-up"
+                  className="bg-kikoff-lavender rounded-xl px-5 py-3 flex items-center gap-4 animate-slide-up border-2 border-black shadow-[4px_4px_0px_0px_#000]"
                   style={{ animationDelay: `${i * 0.08}s` }}
                 >
                   <span className="text-2xl w-8 text-center">
@@ -256,8 +257,8 @@ export default function DashboardPage() {
 
         {/* Distribution */}
         {todayData && todayData.stats.totalVotes > 0 && (
-          <div className="bg-white rounded-3xl p-6 mb-6 border border-gray-200 shadow-sm">
-            <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
+          <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 pb-3 border-b-2 border-black">
               Overall Rating Breakdown
             </h2>
             <div className="max-w-lg mx-auto space-y-2.5">
@@ -272,9 +273,9 @@ export default function DashboardPage() {
                   <div key={star} className="flex items-center gap-3 text-sm">
                     <span className="w-4 text-gray-400 text-right">{star}</span>
                     <span className="w-6 text-center">{emoji}</span>
-                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden border border-black">
                       <div
-                        className="h-full bg-gradient-to-r from-kikoff to-kikoff-hover rounded-full transition-all duration-1000 flex items-center justify-end pr-2"
+                        className="h-full bg-kikoff rounded-full transition-all duration-1000 flex items-center justify-end pr-2"
                         style={{ width: `${Math.max(pct, count > 0 ? 8 : 0)}%` }}
                       >
                         {count > 0 && (
@@ -293,7 +294,7 @@ export default function DashboardPage() {
         )}
 
         {/* Week Overview */}
-        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
+        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 pb-3 border-b-2 border-black">
           This Week at a Glance
         </h2>
         <div className="grid grid-cols-4 gap-3">
@@ -310,11 +311,11 @@ export default function DashboardPage() {
             return (
               <div
                 key={date}
-                className={`rounded-2xl p-4 border overflow-hidden ${
+                className={`rounded-xl p-4 border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_#000] ${
                   isToday
-                    ? "bg-white border-kikoff/50 shadow-sm"
-                    : "bg-gray-50 border-gray-200"
-                } ${isBest ? "ring-2 ring-kikoff/30" : ""}`}
+                    ? "bg-white"
+                    : "bg-gray-50"
+                } ${isBest ? "ring-2 ring-kikoff" : ""}`}
               >
                 <div className="flex items-center gap-1 mb-0.5">
                   <span className="text-xs text-gray-500">{dayName}</span>

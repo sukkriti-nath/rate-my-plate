@@ -144,11 +144,11 @@ export default function ReportsPage() {
         <h1 className="font-display text-2xl text-gray-900 mb-2">No data yet</h1>
         <p className="text-gray-400 mb-6">No votes have been collected for this period.</p>
         <div className="flex justify-center gap-3">
-          <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-gray-100 rounded-xl text-sm hover:bg-gray-200 transition-colors">
+          <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
             ← Previous 2 weeks
           </button>
           {weeksAgo > 0 && (
-            <button onClick={() => setWeeksAgo((w) => w - 1)} className="px-4 py-2 bg-gray-100 rounded-xl text-sm hover:bg-gray-200 transition-colors">
+            <button onClick={() => setWeeksAgo((w) => w - 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
               Next 2 weeks →
             </button>
           )}
@@ -164,11 +164,11 @@ export default function ReportsPage() {
         <h1 className="font-display text-3xl text-gray-900">📋 Bi-Weekly Report</h1>
         <p className="text-gray-400 mt-1">{report.period}</p>
         <div className="flex justify-center gap-3 mt-4">
-          <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-gray-100 rounded-xl text-sm hover:bg-gray-200 transition-colors">
+          <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
             ← Previous
           </button>
           {weeksAgo > 0 && (
-            <button onClick={() => setWeeksAgo((w) => w - 1)} className="px-4 py-2 bg-gray-100 rounded-xl text-sm hover:bg-gray-200 transition-colors">
+            <button onClick={() => setWeeksAgo((w) => w - 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
               Next →
             </button>
           )}
@@ -176,25 +176,25 @@ export default function ReportsPage() {
       </div>
 
       {/* Executive Summary */}
-      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+      <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
         <h2 className="font-display text-xl text-gray-900 mb-4">📊 Executive Summary</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-gray-50 rounded-2xl">
+          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
             <div className={`text-3xl font-bold ${ratingColor(report.summary.avgOverall)}`}>
               {report.summary.avgOverall.toFixed(1)}
             </div>
             <div className="text-lg">{ratingEmoji(report.summary.avgOverall)}</div>
             <div className="text-xs text-gray-400 mt-1">Overall Avg</div>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-2xl">
+          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
             <div className="text-3xl font-bold text-gray-900">{report.summary.totalVotes}</div>
             <div className="text-xs text-gray-400 mt-1">Total Votes</div>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-2xl">
+          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
             <div className="text-3xl font-bold text-gray-900">{report.summary.totalDaysWithData}</div>
             <div className="text-xs text-gray-400 mt-1">Days Rated</div>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-2xl">
+          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
             <div className="text-3xl font-bold text-green-500">
               {report.summary.bestDay?.name || "—"}
             </div>
@@ -206,11 +206,11 @@ export default function ReportsPage() {
       </section>
 
       {/* Day-by-Day */}
-      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+      <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
         <h2 className="font-display text-xl text-gray-900 mb-4">📅 Day-by-Day Breakdown</h2>
         <div className="space-y-3">
           {report.dayByDay.map((day) => (
-            <div key={day.date} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+            <div key={day.date} className="flex items-center justify-between p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-900">{day.dayName}</span>
@@ -241,11 +241,11 @@ export default function ReportsPage() {
 
       {/* Hall of Fame & Shame */}
       <div className="grid md:grid-cols-2 gap-6">
-        <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <h2 className="font-display text-xl text-gray-900 mb-4">🏛️ Hall of Fame</h2>
           <div className="space-y-2">
             {report.topDishes.slice(0, 5).map((dish, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+              <div key={i} className="flex items-center justify-between p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000]">
                 <div>
                   <span className="text-sm mr-2">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</span>
                   <span className="font-medium text-sm">{dish.name}</span>
@@ -258,11 +258,11 @@ export default function ReportsPage() {
           </div>
         </section>
 
-        <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <h2 className="font-display text-xl text-gray-900 mb-4">💀 Hall of Shame</h2>
           <div className="space-y-2">
             {report.bottomDishes.slice(0, 3).map((dish, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+              <div key={i} className="flex items-center justify-between p-3 bg-red-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000]">
                 <div>
                   <span className="font-medium text-sm">{dish.name}</span>
                   <span className="text-xs text-gray-400 ml-1">({dish.category}, {dish.dayName})</span>
@@ -277,11 +277,11 @@ export default function ReportsPage() {
 
       {/* Friday Catering Spotlight */}
       {report.fridaySpotlight.length > 0 && (
-        <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <h2 className="font-display text-xl text-gray-900 mb-4">🍴 Friday Catering Spotlight</h2>
           <p className="text-sm text-gray-400 mb-4">Granular feedback for Friday catering — use this to optimize vendor selection and reduce waste.</p>
           {report.fridaySpotlight.map((fri) => (
-            <div key={fri.date} className="p-4 bg-amber-50 rounded-2xl mb-3">
+            <div key={fri.date} className="p-4 bg-kikoff/20 rounded-xl border-2 border-black mb-3">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <span className="font-semibold">{fri.restaurant || "Friday Lunch"}</span>
@@ -309,11 +309,11 @@ export default function ReportsPage() {
 
       {/* Comments */}
       {report.comments.length > 0 && (
-        <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <h2 className="font-display text-xl text-gray-900 mb-4">💬 Feedback Highlights</h2>
           <div className="space-y-2">
             {report.comments.slice(0, 15).map((c, i) => (
-              <div key={i} className="p-3 bg-gray-50 rounded-xl">
+              <div key={i} className="p-3 bg-white rounded-xl border-2 border-black">
                 <p className="text-sm text-gray-700">&ldquo;{c.comment}&rdquo;</p>
                 <p className="text-xs text-gray-400 mt-1">— {c.userName} • {formatDate(c.date)}</p>
               </div>
@@ -323,7 +323,7 @@ export default function ReportsPage() {
       )}
 
       {/* Download & Send Report */}
-      <section className="bg-kikoff-dark rounded-3xl p-6">
+      <section className="bg-kikoff-dark rounded-xl border-2 border-black shadow-[8px_8px_0px_0px_#000] p-6">
         <h2 className="font-display text-xl text-white mb-2 text-center">Export & Share Report</h2>
 
         {/* PDF Download */}
@@ -332,14 +332,14 @@ export default function ReportsPage() {
             href={`/api/reports/pdf?weeksAgo=${weeksAgo}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block px-8 py-3 rounded-2xl font-bold text-kikoff-dark bg-kikoff hover:bg-kikoff-hover active:scale-[0.98] transition-all"
+            className="inline-block px-8 py-3 rounded-xl font-bold text-kikoff-dark bg-kikoff border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
           >
             📄 Download Report (.docx)
           </a>
         </div>
 
         {/* Send via Slack */}
-        <div className="bg-white/10 rounded-2xl p-5 mb-3">
+        <div className="bg-white/10 rounded-xl border-2 border-white/20 p-5 mb-3">
           <p className="text-gray-300 text-sm mb-3 font-medium">Send via Slack DM</p>
           <div className="flex gap-3">
             <input
@@ -347,13 +347,13 @@ export default function ReportsPage() {
               placeholder="Slack handle (e.g. @sukkriti)"
               value={slackHandle}
               onChange={(e) => setSlackHandle(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-gray-500 border border-white/10 focus:border-kikoff focus:outline-none text-sm"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-gray-500 border-2 border-white/20 focus:border-kikoff focus:outline-none text-sm"
             />
             <button
               onClick={handleSendSlack}
               disabled={sending}
-              className={`px-6 py-2.5 rounded-xl font-bold text-kikoff-dark transition-all shrink-0 ${
-                sending ? "bg-gray-400 cursor-wait" : "bg-kikoff hover:bg-kikoff-hover active:scale-[0.98]"
+              className={`px-6 py-2.5 rounded-xl font-bold text-kikoff-dark transition-all shrink-0 border-2 border-black shadow-[2px_2px_0px_0px_#000] ${
+                sending ? "bg-gray-400 cursor-wait" : "bg-kikoff hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
               }`}
             >
               {sending ? "..." : "📤 Send"}
@@ -362,7 +362,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Send via Email */}
-        <div className="bg-white/10 rounded-2xl p-5">
+        <div className="bg-white/10 rounded-xl border-2 border-white/20 p-5">
           <p className="text-gray-300 text-sm mb-3 font-medium">Send via Email</p>
           <div className="flex gap-3">
             <input
@@ -370,13 +370,13 @@ export default function ReportsPage() {
               placeholder="Email (e.g. sukkriti@kikoff.com)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-gray-500 border border-white/10 focus:border-kikoff focus:outline-none text-sm"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-gray-500 border-2 border-white/20 focus:border-kikoff focus:outline-none text-sm"
             />
             <button
               onClick={handleSendEmail}
               disabled={sending}
-              className={`px-6 py-2.5 rounded-xl font-bold text-kikoff-dark transition-all shrink-0 ${
-                sending ? "bg-gray-400 cursor-wait" : "bg-kikoff hover:bg-kikoff-hover active:scale-[0.98]"
+              className={`px-6 py-2.5 rounded-xl font-bold text-kikoff-dark transition-all shrink-0 border-2 border-black shadow-[2px_2px_0px_0px_#000] ${
+                sending ? "bg-gray-400 cursor-wait" : "bg-kikoff hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
               }`}
             >
               {sending ? "..." : "📧 Send"}

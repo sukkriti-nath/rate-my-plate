@@ -51,10 +51,14 @@ export default function HistoryPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="text-center mb-6">
+        <h1 className="font-display text-3xl text-gray-900 font-extrabold mb-1">📜 Vote History</h1>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => setWeekOffset((o) => o - 1)}
-          className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+          className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
         >
           &larr; Previous
         </button>
@@ -64,14 +68,14 @@ export default function HistoryPage() {
         <button
           onClick={() => setWeekOffset((o) => Math.min(o + 1, 0))}
           disabled={weekOffset >= 0}
-          className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-30"
+          className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all disabled:opacity-30"
         >
           Next &rarr;
         </button>
       </div>
 
       <div className="space-y-4">
-        {weekDates.map((date) => {
+        {weekDates.map((date, i) => {
           const day = stats[date];
           const dayName = new Date(date + "T12:00:00").toLocaleDateString(
             "en-US",
@@ -81,7 +85,8 @@ export default function HistoryPage() {
           return (
             <div
               key={date}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
+              className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-5 animate-slide-up"
+              style={{ animationDelay: `${i * 0.08}s` }}
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-medium text-gray-900">{dayName}</h3>

@@ -36,7 +36,9 @@ export default function SliderRating({
           style={{
             background: isNA
               ? "#e5e7eb"
-              : `linear-gradient(to right, #b5fc4f ${pct}%, #e5e7eb ${pct}%)`,
+              : `linear-gradient(to right, #B5FC4F ${pct}%, #e5e7eb ${pct}%)`,
+            border: isNA ? undefined : "2px solid black",
+            borderRadius: "9999px",
           }}
         />
         <span className={`w-8 text-center text-lg font-bold tabular-nums transition-colors ${
@@ -48,10 +50,10 @@ export default function SliderRating({
           <button
             type="button"
             onClick={() => onNAChange?.(!isNA)}
-            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all border ${
+            className={`text-xs px-2.5 py-1 rounded-xl font-bold transition-all border-2 ${
               isNA
-                ? "bg-gray-200 text-gray-600 border-gray-300"
-                : "bg-transparent text-gray-400 border-gray-200 hover:border-gray-300"
+                ? "bg-gray-200 text-gray-600 border-black shadow-[2px_2px_0px_0px_#000]"
+                : "bg-transparent text-gray-400 border-black hover:bg-gray-100"
             }`}
           >
             N/A

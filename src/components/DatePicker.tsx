@@ -36,24 +36,24 @@ export default function DatePicker({ currentDate, todayDate, availableDates }: D
       <button
         onClick={() => canGoPrev && navigate(availableDates[currentIdx + 1])}
         disabled={!canGoPrev}
-        className="px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-30 disabled:cursor-not-allowed transition-all"
       >
         ← Prev
       </button>
-      <span className={`px-4 py-1.5 rounded-xl text-sm font-semibold ${isToday ? "bg-kikoff/20 text-kikoff-dark" : "bg-gray-100 text-gray-700"}`}>
+      <span className={`px-4 py-1.5 rounded-xl text-sm font-bold border-2 border-black ${isToday ? "bg-kikoff text-black" : "bg-gray-100 text-gray-700"}`}>
         {isToday ? "Today" : label}
       </span>
       <button
         onClick={() => canGoNext && navigate(availableDates[currentIdx - 1])}
         disabled={!canGoNext}
-        className="px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-30 disabled:cursor-not-allowed transition-all"
       >
         Next →
       </button>
       {!isToday && (
         <button
           onClick={() => navigate(todayDate)}
-          className="px-3 py-1.5 rounded-xl text-xs font-medium bg-kikoff text-kikoff-dark hover:bg-kikoff-hover transition-colors"
+          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-kikoff text-black border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
         >
           Today
         </button>

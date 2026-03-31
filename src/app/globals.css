@@ -7,8 +7,11 @@
   --kikoff-hover: #94cf40;
   --kikoff-dark: #131413;
   --kikoff-lavender: #f0f5e8;
-  --kikoff-pink: #ff6b9d;
-  --kikoff-warm: #fff8e1;
+  --kikoff-forest: #005937;
+  --shadow-sm: 4px 4px 0px 0px #000000;
+  --shadow-lg: 8px 8px 0px 0px #000000;
+  --shadow-xl: 12px 12px 0px 0px #000000;
+  --border: 2px solid #000000;
 }
 
 @theme inline {
@@ -18,8 +21,7 @@
   --color-kikoff-hover: var(--kikoff-hover);
   --color-kikoff-dark: var(--kikoff-dark);
   --color-kikoff-lavender: var(--kikoff-lavender);
-  --color-kikoff-pink: var(--kikoff-pink);
-  --color-kikoff-warm: var(--kikoff-warm);
+  --color-kikoff-forest: var(--kikoff-forest);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: "DM Serif Display", serif;
@@ -35,7 +37,87 @@ body {
   font-family: "DM Serif Display", Georgia, serif;
 }
 
-/* Slider */
+/* ===== Neo-Brutalist Design System ===== */
+
+/* Neo-Brutalist Card */
+.neo-card {
+  border: 2px solid #000;
+  box-shadow: 4px 4px 0px 0px #000;
+  border-radius: 0.75rem;
+}
+.neo-card-lg {
+  border: 2px solid #000;
+  box-shadow: 8px 8px 0px 0px #000;
+  border-radius: 0.75rem;
+}
+
+/* Neo-Brutalist Button */
+.neo-btn {
+  border: 2px solid #000;
+  box-shadow: 4px 4px 0px 0px #000;
+  border-radius: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-weight: 700;
+}
+.neo-btn:hover {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px 0px #000;
+}
+.neo-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px 0px #000;
+}
+.neo-btn-primary {
+  background-color: #b5fc4f;
+  color: #131413;
+}
+.neo-btn-dark {
+  background-color: #131413;
+  color: #fff;
+}
+
+/* Neo-Brutalist Input */
+.neo-input {
+  border: 2px solid #000;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease;
+  outline: none;
+}
+.neo-input:focus {
+  border-color: #b5fc4f;
+}
+
+/* Neo-Brutalist Badge */
+.neo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 2px solid #000;
+  border-radius: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+/* Neo-Brutalist Section */
+.neo-section {
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+}
+
+/* Dot pattern for primary backgrounds */
+.neo-dots {
+  background-image: radial-gradient(circle, #000 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.06;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ===== Slider ===== */
 .slider-rating {
   -webkit-appearance: none;
   appearance: none;
@@ -62,7 +144,7 @@ body {
   background: #131413;
   border: 3px solid #b5fc4f;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 2px 2px 0px 0px #000;
   margin-top: -8px;
   transition: transform 0.15s ease;
 }
@@ -84,8 +166,10 @@ body {
   background: #131413;
   border: 3px solid #b5fc4f;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 2px 2px 0px 0px #000;
 }
+
+/* ===== Animations ===== */
 
 /* Confetti animation */
 @keyframes confetti-fall {

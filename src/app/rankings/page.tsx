@@ -150,7 +150,7 @@ export default function RankingsPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="text-center mb-6">
-        <h1 className="font-display text-3xl text-gray-900 mb-1">
+        <h1 className="font-display text-3xl text-gray-900 mb-1 font-extrabold">
           🏆 Power Rankings
         </h1>
         <p className="text-gray-400">Week of {weekLabel}</p>
@@ -158,14 +158,14 @@ export default function RankingsPage() {
 
       {/* Downloadable Card */}
       <div
-        className="bg-kikoff-dark rounded-3xl p-8 text-white mb-6 overflow-hidden"
+        className="bg-kikoff-dark rounded-xl p-8 text-white mb-6 overflow-hidden border-2 border-black shadow-[8px_8px_0px_0px_#000]"
       >
         {/* Card Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-kikoff/20 px-4 py-1.5 rounded-full text-sm text-kikoff font-medium mb-3">
+          <div className="inline-flex items-center gap-2 bg-kikoff px-4 py-1.5 rounded-xl text-sm text-kikoff-dark font-bold mb-3 border-2 border-black">
             🍽️ RateMyPlate
           </div>
-          <h2 className="font-display text-3xl">Weekly Power Rankings</h2>
+          <h2 className="font-display text-3xl font-extrabold">Weekly Power Rankings</h2>
           <p className="text-gray-500 text-sm mt-1">{weekLabel}</p>
         </div>
 
@@ -178,7 +178,7 @@ export default function RankingsPage() {
             {days.map((day, i) => (
               <div
                 key={day.date}
-                className={`rounded-2xl px-5 py-4 flex items-center justify-between ${
+                className={`rounded-xl px-5 py-4 flex items-center justify-between ${
                   i === 0
                     ? "bg-kikoff/15 border border-kikoff/30"
                     : "bg-gray-800/50"
@@ -264,7 +264,7 @@ export default function RankingsPage() {
         <button
           onClick={handleDownload}
           disabled={downloading}
-          className="px-8 py-3.5 bg-kikoff text-kikoff-dark font-bold rounded-2xl hover:bg-kikoff-hover hover:shadow-lg hover:shadow-kikoff/20 transition-all active:scale-[0.98] text-lg disabled:opacity-60 disabled:cursor-wait"
+          className="px-8 py-3.5 bg-kikoff text-kikoff-dark font-bold rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all text-lg disabled:opacity-60 disabled:cursor-wait"
         >
           {downloading ? "Generating..." : "Share It 🔗"}
         </button>

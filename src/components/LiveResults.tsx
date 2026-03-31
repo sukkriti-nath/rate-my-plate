@@ -122,14 +122,14 @@ export default function LiveResults({
       {/* Dish Leaderboard */}
       {rankedDishes.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-500">Dish Leaderboard</h4>
+          <h4 className="text-sm font-bold text-gray-500">Dish Leaderboard</h4>
           {rankedDishes.map((dish, i) => {
             const rating = stats.dishRatings[dish.key];
             const pct = (rating.avg / 5) * 100;
             return (
               <div
                 key={dish.key}
-                className="bg-kikoff-lavender rounded-xl px-4 py-3 animate-slide-up"
+                className="bg-kikoff-lavender rounded-xl px-4 py-3 animate-slide-up border-2 border-black shadow-[4px_4px_0px_0px_#000]"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -155,9 +155,9 @@ export default function LiveResults({
                     </span>
                   </div>
                 </div>
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden border border-black">
                   <div
-                    className="h-full bg-gradient-to-r from-kikoff to-kikoff-hover rounded-full transition-all duration-700"
+                    className="h-full bg-kikoff rounded-full transition-all duration-700"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -169,7 +169,7 @@ export default function LiveResults({
 
       {/* Distribution */}
       <div className="space-y-1.5">
-        <h4 className="text-sm font-medium text-gray-500">Distribution</h4>
+        <h4 className="text-sm font-bold text-gray-500">Distribution</h4>
         {[5, 4, 3, 2, 1].map((star) => {
           const count = stats.distribution[star] || 0;
           const pct = stats.totalVotes > 0 ? (count / stats.totalVotes) * 100 : 0;
@@ -178,9 +178,9 @@ export default function LiveResults({
             <div key={star} className="flex items-center gap-2 text-sm">
               <span className="w-3 text-gray-500 text-right">{star}</span>
               <span className="w-5 text-center text-xs">{emoji}</span>
-              <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+              <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden border border-black">
                 <div
-                  className="h-full bg-gradient-to-r from-kikoff to-kikoff-hover rounded-full transition-all duration-700"
+                  className="h-full bg-kikoff rounded-full transition-all duration-700"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -193,7 +193,7 @@ export default function LiveResults({
       {/* Recent Votes */}
       {votes.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-500 mb-2">
+          <h4 className="text-sm font-bold text-gray-500 mb-2">
             Latest Ratings
           </h4>
           <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -203,7 +203,7 @@ export default function LiveResults({
                 className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0 animate-slide-up"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                <div className="w-8 h-8 rounded-full bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold shrink-0 border-2 border-black">
                   {vote.user_name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">

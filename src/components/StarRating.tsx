@@ -37,7 +37,7 @@ export default function StarRating({
           <span
             className={
               star <= (hovered || value)
-                ? "text-kikoff drop-shadow-[0_0_4px_rgba(181,252,79,0.5)]"
+                ? "text-kikoff drop-shadow-[1px_1px_0px_#000]"
                 : "text-gray-300"
             }
           >

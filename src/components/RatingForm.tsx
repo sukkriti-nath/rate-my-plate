@@ -109,7 +109,7 @@ export default function RatingForm({
     const voteSource = existingVote.slack_user_id ? "Slack" : "web";
     return (
       <div className="space-y-4">
-        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 text-center">
+        <div className="bg-green-50 border-2 border-black rounded-xl p-5 text-center shadow-[4px_4px_0px_0px_#000]">
           <div className="text-3xl mb-2">✅</div>
           <p className="font-bold text-gray-900 text-lg">You already voted today!</p>
           <p className="text-sm text-gray-500 mt-1">
@@ -123,7 +123,7 @@ export default function RatingForm({
               const ratingKey = `rating_${dish.key}` as string;
               const val = existingVote[ratingKey] as number | null;
               return (
-                <div key={dish.key} className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-xl">
+                <div key={dish.key} className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-xl border-2 border-black">
                   <div>
                     <span className="text-xs text-gray-400 uppercase mr-2">{dish.label}</span>
                     <span className="text-sm text-gray-700">{dish.name}</span>
@@ -137,7 +137,7 @@ export default function RatingForm({
           </div>
         )}
         {(existingVote.comment as string) && (
-          <div className="px-4 py-3 bg-gray-50 rounded-xl">
+          <div className="px-4 py-3 bg-gray-50 rounded-xl border-2 border-black">
             <p className="text-xs text-gray-400 mb-1">Your comment</p>
             <p className="text-sm text-gray-700">&ldquo;{existingVote.comment as string}&rdquo;</p>
           </div>
@@ -151,7 +151,7 @@ export default function RatingForm({
       <Confetti active={showConfetti} />
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Overall Rating */}
-        <div className="bg-kikoff-lavender rounded-2xl p-4">
+        <div className="bg-kikoff-lavender rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
           <div className="flex items-center justify-between mb-1">
             <label className="text-sm font-bold text-gray-800">
               How was today&apos;s meal?
@@ -187,7 +187,7 @@ export default function RatingForm({
             maxLength={280}
             rows={2}
             placeholder="The vibes were immaculate..."
-            className="w-full rounded-2xl border-2 border-gray-200 px-4 py-3 text-sm text-gray-700
+            className="w-full rounded-xl border-2 border-black px-4 py-3 text-sm text-gray-700
               focus:outline-none focus:border-kikoff transition-colors resize-none"
           />
           <div className="text-right text-[10px] text-gray-300 mt-1">
@@ -213,7 +213,7 @@ export default function RatingForm({
               return (
                 <div
                   key={dish.key}
-                  className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm animate-slide-up"
+                  className="bg-white border-2 border-black rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_#000] animate-slide-up"
                   style={{ animationDelay: `${i * 0.04}s` }}
                 >
                   <div className="px-4 py-3">
@@ -255,7 +255,7 @@ export default function RatingForm({
                         maxLength={200}
                         rows={2}
                         placeholder={`What did you think of the ${dish.label.toLowerCase()}?`}
-                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700
+                        className="w-full rounded-xl border-2 border-black px-3 py-2 text-sm text-gray-700
                           focus:outline-none focus:border-kikoff transition-colors resize-none"
                       />
                     </div>
@@ -269,10 +269,10 @@ export default function RatingForm({
         <button
           type="submit"
           disabled={!canSubmit || submitting}
-          className={`w-full py-3.5 px-4 rounded-2xl font-bold text-lg transition-all active:scale-[0.98]
+          className={`w-full py-3.5 px-4 rounded-xl font-bold text-lg transition-all border-2 border-black
             ${submitted
-              ? "bg-green-500 text-white"
-              : "bg-kikoff text-kikoff-dark hover:bg-kikoff-hover hover:shadow-lg hover:shadow-kikoff/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              ? "bg-green-500 text-white shadow-none"
+              : "bg-kikoff text-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
             }`}
         >
           {submitted
