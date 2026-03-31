@@ -1,0 +1,18 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - env | grep -E '^(DATABASE_URL|GOOGLE_SHEET|FRIDAY_SHEET|SLACK_|JWT_SECRET|NEXT_PUBLIC_|CRON_SECRET)' > .env.production
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
