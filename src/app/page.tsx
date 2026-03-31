@@ -8,14 +8,16 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+function getPTNow(): Date {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+}
+
 function getTodayDate(): string {
-  return new Date().toISOString().split("T")[0];
+  return getPTNow().toISOString().split("T")[0];
 }
 
 function getPTHour(): number {
-  const now = new Date();
-  const ptNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-  return ptNow.getHours();
+  return getPTNow().getHours();
 }
 
 interface PageProps {
@@ -190,7 +192,7 @@ export default async function Home({ searchParams }: PageProps) {
 }
 
 function getTimeGreeting(): string {
-  const hour = new Date().getHours();
+  const hour = getPTHour();
   if (hour < 12) return "Good morning! ☀️";
   if (hour < 17) return "Good afternoon! 🌤️";
   return "Good evening! 🌙";
