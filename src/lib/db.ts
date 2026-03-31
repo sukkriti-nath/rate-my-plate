@@ -96,6 +96,22 @@ async function initDb() {
   for (const sql of migrations) {
     await pool.query(sql);
   }
+
+  // Slack rating draft cache table (replaces in-memory Map)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS slack_rating_drafts (
+      slack_user_id TEXT NOT NULL,
+      menu_date TEXT NOT NULL,
+      overall INTEGER CHECK (overall BETWEEN 1 AND 5),
+      dish_starch INTEGER CHECK (dish_starch BETWEEN 1 AND 5),
+      dish_vegan_protein INTEGER CHECK (dish_vegan_protein BETWEEN 1 AND 5),
+      dish_veg INTEGER CHECK (dish_veg BETWEEN 1 AND 5),
+      dish_protein_1 INTEGER CHECK (dish_protein_1 BETWEEN 1 AND 5),
+      dish_protein_2 INTEGER CHECK (dish_protein_2 BETWEEN 1 AND 5),
+      updated_at TEXT DEFAULT (NOW()::text),
+      PRIMARY KEY (slack_user_id, menu_date)
+    );
+  `);
 }
 
 export async function upsertMenuDay(menu: {
@@ -469,4 +485,72 @@ export async function getVotingStreaks(): Promise<StreakInfo[]> {
   }
 
   return results.sort((a, b) => b.currentStreak - a.currentStreak);
+}
+
+// ─── Slack Rating Draft Cache (DB-backed) ───────────────────────────────────
+
+export interface CachedRating {
+  date: string;
+  overall: number | null;
+  dishes: Record<string, number | null>;
+}
+
+const DISH_COLUMNS = ["starch", "vegan_protein", "veg", "protein_1", "protein_2"] as const;
+
+export async function setCachedOverall(userId: string, date: string, overall: number | null): Promise<void> {
+  const db = await getDb();
+  await db.query(
+    `INSERT INTO slack_rating_drafts (slack_user_id, menu_date, overall, updated_at)
+     VALUES ($1, $2, $3, NOW()::text)
+     ON CONFLICT (slack_user_id, menu_date) DO UPDATE SET overall = $3, updated_at = NOW()::text`,
+    [userId, date, overall]
+  );
+}
+
+export async function setCachedDish(userId: string, date: string, dishKey: string, rating: number | null): Promise<void> {
+  const col = `dish_${dishKey}`;
+  const db = await getDb();
+  // First ensure row exists
+  await db.query(
+    `INSERT INTO slack_rating_drafts (slack_user_id, menu_date, updated_at)
+     VALUES ($1, $2, NOW()::text)
+     ON CONFLICT (slack_user_id, menu_date) DO NOTHING`,
+    [userId, date]
+  );
+  // Then update the specific dish column
+  await db.query(
+    `UPDATE slack_rating_drafts SET ${col} = $1, updated_at = NOW()::text
+     WHERE slack_user_id = $2 AND menu_date = $3`,
+    [rating, userId, date]
+  );
+}
+
+export async function getCachedRating(userId: string, date: string): Promise<CachedRating | undefined> {
+  const db = await getDb();
+  const result = await db.query(
+    `SELECT * FROM slack_rating_drafts WHERE slack_user_id = $1 AND menu_date = $2`,
+    [userId, date]
+  );
+  if (result.rows.length === 0) return undefined;
+  const row = result.rows[0] as Record<string, unknown>;
+  const dishes: Record<string, number | null> = {};
+  for (const key of DISH_COLUMNS) {
+    const val = row[`dish_${key}`] as number | null;
+    if (val !== null && val !== undefined) {
+      dishes[key] = val;
+    }
+  }
+  return {
+    date,
+    overall: (row.overall as number | null) ?? null,
+    dishes,
+  };
+}
+
+export async function clearCachedRating(userId: string, date: string): Promise<void> {
+  const db = await getDb();
+  await db.query(
+    `DELETE FROM slack_rating_drafts WHERE slack_user_id = $1 AND menu_date = $2`,
+    [userId, date]
+  );
 }

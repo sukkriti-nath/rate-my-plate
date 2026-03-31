@@ -143,7 +143,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     if (!menu) return NextResponse.json({ ok: true });
 
     // Cache the overall rating
-    setCachedOverall(userId, date, rating);
+    await setCachedOverall(userId, date, rating);
 
     // Post ephemeral message with per-dish dropdowns via response_url
     if (responseUrl) {
@@ -176,7 +176,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
 
     if (selectedValue && date) {
       const rating = selectedValue === "na" ? null : parseInt(selectedValue, 10);
-      setCachedDish(userId, date, dishKey, rating);
+      await setCachedDish(userId, date, dishKey, rating);
     }
 
     // Just acknowledge — Slack UI shows the selected dropdown value
@@ -186,7 +186,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
   // ─── Submit inline ratings ─────────────────────────────────────────────
   if (action.action_id === "submit_inline_ratings") {
     const date = action.value || "";
-    const cached = getCachedRating(userId, date);
+    const cached = await getCachedRating(userId, date);
 
     if (!cached) {
       // No cached data — tell user
@@ -268,7 +268,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
         });
       }
 
-      clearCachedRating(userId, date);
+      await clearCachedRating(userId, date);
     } catch (err) {
       console.error("Failed to save inline ratings:", err);
       if (responseUrl) {
@@ -344,7 +344,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       } catch { /* use fallback */ }
 
       // Get cached ratings and existing vote — merge to avoid overwriting
-      const cached = getCachedRating(userId, date);
+      const cached = await getCachedRating(userId, date);
       const existing = await getUserVoteForDate(userEmail, date);
 
       await upsertVote({
@@ -366,7 +366,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         commentProtein2: (existing?.comment_protein_2 as string | null) ?? null,
       });
 
-      clearCachedRating(userId, date);
+      await clearCachedRating(userId, date);
     }
 
     return NextResponse.json({ response_action: "clear" });

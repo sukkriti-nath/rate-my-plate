@@ -235,48 +235,14 @@ export function buildCommentModal(date: string): object {
   };
 }
 
-// ─── Server-side rating cache for inline Slack flow ─────────────────────────
-// Tracks selections as user interacts with dropdowns before hitting Submit
-
-interface CachedRating {
-  date: string;
-  overall: number | null;
-  dishes: Record<string, number | null>;
-}
-
-const ratingCache = new Map<string, CachedRating>();
-
-export function cacheKey(userId: string, date: string): string {
-  return `${userId}:${date}`;
-}
-
-export function getCachedRating(userId: string, date: string): CachedRating | undefined {
-  return ratingCache.get(cacheKey(userId, date));
-}
-
-export function setCachedOverall(userId: string, date: string, overall: number | null): void {
-  const key = cacheKey(userId, date);
-  const existing = ratingCache.get(key);
-  if (existing) {
-    existing.overall = overall;
-  } else {
-    ratingCache.set(key, { date, overall, dishes: {} });
-  }
-}
-
-export function setCachedDish(userId: string, date: string, dishKey: string, rating: number | null): void {
-  const key = cacheKey(userId, date);
-  const existing = ratingCache.get(key);
-  if (existing) {
-    existing.dishes[dishKey] = rating;
-  } else {
-    ratingCache.set(key, { date, overall: null, dishes: { [dishKey]: rating } });
-  }
-}
-
-export function clearCachedRating(userId: string, date: string): void {
-  ratingCache.delete(cacheKey(userId, date));
-}
+// ─── Slack rating cache — now DB-backed (see lib/db.ts) ─────────────────────
+// Re-exported for convenience so existing imports still work
+export {
+  setCachedOverall,
+  setCachedDish,
+  getCachedRating,
+  clearCachedRating,
+} from "@/lib/db";
 
 // Legacy modal builder (kept for reminder DM flow)
 export async function buildRatingModal(date: string, overallRating?: number | null): Promise<object> {
