@@ -156,107 +156,93 @@ export default function RankingsPage() {
         <p className="text-gray-400">Week of {weekLabel}</p>
       </div>
 
-      {/* Downloadable Card */}
-      <div
-        className="bg-kikoff-dark rounded-xl p-8 text-white mb-6 overflow-hidden border-2 border-black shadow-[8px_8px_0px_0px_#000]"
-      >
-        {/* Card Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-kikoff px-4 py-1.5 rounded-xl text-sm text-kikoff-dark font-bold mb-3 border-2 border-black">
-            🍽️ RateMyPlate
-          </div>
-          <h2 className="font-display text-3xl font-extrabold">Weekly Power Rankings</h2>
-          <p className="text-gray-500 text-sm mt-1">{weekLabel}</p>
+      {/* Meal Rankings */}
+      <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
+        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 pb-3 border-b-2 border-black">
+          Meals Ranked by Overall Score
+        </h2>
+        <div className="space-y-3">
+          {days.map((day, i) => (
+            <div
+              key={day.date}
+              className={`rounded-xl px-5 py-4 flex items-center justify-between border-2 border-black shadow-[4px_4px_0px_0px_#000] animate-slide-up ${
+                i === 0
+                  ? "bg-kikoff"
+                  : "bg-kikoff-lavender"
+              }`}
+              style={{ animationDelay: `${i * 0.08}s` }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">
+                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                </span>
+                <div>
+                  <div className="font-semibold text-gray-900">{day.dayName}</div>
+                  <div className="text-xs text-gray-500">
+                    {day.totalVotes} vote{day.totalVotes !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-kikoff-dark">
+                  {day.averageOverall.toFixed(1)}
+                </div>
+                <div className="text-xs text-gray-500">/ 5</div>
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Meal Rankings */}
-        <div className="mb-8">
-          <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-3">
-            Meals Ranked by Overall Score
-          </h3>
-          <div className="space-y-3">
-            {days.map((day, i) => (
+      {/* Top 3 Dishes */}
+      {topDishes.length > 0 && (
+        <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 pb-3 border-b-2 border-black flex items-center gap-1">
+            🏛️ Hall of Fame
+          </h2>
+          <div className="space-y-2">
+            {topDishes.map((dish, i) => (
               <div
-                key={day.date}
-                className={`rounded-xl px-5 py-4 flex items-center justify-between ${
-                  i === 0
-                    ? "bg-kikoff/15 border border-kikoff/30"
-                    : "bg-gray-800/50"
-                }`}
+                key={`${dish.name}-${i}`}
+                className="bg-kikoff-lavender rounded-xl px-5 py-3 flex items-center justify-between border-2 border-black shadow-[4px_4px_0px_0px_#000] animate-slide-up"
+                style={{ animationDelay: `${i * 0.08}s` }}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">
-                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <span>{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}</span>
                   <div>
-                    <div className="font-semibold">{day.dayName}</div>
-                    <div className="text-xs text-gray-500">
-                      {day.totalVotes} vote{day.totalVotes !== 1 ? "s" : ""}
-                    </div>
+                    <div className="text-sm font-medium text-gray-800">{dish.name}</div>
+                    <div className="text-[10px] text-gray-500">{dish.day} • {dish.label}</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className={`text-2xl font-bold ${i === 0 ? "text-kikoff" : "text-white"}`}>
-                    {day.averageOverall.toFixed(1)}
-                  </div>
-                  <div className="text-xs text-gray-500">/ 5</div>
-                </div>
+                <span className="text-kikoff-dark font-bold">{dish.avg.toFixed(1)}</span>
               </div>
             ))}
           </div>
         </div>
+      )}
 
-        {/* Top 3 Dishes */}
-        {topDishes.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1">
-              🏛️ Hall of Fame
-            </h3>
-            <div className="space-y-2">
-              {topDishes.map((dish, i) => (
-                <div
-                  key={`${dish.name}-${i}`}
-                  className="bg-gray-800/50 rounded-xl px-4 py-3 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <span>{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}</span>
-                    <div>
-                      <div className="text-sm font-medium">{dish.name}</div>
-                      <div className="text-[10px] text-gray-500">{dish.day} • {dish.label}</div>
-                    </div>
-                  </div>
-                  <span className="text-kikoff font-bold">{dish.avg.toFixed(1)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Needs Work */}
-        {bottomDish && (
-          <div>
-            <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1">
-              💀 Hall of Shame
-            </h3>
-            <div className="bg-gray-800/50 rounded-xl px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span>📉</span>
-                <div>
-                  <div className="text-sm font-medium">{bottomDish.name}</div>
-                  <div className="text-[10px] text-gray-500">{bottomDish.day} • {bottomDish.label}</div>
-                </div>
+      {/* Needs Work */}
+      {bottomDish && (
+        <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 pb-3 border-b-2 border-black flex items-center gap-1">
+            💀 Hall of Shame
+          </h2>
+          <div className="bg-red-50 rounded-xl px-5 py-3 flex items-center justify-between border-2 border-black shadow-[2px_2px_0px_0px_#000]">
+            <div className="flex items-center gap-2">
+              <span>📉</span>
+              <div>
+                <div className="text-sm font-medium text-gray-800">{bottomDish.name}</div>
+                <div className="text-[10px] text-gray-500">{bottomDish.day} • {bottomDish.label}</div>
               </div>
-              <span className="text-amber-400 font-bold">{bottomDish.avg.toFixed(1)}</span>
             </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="text-center mt-8 pt-4 border-t border-gray-800">
-          <div className="text-xs text-gray-600">
-            Powered by RateMyPlate • Built with 💚 at Kikoff
+            <span className="text-amber-500 font-bold">{bottomDish.avg.toFixed(1)}</span>
           </div>
         </div>
+      )}
+
+      {/* Footer */}
+      <div className="text-center mb-6 text-xs text-gray-400">
+        Powered by RateMyPlate • Built with 💚 at Kikoff
       </div>
 
       {/* Share Button */}
