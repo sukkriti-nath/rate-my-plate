@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
   try {
     const { startDate, endDate } = getWeekDateRange();
-    const rankings = getWeeklyRankings(startDate, endDate);
+    const rankings = await getWeeklyRankings(startDate, endDate);
 
     // Post the text-based rankings
     const blocks = buildPowerRankingsBlocks(rankings);

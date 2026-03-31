@@ -16,15 +16,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "date is required" }, { status: 400 });
   }
 
-  const menu = getMenuForDate(date);
-  const stats = getVoteStatsForDate(date);
-  const votes = getVotesForDate(date);
+  const menu = await getMenuForDate(date);
+  const stats = await getVoteStatsForDate(date);
+  const votes = await getVotesForDate(date);
 
   // If user is logged in, include their vote
   const session = await getSession();
   let userVote = null;
   if (session) {
-    userVote = getUserVoteForDate(session.email, date);
+    userVote = await getUserVoteForDate(session.email, date);
   }
 
   return NextResponse.json({ menu, stats, votes, userVote });
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
   }
 
   // Verify menu exists for that date
-  const menu = getMenuForDate(date);
+  const menu = await getMenuForDate(date);
   if (!menu) {
     return NextResponse.json(
       { error: "No menu found for this date" },
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     );
   }
 
-  upsertVote({
+  await upsertVote({
     menuDate: date,
     userName: session.displayName,
     userEmail: session.email,
@@ -117,6 +117,6 @@ export async function POST(request: Request) {
     commentProtein2: commentProtein2 || null,
   });
 
-  const stats = getVoteStatsForDate(date);
+  const stats = await getVoteStatsForDate(date);
   return NextResponse.json({ success: true, stats });
 }

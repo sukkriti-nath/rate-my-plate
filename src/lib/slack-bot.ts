@@ -62,8 +62,8 @@ function formatDateHeader(date: string): string {
 // ─── Daily Rating Message ───────────────────────────────────────────────────
 // Kate's design: emoji buttons in-channel for overall rating (1🙁 - 5🤩 + N/A)
 
-export function buildDailyMenuBlocks(date: string): object[] | null {
-  const menu = getMenuForDate(date);
+export async function buildDailyMenuBlocks(date: string): Promise<object[] | null> {
+  const menu = await getMenuForDate(date);
   if (!menu || menu.no_service) return null;
 
   const dayName = menu.day_name as string;
@@ -279,8 +279,8 @@ export function clearCachedRating(userId: string, date: string): void {
 }
 
 // Legacy modal builder (kept for reminder DM flow)
-export function buildRatingModal(date: string, overallRating?: number | null): object {
-  const menu = getMenuForDate(date);
+export async function buildRatingModal(date: string, overallRating?: number | null): Promise<object> {
+  const menu = await getMenuForDate(date);
   if (!menu) throw new Error(`No menu found for date ${date}`);
 
   const blocks: object[] = [

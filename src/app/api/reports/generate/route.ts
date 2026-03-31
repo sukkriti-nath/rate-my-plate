@@ -68,10 +68,10 @@ interface ReportData {
   comments: Array<{ date: string; comment: string; userName: string }>;
 }
 
-function generateReport(startDate: string, endDate: string, label: string): ReportData {
-  const rankings = getWeeklyRankings(startDate, endDate);
-  const comments = getCommentsForDateRange(startDate, endDate);
-  const menus = getMenuForWeek(startDate, endDate);
+async function generateReport(startDate: string, endDate: string, label: string): Promise<ReportData> {
+  const rankings = await getWeeklyRankings(startDate, endDate);
+  const comments = await getCommentsForDateRange(startDate, endDate);
+  const menus = await getMenuForWeek(startDate, endDate);
 
   // Summary stats
   const totalVotes = rankings.reduce((sum, d) => sum + d.totalVotes, 0);
@@ -217,7 +217,7 @@ export async function GET(request: Request) {
   const weeksAgo = parseInt(searchParams.get("weeksAgo") || "0", 10);
 
   const { startDate, endDate, label } = getBiWeeklyRange(weeksAgo);
-  const report = generateReport(startDate, endDate, label);
+  const report = await generateReport(startDate, endDate, label);
 
   return NextResponse.json({ report });
 }
@@ -229,7 +229,7 @@ export async function POST(request: Request) {
   const emails: string[] = body.emails || []; // e.g. ["sukkriti@kikoff.com"]
 
   const { startDate, endDate, label } = getBiWeeklyRange(weeksAgo);
-  const report = generateReport(startDate, endDate, label);
+  const report = await generateReport(startDate, endDate, label);
   const reportText = formatReportForSlack(report);
   const results: { recipient: string; method: string; success: boolean; error?: string }[] = [];
 

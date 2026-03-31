@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const menuItems = await fetchAllMenus();
 
     for (const item of menuItems) {
-      upsertMenuDay(item);
+      await upsertMenuDay(item);
     }
 
     return NextResponse.json({

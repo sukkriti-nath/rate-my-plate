@@ -30,9 +30,9 @@ export default async function Home({ searchParams }: PageProps) {
     }
   }
 
-  const menu = getMenuForDate(selectedDate) as Record<string, unknown> | undefined;
+  const menu = await getMenuForDate(selectedDate) as Record<string, unknown> | undefined;
   const session = await getSession();
-  const availableDates = getRecentServiceDates(today, 7);
+  const availableDates = await getRecentServiceDates(today, 7);
 
   const noService = !menu || (menu.no_service as number);
   const isToday = selectedDate === today;
@@ -79,7 +79,7 @@ export default async function Home({ searchParams }: PageProps) {
 
   let existingVote = null;
   if (session) {
-    existingVote = getUserVoteForDate(session.email, selectedDate) as Record<string, unknown> | null;
+    existingVote = await getUserVoteForDate(session.email, selectedDate) as Record<string, unknown> | null;
   }
 
   const dayName = menu.day_name as string;

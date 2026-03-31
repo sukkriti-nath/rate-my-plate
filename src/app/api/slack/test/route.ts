@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     if (action === "sync") {
       const menuItems = await fetchMenuFromSheet();
       for (const item of menuItems) {
-        upsertMenuDay(item);
+        await upsertMenuDay(item);
       }
       return NextResponse.json({
         success: true,
@@ -56,13 +56,13 @@ export async function GET(request: Request) {
       const today = dateParam || ptDate.toISOString().split("T")[0];
 
       // Ensure menu is synced
-      let menu = getMenuForDate(today);
+      let menu = await getMenuForDate(today);
       if (!menu) {
         const menuItems = await fetchMenuFromSheet();
         for (const item of menuItems) {
-          upsertMenuDay(item);
+          await upsertMenuDay(item);
         }
-        menu = getMenuForDate(today);
+        menu = await getMenuForDate(today);
       }
 
       if (!menu || menu.no_service) {
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
         });
       }
 
-      const blocks = buildDailyMenuBlocks(today);
+      const blocks = await buildDailyMenuBlocks(today);
       if (!blocks) {
         return NextResponse.json({
           success: false,
@@ -107,7 +107,7 @@ export async function GET(request: Request) {
       const startDate = monday.toISOString().split("T")[0];
       const endDate = thursday.toISOString().split("T")[0];
 
-      const rankings = getWeeklyRankings(startDate, endDate);
+      const rankings = await getWeeklyRankings(startDate, endDate);
       const blocks = buildPowerRankingsBlocks(rankings);
       const ts = await postToChannel(blocks, "This week's Power Rankings are here! 🏆");
 
@@ -128,16 +128,16 @@ export async function GET(request: Request) {
     );
     const today = dateParam || ptDate.toISOString().split("T")[0];
 
-    let menu = getMenuForDate(today);
+    let menu = await getMenuForDate(today);
     if (!menu) {
       const menuItems = await fetchMenuFromSheet();
       for (const item of menuItems) {
-        upsertMenuDay(item);
+        await upsertMenuDay(item);
       }
-      menu = getMenuForDate(today);
+      menu = await getMenuForDate(today);
     }
 
-    const blocks = menu && !menu.no_service ? buildDailyMenuBlocks(today) : null;
+    const blocks = menu && !menu.no_service ? await buildDailyMenuBlocks(today) : null;
 
     return NextResponse.json({
       action: "preview",

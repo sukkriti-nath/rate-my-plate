@@ -46,7 +46,7 @@ export async function GET(request: Request) {
   }
 
   // Check if there's a menu today
-  const menu = getMenuForDate(today);
+  const menu = await getMenuForDate(today);
   if (!menu || menu.no_service) {
     return NextResponse.json({ message: "No lunch service today", sent: 0 });
   }
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   // Get current vote stats for social proof
-  const stats = getVoteStatsForDate(today);
+  const stats = await getVoteStatsForDate(today);
   const voteCount = stats.totalVotes;
   const socialProof = voteCount > 0
     ? `\n📊 *${voteCount} Kikster${voteCount !== 1 ? "s" : ""}* already rated — join them!`
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 
   // Get emails of people who already voted
   const alreadyVoted = new Set(
-    getVoterEmailsForDate(today).map((e) => e.toLowerCase())
+    (await getVoterEmailsForDate(today)).map((e) => e.toLowerCase())
   );
 
   // Get all workspace members from the channel

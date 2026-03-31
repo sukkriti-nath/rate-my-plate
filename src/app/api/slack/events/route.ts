@@ -116,7 +116,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     const selectedValue = action.selected_option?.value;
     const rating = selectedValue && selectedValue !== "na" ? parseInt(selectedValue, 10) : null;
 
-    const menu = getMenuForDate(date) as Record<string, unknown> | undefined;
+    const menu = await getMenuForDate(date) as Record<string, unknown> | undefined;
     if (!menu) return NextResponse.json({ ok: true });
 
     // Cache the overall rating
@@ -195,7 +195,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
 
     // Save to DB
     try {
-      upsertVote({
+      await upsertVote({
         menuDate: date,
         userName,
         userEmail,
@@ -274,12 +274,12 @@ async function handleBlockAction(payload: Record<string, unknown>) {
   // ─── Legacy: "Rate in Slack" from reminder DMs ─────────────────────────
   if (action.action_id === "open_rating_modal") {
     const date = action.value || "";
-    const menu = getMenuForDate(date);
+    const menu = await getMenuForDate(date);
     if (!menu) return NextResponse.json({ ok: true });
 
     try {
       const slack = getSlackClient();
-      const modal = buildRatingModal(date);
+      const modal = await buildRatingModal(date);
       await slack.views.open({ trigger_id: triggerId, view: modal as never });
     } catch (err) {
       console.error("Failed to open modal:", err);
@@ -317,7 +317,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       // Get cached ratings (may already be submitted, in which case just update comment)
       const cached = getCachedRating(userId, date);
 
-      upsertVote({
+      await upsertVote({
         menuDate: date,
         userName,
         userEmail,
@@ -371,7 +371,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         });
       }
 
-      upsertVote({
+      await upsertVote({
         menuDate: parsed.date,
         userName,
         userEmail,

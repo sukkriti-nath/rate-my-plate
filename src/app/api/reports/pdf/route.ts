@@ -60,9 +60,9 @@ export async function GET(request: Request) {
   const weeksAgo = parseInt(searchParams.get("weeksAgo") || "0", 10);
 
   const { startDate, endDate, label } = getBiWeeklyRange(weeksAgo);
-  const rankings = getWeeklyRankings(startDate, endDate);
-  const comments = getCommentsForDateRange(startDate, endDate);
-  const menus = getMenuForWeek(startDate, endDate);
+  const rankings = await getWeeklyRankings(startDate, endDate);
+  const comments = await getCommentsForDateRange(startDate, endDate);
+  const menus = await getMenuForWeek(startDate, endDate);
 
   const daysWithVotes = rankings.filter(d => d.totalVotes > 0);
   const totalVotes = rankings.reduce((sum, d) => sum + d.totalVotes, 0);

@@ -477,7 +477,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const rankings = getWeeklyRankings(startDate, endDate);
+    const rankings = await getWeeklyRankings(startDate, endDate);
     const element = buildRankingsJsx(rankings, startDate, endDate);
 
     // Load font from local file system

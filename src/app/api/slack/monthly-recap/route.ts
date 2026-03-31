@@ -19,10 +19,10 @@ function getMonthRange(monthsAgo: number = 0): { startDate: string; endDate: str
   return { startDate, endDate, label };
 }
 
-function buildRecapData(startDate: string, endDate: string, label: string): MonthlyRecapData {
-  const participants = getParticipationForRange(startDate, endDate);
-  const serviceDays = getServiceDaysInRange(startDate, endDate);
-  const streaks = getVotingStreaks();
+async function buildRecapData(startDate: string, endDate: string, label: string): Promise<MonthlyRecapData> {
+  const participants = await getParticipationForRange(startDate, endDate);
+  const serviceDays = await getServiceDaysInRange(startDate, endDate);
+  const streaks = await getVotingStreaks();
 
   const streakMap = new Map(streaks.map(s => [s.userEmail, s]));
   const totalVotesCast = participants.reduce((sum, p) => sum + p.totalVotes, 0);
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   const monthsAgo = parseInt(searchParams.get("monthsAgo") || "0", 10);
 
   const { startDate, endDate, label } = getMonthRange(monthsAgo);
-  const data = buildRecapData(startDate, endDate, label);
+  const data = await buildRecapData(startDate, endDate, label);
 
   return NextResponse.json({ data });
 }
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
   const monthsAgo = (body as { monthsAgo?: number }).monthsAgo ?? 0;
 
   const { startDate, endDate, label } = getMonthRange(monthsAgo);
-  const data = buildRecapData(startDate, endDate, label);
+  const data = await buildRecapData(startDate, endDate, label);
 
   if (data.totalParticipants === 0) {
     return NextResponse.json({ message: "No participation data for this month", data });

@@ -29,15 +29,15 @@ export async function GET(request: Request) {
     }
 
     // Make sure we have today's menu synced
-    let menu = getMenuForDate(today);
+    let menu = await getMenuForDate(today);
     if (!menu) {
       // Try to sync from sheet
       try {
         const menuItems = await fetchAllMenus();
         for (const item of menuItems) {
-          upsertMenuDay(item);
+          await upsertMenuDay(item);
         }
-        menu = getMenuForDate(today);
+        menu = await getMenuForDate(today);
       } catch (err) {
         console.error("Failed to sync menu:", err);
       }
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     }
 
     // Build and post the message
-    const blocks = buildDailyMenuBlocks(today);
+    const blocks = await buildDailyMenuBlocks(today);
     if (!blocks) {
       return NextResponse.json({
         message: "Could not build menu blocks",
