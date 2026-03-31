@@ -487,6 +487,112 @@ export async function getVotingStreaks(): Promise<StreakInfo[]> {
   return results.sort((a, b) => b.currentStreak - a.currentStreak);
 }
 
+// ─── Bi-Weekly Trends Data ───────────────────────────────────────────────────
+
+export interface BiWeeklyTrendsData {
+  startDate: string;
+  endDate: string;
+  avgOverall: number;
+  totalVotes: number;
+  totalDays: number;
+  dayRankings: WeeklyDayRanking[];
+  categoryFavorites: { category: string; dishName: string; avgRating: number; timesServed: number }[];
+  categoryWorst: { category: string; dishName: string; avgRating: number; timesServed: number }[];
+}
+
+export async function getBiWeeklyTrendsData(startDate: string, endDate: string): Promise<BiWeeklyTrendsData> {
+  const db = await getDb();
+
+  // Get all Mon-Thu days with votes in range
+  const daysResult = await db.query(
+    `SELECT * FROM menu_days
+     WHERE date BETWEEN $1 AND $2
+     AND no_service = 0
+     AND day_name != 'Friday'
+     ORDER BY date`,
+    [startDate, endDate]
+  );
+  const days = daysResult.rows as Record<string, unknown>[];
+
+  // Get all votes in range for Mon-Thu only
+  const votesResult = await db.query(
+    `SELECT v.*, m.day_name, m.starch, m.vegan_protein, m.veg, m.protein_1, m.protein_2
+     FROM votes v
+     JOIN menu_days m ON v.menu_date = m.date
+     WHERE v.menu_date BETWEEN $1 AND $2
+     AND m.day_name != 'Friday'
+     AND m.no_service = 0`,
+    [startDate, endDate]
+  );
+  const allVotes = votesResult.rows as Record<string, unknown>[];
+
+  // Build day rankings (reuse getWeeklyRankings pattern)
+  const dayRankings = await getWeeklyRankings(startDate, endDate);
+  // Filter to Mon-Thu only
+  const monThuRankings = dayRankings.filter(
+    (d) => d.dayName !== "Friday" && d.totalVotes > 0
+  );
+
+  // Overall average
+  const overallRatings = allVotes
+    .map((v) => v.rating_overall as number | null)
+    .filter((r): r is number => r !== null);
+  const avgOverall = overallRatings.length > 0
+    ? overallRatings.reduce((a, b) => a + b, 0) / overallRatings.length
+    : 0;
+
+  // Aggregate dishes by category
+  const dishCategories = [
+    { key: "starch", ratingCol: "rating_starch", menuCol: "starch", label: "Starch" },
+    { key: "vegan_protein", ratingCol: "rating_vegan_protein", menuCol: "vegan_protein", label: "Vegan Protein" },
+    { key: "veg", ratingCol: "rating_veg", menuCol: "veg", label: "Veg" },
+    { key: "protein_1", ratingCol: "rating_protein_1", menuCol: "protein_1", label: "Protein 1" },
+    { key: "protein_2", ratingCol: "rating_protein_2", menuCol: "protein_2", label: "Protein 2" },
+  ];
+
+  const categoryFavorites: BiWeeklyTrendsData["categoryFavorites"] = [];
+  const categoryWorst: BiWeeklyTrendsData["categoryWorst"] = [];
+
+  for (const cat of dishCategories) {
+    // Group votes by dish name within this category
+    const dishMap = new Map<string, number[]>();
+    for (const vote of allVotes) {
+      const dishName = vote[cat.menuCol] as string | null;
+      const rating = vote[cat.ratingCol] as number | null;
+      if (dishName && rating !== null) {
+        if (!dishMap.has(dishName)) dishMap.set(dishName, []);
+        dishMap.get(dishName)!.push(rating);
+      }
+    }
+
+    // Rank dishes
+    const ranked = Array.from(dishMap.entries())
+      .map(([name, ratings]) => ({
+        category: cat.label,
+        dishName: name,
+        avgRating: ratings.reduce((a, b) => a + b, 0) / ratings.length,
+        timesServed: ratings.length,
+      }))
+      .sort((a, b) => b.avgRating - a.avgRating);
+
+    if (ranked.length > 0) {
+      categoryFavorites.push(ranked[0]);
+      categoryWorst.push(ranked[ranked.length - 1]);
+    }
+  }
+
+  return {
+    startDate,
+    endDate,
+    avgOverall,
+    totalVotes: allVotes.length,
+    totalDays: days.length,
+    dayRankings: monThuRankings.sort((a, b) => b.avgOverall - a.avgOverall),
+    categoryFavorites,
+    categoryWorst,
+  };
+}
+
 // ─── Slack Rating Draft Cache (DB-backed) ───────────────────────────────────
 
 export interface CachedRating {
