@@ -9,14 +9,27 @@ const pool = new Pool({
   max: 5,
 });
 
-let initialized = false;
+let initPromise: Promise<void> | null = null;
 
 export async function getDb(): Promise<Pool> {
-  if (!initialized) {
-    await initDb();
-    initialized = true;
+  if (!initPromise) {
+    initPromise = initDb().catch((err) => {
+      initPromise = null;
+      throw err;
+    });
   }
+  await initPromise;
   return pool;
+}
+
+// Call this to eagerly start DB init without waiting
+export function warmDb() {
+  if (!initPromise) {
+    initPromise = initDb().catch((err) => {
+      initPromise = null;
+      throw err;
+    });
+  }
 }
 
 async function initDb() {

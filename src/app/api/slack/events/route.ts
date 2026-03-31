@@ -11,7 +11,10 @@ import {
   getCachedRating,
   clearCachedRating,
 } from "@/lib/slack-bot";
-import { upsertVote, getMenuForDate } from "@/lib/db";
+import { upsertVote, getMenuForDate, warmDb } from "@/lib/db";
+
+// Eagerly start DB connection on module load (reduces cold start latency)
+warmDb();
 
 function verifySlackSignature(
   body: string,
@@ -66,7 +69,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing payload" }, { status: 400 });
     }
     const payload = JSON.parse(payloadStr);
-    return handleInteraction(payload);
+    const type = payload.type as string;
+
+    // View submissions (modals) must be handled synchronously — Slack expects response_action
+    if (type === "view_submission") {
+      return handleViewSubmission(payload);
+    }
+
+    // Block actions: respond immediately, process in background via waitUntil-style
+    // Use a fire-and-forget pattern since Lambda won't run after response
+    try {
+      const result = await Promise.race([
+        handleInteraction(payload),
+        new Promise<Response>((resolve) =>
+          setTimeout(() => resolve(NextResponse.json({ ok: true })), 2500)
+        ),
+      ]);
+      return result;
+    } catch (err) {
+      console.error("Interaction handler error:", err);
+      return NextResponse.json({ ok: true });
+    }
   }
 
   return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
