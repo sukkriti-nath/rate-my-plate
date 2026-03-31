@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "RateMyPlate - Kikoff Lunch Ratings",
   description: "Your voice shapes tomorrow's menu. Rate your daily Kikoff lunch.",
-  icons: { icon: "/favicon.ico" },
+  icons: { icon: "/logo.png" },
 };
 
 export default function RootLayout({

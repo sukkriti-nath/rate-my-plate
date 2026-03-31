@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { UserSession } from "@/lib/types";
@@ -31,9 +32,13 @@ export default function Navbar() {
     <nav className="bg-kikoff-dark sticky top-0 z-50 border-b-2 border-black">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="w-8 h-8 bg-black rounded-lg border-2 border-black flex items-center justify-center text-kikoff text-sm">
-            🍴
-          </span>
+          <Image
+            src="/logo.png"
+            alt="RateMyPlate"
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
           <span className="font-display text-base text-white tracking-tight font-extrabold uppercase">
             Rate<span className="text-kikoff">My</span>Plate
           </span>
