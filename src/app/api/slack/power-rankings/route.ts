@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import {
   buildPowerRankingsBlocks,
   postToChannel,
-  uploadFileToChannel,
 } from "@/lib/slack-bot";
 import { getWeeklyRankings } from "@/lib/db";
 
@@ -19,11 +18,11 @@ function getWeekDateRange(): { startDate: string; endDate: string } {
   const monday = new Date(pt);
   monday.setDate(pt.getDate() + diffToMonday);
 
-  const thursday = new Date(monday);
-  thursday.setDate(monday.getDate() + 3);
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
 
   const format = (d: Date) => d.toISOString().split("T")[0];
-  return { startDate: format(monday), endDate: format(thursday) };
+  return { startDate: format(monday), endDate: format(friday) };
 }
 
 export async function GET(request: Request) {
@@ -41,30 +40,6 @@ export async function GET(request: Request) {
     // Post the text-based rankings
     const blocks = buildPowerRankingsBlocks(rankings);
     await postToChannel(blocks, "This week's Power Rankings are here! 🏆");
-
-    // Generate and upload the PNG graphic
-    try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      const imgSecret = process.env.CRON_SECRET
-        ? `&secret=${process.env.CRON_SECRET}`
-        : "";
-      const imgUrl = `${appUrl}/api/rankings/image?start=${startDate}&end=${endDate}${imgSecret}`;
-
-      const imgResponse = await fetch(imgUrl);
-      if (imgResponse.ok) {
-        const buffer = Buffer.from(await imgResponse.arrayBuffer());
-        await uploadFileToChannel(
-          buffer,
-          `power-rankings-${startDate}.png`,
-          `Power Rankings: ${startDate} to ${endDate}`
-        );
-      } else {
-        console.error("Failed to generate rankings image:", imgResponse.status);
-      }
-    } catch (imgErr) {
-      console.error("Failed to generate/upload rankings image:", imgErr);
-      // Don't fail the whole request if image fails
-    }
 
     return NextResponse.json({
       success: true,

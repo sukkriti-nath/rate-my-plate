@@ -33,6 +33,7 @@ function initDb(db: Database.Database) {
       protein_1 TEXT,
       protein_2 TEXT,
       sauce_sides TEXT,
+      restaurant TEXT,
       no_service INTEGER DEFAULT 0,
       synced_at TEXT DEFAULT (datetime('now'))
     );
@@ -103,6 +104,9 @@ function initDb(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE votes ADD COLUMN comment_protein_2 TEXT`);
   } catch { /* column already exists */ }
+  try {
+    db.exec(`ALTER TABLE menu_days ADD COLUMN restaurant TEXT`);
+  } catch { /* column already exists */ }
 }
 
 export function upsertMenuDay(menu: {
@@ -115,12 +119,13 @@ export function upsertMenuDay(menu: {
   protein1: string | null;
   protein2: string | null;
   sauceSides: string | null;
+  restaurant?: string | null;
   noService: boolean;
 }) {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO menu_days (date, day_name, breakfast, starch, vegan_protein, veg, protein_1, protein_2, sauce_sides, no_service)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO menu_days (date, day_name, breakfast, starch, vegan_protein, veg, protein_1, protein_2, sauce_sides, restaurant, no_service)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(date) DO UPDATE SET
       day_name = excluded.day_name,
       breakfast = excluded.breakfast,
@@ -130,6 +135,7 @@ export function upsertMenuDay(menu: {
       protein_1 = excluded.protein_1,
       protein_2 = excluded.protein_2,
       sauce_sides = excluded.sauce_sides,
+      restaurant = excluded.restaurant,
       no_service = excluded.no_service,
       synced_at = datetime('now')
   `);
@@ -143,6 +149,7 @@ export function upsertMenuDay(menu: {
     menu.protein1,
     menu.protein2,
     menu.sauceSides,
+    menu.restaurant ?? null,
     menu.noService ? 1 : 0
   );
 }
@@ -284,6 +291,17 @@ export function getVoterEmailsForDate(date: string): string[] {
   return rows.map((r) => r.user_email);
 }
 
+export function getCommentsForDateRange(startDate: string, endDate: string): { date: string; comment: string; userName: string }[] {
+  const db = getDb();
+  return db
+    .prepare(
+      `SELECT menu_date as date, comment, user_name as userName
+      FROM votes WHERE menu_date BETWEEN ? AND ? AND comment IS NOT NULL AND comment != ''
+      ORDER BY menu_date`
+    )
+    .all(startDate, endDate) as { date: string; comment: string; userName: string }[];
+}
+
 export interface WeeklyDayRanking {
   date: string;
   dayName: string;
@@ -338,4 +356,116 @@ export function getWeeklyRankings(startDate: string, endDate: string): WeeklyDay
   }
 
   return results;
+}
+
+export function getRecentServiceDates(todayDate: string, maxDaysBack: number = 7): string[] {
+  const db = getDb();
+  const cutoff = new Date(todayDate + "T12:00:00");
+  cutoff.setDate(cutoff.getDate() - maxDaysBack);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const rows = db.prepare(
+    "SELECT date FROM menu_days WHERE date BETWEEN ? AND ? AND no_service = 0 ORDER BY date DESC"
+  ).all(cutoffStr, todayDate) as { date: string }[];
+  return rows.map(r => r.date);
+}
+
+// ─── Participation & Streak tracking ──────────────────────────────────────────
+
+export interface ParticipantStats {
+  userName: string;
+  userEmail: string;
+  totalVotes: number;
+  daysVoted: string[];
+}
+
+export function getParticipationForRange(startDate: string, endDate: string): ParticipantStats[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT user_name, user_email, menu_date
+    FROM votes
+    WHERE menu_date BETWEEN ? AND ?
+    ORDER BY user_name, menu_date
+  `).all(startDate, endDate) as { user_name: string; user_email: string; menu_date: string }[];
+
+  const map = new Map<string, ParticipantStats>();
+  for (const row of rows) {
+    const key = row.user_email;
+    if (!map.has(key)) {
+      map.set(key, { userName: row.user_name, userEmail: row.user_email, totalVotes: 0, daysVoted: [] });
+    }
+    const stats = map.get(key)!;
+    stats.totalVotes++;
+    if (!stats.daysVoted.includes(row.menu_date)) {
+      stats.daysVoted.push(row.menu_date);
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.daysVoted.length - a.daysVoted.length);
+}
+
+export function getServiceDaysInRange(startDate: string, endDate: string): string[] {
+  const db = getDb();
+  const rows = db.prepare(
+    "SELECT date FROM menu_days WHERE date BETWEEN ? AND ? AND no_service = 0 ORDER BY date"
+  ).all(startDate, endDate) as { date: string }[];
+  return rows.map(r => r.date);
+}
+
+export interface StreakInfo {
+  userName: string;
+  userEmail: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastVoteDate: string;
+}
+
+export function getVotingStreaks(): StreakInfo[] {
+  const db = getDb();
+
+  // Get all service days (days with menus)
+  const serviceDays = db.prepare(
+    "SELECT date FROM menu_days WHERE no_service = 0 ORDER BY date"
+  ).all() as { date: string }[];
+  const serviceDateSet = new Set(serviceDays.map(d => d.date));
+  const serviceDateList = serviceDays.map(d => d.date);
+
+  // Get all votes grouped by user
+  const votes = db.prepare(
+    "SELECT DISTINCT user_name, user_email, menu_date FROM votes ORDER BY user_email, menu_date"
+  ).all() as { user_name: string; user_email: string; menu_date: string }[];
+
+  const userVotes = new Map<string, { userName: string; dates: Set<string> }>();
+  for (const v of votes) {
+    if (!userVotes.has(v.user_email)) {
+      userVotes.set(v.user_email, { userName: v.user_name, dates: new Set() });
+    }
+    userVotes.get(v.user_email)!.dates.add(v.menu_date);
+  }
+
+  const results: StreakInfo[] = [];
+
+  for (const [email, { userName, dates }] of userVotes) {
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let streak = 0;
+    let lastVoteDate = "";
+
+    // Walk through service days in order
+    for (const day of serviceDateList) {
+      if (dates.has(day)) {
+        streak++;
+        lastVoteDate = day;
+        if (streak > longestStreak) longestStreak = streak;
+      } else {
+        streak = 0;
+      }
+    }
+    currentStreak = streak;
+
+    if (lastVoteDate) {
+      results.push({ userName, userEmail: email, currentStreak, longestStreak, lastVoteDate });
+    }
+  }
+
+  return results.sort((a, b) => b.currentStreak - a.currentStreak);
 }

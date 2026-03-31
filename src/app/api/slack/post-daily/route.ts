@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildDailyMenuBlocks, postToChannel } from "@/lib/slack-bot";
-import { fetchMenuFromSheet } from "@/lib/google-sheets";
+import { fetchAllMenus } from "@/lib/google-sheets";
 import { upsertMenuDay, getMenuForDate } from "@/lib/db";
 
 export async function GET(request: Request) {
@@ -20,10 +20,10 @@ export async function GET(request: Request) {
     const today = ptDate.toISOString().split("T")[0];
     const dayOfWeek = ptDate.getDay(); // 0=Sun, 1=Mon, ..., 4=Thu
 
-    // Only post Mon-Thu (1-4)
-    if (dayOfWeek < 1 || dayOfWeek > 4) {
+    // Only post Mon-Fri (1-5)
+    if (dayOfWeek < 1 || dayOfWeek > 5) {
       return NextResponse.json({
-        message: "Not a posting day (Mon-Thu only)",
+        message: "Not a posting day (Mon-Fri only)",
         dayOfWeek,
       });
     }
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     if (!menu) {
       // Try to sync from sheet
       try {
-        const menuItems = await fetchMenuFromSheet();
+        const menuItems = await fetchAllMenus();
         for (const item of menuItems) {
           upsertMenuDay(item);
         }

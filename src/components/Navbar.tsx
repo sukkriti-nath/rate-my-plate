@@ -19,7 +19,7 @@ export default function Navbar() {
     { href: "/", label: "Vote", emoji: "🗳️" },
     { href: "/dashboard", label: "Dashboard", emoji: "📊" },
     { href: "/rankings", label: "Rankings", emoji: "🏆" },
-    { href: "/history", label: "History", emoji: "📅" },
+    { href: "/reports", label: "Reports", emoji: "📋" },
   ];
 
   async function handleLogout() {

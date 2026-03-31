@@ -2,10 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "name": "KikBites Dev Server",
+      "runtimeExecutable": "/tmp/kikoff-dev/run.sh",
+      "runtimeArgs": [],
+      "port": 3000,
+      "autoPort": false
     }
   ]
 }

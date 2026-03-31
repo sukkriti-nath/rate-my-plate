@@ -40,8 +40,8 @@ export async function GET(request: Request) {
   const today = ptDate.toISOString().split("T")[0];
   const dayOfWeek = ptDate.getDay();
 
-  // Only remind Mon-Thu
-  if (dayOfWeek < 1 || dayOfWeek > 4) {
+  // Only remind Mon-Fri
+  if (dayOfWeek < 1 || dayOfWeek > 5) {
     return NextResponse.json({ message: "Not a reminder day", sent: 0 });
   }
 

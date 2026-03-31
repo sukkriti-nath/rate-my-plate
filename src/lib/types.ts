@@ -8,6 +8,7 @@ export interface MenuItem {
   protein1: string | null;
   protein2: string | null;
   sauceSides: string | null;
+  restaurant: string | null;
   noService: boolean;
 }
 

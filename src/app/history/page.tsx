@@ -44,7 +44,7 @@ export default function HistoryPage() {
     "en-US",
     { month: "short", day: "numeric" }
   );
-  const weekEnd = new Date(weekDates[4] + "T12:00:00").toLocaleDateString(
+  const weekEnd = new Date(weekDates[weekDates.length - 1] + "T12:00:00").toLocaleDateString(
     "en-US",
     { month: "short", day: "numeric" }
   );
@@ -120,7 +120,7 @@ function getWeekDates(offset: number): string[] {
   monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1) + offset * 7);
 
   const dates: string[] = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) { // Mon-Thu only (no Friday catering)
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     dates.push(d.toISOString().split("T")[0]);

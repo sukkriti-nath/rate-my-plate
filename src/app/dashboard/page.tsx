@@ -30,7 +30,7 @@ function getWeekDates(): string[] {
   monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
 
   const dates: string[] = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) { // Mon-Thu only (no Friday catering)
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     dates.push(d.toISOString().split("T")[0]);
@@ -296,7 +296,7 @@ export default function DashboardPage() {
         <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
           This Week at a Glance
         </h2>
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           {weekDates.map((date) => {
             const data = days[date];
             const isToday = date === today;

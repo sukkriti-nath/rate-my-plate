@@ -82,6 +82,9 @@ export function buildDailyMenuBlocks(date: string): object[] | null {
   const sauceSides = menu.sauce_sides as string | null;
   const sauceLine = sauceSides ? `\n🫙  *Sauce/Sides:* ${sauceSides}` : "";
 
+  const restaurant = menu.restaurant as string | null;
+  const restaurantLine = restaurant ? `\n🍴  *Catered by:* ${restaurant}` : "";
+
   const blocks: object[] = [
     {
       type: "header",
@@ -95,44 +98,25 @@ export function buildDailyMenuBlocks(date: string): object[] | null {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `Today's menu is looking *fire* 🔥\n\n${dishLines}${sauceLine}`,
+        text: `<!here> Today's menu is looking *fire* 🔥${restaurantLine}\n\n${dishLines}${sauceLine}`,
       },
     },
     {
       type: "divider",
     },
+    // Overall meal rating dropdown
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*How was today's meal overall?*\nTap a rating — then rate each dish:",
+        text: "*How was today's meal overall?*\nRate it, then rate each dish:",
       },
-    },
-    // Emoji rating buttons row (Kate's design)
-    {
-      type: "actions",
-      elements: [
-        ...[1, 2, 3, 4, 5].map((n) => ({
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: `${n} ${RATING_EMOJIS[n]}`,
-            emoji: true,
-          },
-          action_id: `rate_overall_${n}`,
-          value: JSON.stringify({ date, rating: n }),
-        })),
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: "N/A",
-            emoji: true,
-          },
-          action_id: "rate_overall_na",
-          value: JSON.stringify({ date, rating: null }),
-        },
-      ],
+      accessory: {
+        type: "static_select",
+        action_id: `rate_overall__${date}`,
+        placeholder: { type: "plain_text", text: "Rate overall…" },
+        options: DROPDOWN_OPTIONS,
+      },
     },
     {
       type: "context",
@@ -148,47 +132,168 @@ export function buildDailyMenuBlocks(date: string): object[] | null {
   return blocks;
 }
 
-// ─── Rating Modal ───────────────────────────────────────────────────────────
-// Kate's design: radio buttons per dish, shows overall rating confirmation,
-// "Submit Ratings" / "Skip", general comments at bottom
+// ─── Inline Dish Rating (ephemeral message with dropdowns) ──────────────────
+// Compact dropdowns for each dish, shown inline in Slack (no popup modal)
 
-export function buildRatingModal(date: string, overallRating?: number | null): object {
-  const menu = getMenuForDate(date);
-  if (!menu) throw new Error(`No menu found for date ${date}`);
+const DROPDOWN_OPTIONS = [
+  { text: { type: "plain_text" as const, text: "5 🤩 Outstanding", emoji: true }, value: "5" },
+  { text: { type: "plain_text" as const, text: "4 😋 Really good", emoji: true }, value: "4" },
+  { text: { type: "plain_text" as const, text: "3 😐 Decent", emoji: true }, value: "3" },
+  { text: { type: "plain_text" as const, text: "2 😕 Below average", emoji: true }, value: "2" },
+  { text: { type: "plain_text" as const, text: "1 🙁 Did not enjoy", emoji: true }, value: "1" },
+  { text: { type: "plain_text" as const, text: "N/A — Didn't try", emoji: true }, value: "na" },
+];
 
-  const blocks: object[] = [];
+export function buildInlineRatingBlocks(
+  date: string,
+  overallRating: number | null,
+  menu: Record<string, unknown>,
+): object[] {
+  const emoji = overallRating ? RATING_EMOJIS[overallRating] : "";
+  const overallText = overallRating
+    ? `You rated today's meal *${overallRating} ${emoji}* — now rate each dish:`
+    : "Rate each dish below:";
 
-  // Header with date
-  blocks.push({
-    type: "header",
-    text: {
-      type: "plain_text",
-      text: `${formatDateHeader(date)} - Dish Ratings`,
+  const blocks: object[] = [
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: `✅ ${overallText}` },
     },
-  });
+    { type: "divider" },
+  ];
 
-  // Overall rating confirmation (if provided from button click)
-  if (overallRating && overallRating >= 1 && overallRating <= 5) {
+  for (const cat of DISH_CATEGORIES) {
+    const dishName = menu[cat.field] as string | null;
+    if (!dishName) continue;
+
     blocks.push({
       type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `You rated today's meal a *${overallRating} ${RATING_EMOJIS[overallRating]}* — nice! Now tell us how you felt about each dish.`,
-      },
-    });
-  } else {
-    blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: "Tell us how you felt about each dish!",
+      text: { type: "mrkdwn", text: `${cat.emoji} *${dishName}*\n_${cat.label}_` },
+      accessory: {
+        type: "static_select",
+        action_id: `dish_rate_${cat.key}__${date}`,
+        placeholder: { type: "plain_text", text: "Rate…" },
+        options: DROPDOWN_OPTIONS,
       },
     });
   }
 
   blocks.push({ type: "divider" });
 
-  // Radio button options (matching Kate's mockup exactly)
+  blocks.push({
+    type: "actions",
+    elements: [
+      {
+        type: "button",
+        text: { type: "plain_text", text: "✅ Submit Ratings", emoji: true },
+        style: "primary",
+        action_id: "submit_inline_ratings",
+        value: date,
+      },
+      {
+        type: "button",
+        text: { type: "plain_text", text: "💬 Add a Comment", emoji: true },
+        action_id: "add_inline_comment",
+        value: date,
+      },
+    ],
+  });
+
+  blocks.push({
+    type: "context",
+    elements: [
+      { type: "mrkdwn", text: "Select a rating for each dish, then hit Submit" },
+    ],
+  });
+
+  return blocks;
+}
+
+// Small modal just for adding a comment (no dish ratings)
+export function buildCommentModal(date: string): object {
+  return {
+    type: "modal",
+    callback_id: "inline_comment_submission",
+    private_metadata: JSON.stringify({ date }),
+    title: { type: "plain_text", text: "Add a Comment", emoji: true },
+    submit: { type: "plain_text", text: "Save Comment" },
+    close: { type: "plain_text", text: "Cancel" },
+    blocks: [
+      {
+        type: "input",
+        block_id: "comment_general",
+        optional: false,
+        element: {
+          type: "plain_text_input",
+          action_id: "input_comment_general",
+          multiline: true,
+          placeholder: { type: "plain_text", text: "Any thoughts about today's lunch?" },
+        },
+        label: { type: "plain_text", text: "Your feedback" },
+      },
+    ],
+  };
+}
+
+// ─── Server-side rating cache for inline Slack flow ─────────────────────────
+// Tracks selections as user interacts with dropdowns before hitting Submit
+
+interface CachedRating {
+  date: string;
+  overall: number | null;
+  dishes: Record<string, number | null>;
+}
+
+const ratingCache = new Map<string, CachedRating>();
+
+export function cacheKey(userId: string, date: string): string {
+  return `${userId}:${date}`;
+}
+
+export function getCachedRating(userId: string, date: string): CachedRating | undefined {
+  return ratingCache.get(cacheKey(userId, date));
+}
+
+export function setCachedOverall(userId: string, date: string, overall: number | null): void {
+  const key = cacheKey(userId, date);
+  const existing = ratingCache.get(key);
+  if (existing) {
+    existing.overall = overall;
+  } else {
+    ratingCache.set(key, { date, overall, dishes: {} });
+  }
+}
+
+export function setCachedDish(userId: string, date: string, dishKey: string, rating: number | null): void {
+  const key = cacheKey(userId, date);
+  const existing = ratingCache.get(key);
+  if (existing) {
+    existing.dishes[dishKey] = rating;
+  } else {
+    ratingCache.set(key, { date, overall: null, dishes: { [dishKey]: rating } });
+  }
+}
+
+export function clearCachedRating(userId: string, date: string): void {
+  ratingCache.delete(cacheKey(userId, date));
+}
+
+// Legacy modal builder (kept for reminder DM flow)
+export function buildRatingModal(date: string, overallRating?: number | null): object {
+  const menu = getMenuForDate(date);
+  if (!menu) throw new Error(`No menu found for date ${date}`);
+
+  const blocks: object[] = [
+    { type: "header", text: { type: "plain_text", text: `${formatDateHeader(date)} - Dish Ratings` } },
+  ];
+
+  if (overallRating && overallRating >= 1 && overallRating <= 5) {
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: `You rated today's meal a *${overallRating} ${RATING_EMOJIS[overallRating]}* — nice! Now tell us how you felt about each dish.` } });
+  } else {
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: "Tell us how you felt about each dish!" } });
+  }
+  blocks.push({ type: "divider" });
+
   const ratingOptions = [
     { text: { type: "plain_text" as const, text: "5 🤩  Outstanding", emoji: true }, value: "5" },
     { text: { type: "plain_text" as const, text: "4 😋  Really good", emoji: true }, value: "4" },
@@ -198,86 +303,29 @@ export function buildRatingModal(date: string, overallRating?: number | null): o
     { text: { type: "plain_text" as const, text: "N/A - Didn't try it", emoji: true }, value: "na" },
   ];
 
-  // Per-dish ratings with radio buttons
   for (const cat of DISH_CATEGORIES) {
     const dishName = menu[cat.field] as string | null;
     if (!dishName) continue;
-
-    // Radio buttons for this dish (Kate's format: "Dish Name (Category)")
     blocks.push({
-      type: "input",
-      block_id: `rating_${cat.key}`,
-      optional: true,
-      label: {
-        type: "plain_text",
-        text: `${dishName} (${cat.label})`,
-      },
-      element: {
-        type: "radio_buttons",
-        action_id: `radio_rating_${cat.key}`,
-        options: ratingOptions,
-      },
+      type: "input", block_id: `rating_${cat.key}`, optional: true,
+      label: { type: "plain_text", text: `${dishName} (${cat.label})` },
+      element: { type: "radio_buttons", action_id: `radio_rating_${cat.key}`, options: ratingOptions },
     });
-
-    // Comment field for this dish
-    blocks.push({
-      type: "input",
-      block_id: `comment_${cat.key}`,
-      optional: true,
-      element: {
-        type: "plain_text_input",
-        action_id: `input_comment_${cat.key}`,
-        placeholder: {
-          type: "plain_text",
-          text: "Any thoughts on this dish?",
-        },
-      },
-      label: {
-        type: "plain_text",
-        text: `${dishName} comments (optional)`,
-      },
-    });
-
     blocks.push({ type: "divider" });
   }
 
-  // General comments at the bottom (Kate's design)
   blocks.push({
-    type: "input",
-    block_id: "comment_general",
-    optional: true,
-    element: {
-      type: "plain_text_input",
-      action_id: "input_comment_general",
-      multiline: true,
-      placeholder: {
-        type: "plain_text",
-        text: "Any other thoughts about today's lunch?",
-      },
-    },
-    label: {
-      type: "plain_text",
-      text: "General Comments (optional)",
-    },
+    type: "input", block_id: "comment_general", optional: true,
+    element: { type: "plain_text_input", action_id: "input_comment_general", multiline: true, placeholder: { type: "plain_text", text: "Any other thoughts about today's lunch?" } },
+    label: { type: "plain_text", text: "General Comments (optional)" },
   });
 
   return {
-    type: "modal",
-    callback_id: "rating_submission",
+    type: "modal", callback_id: "rating_submission",
     private_metadata: JSON.stringify({ date, overallRating: overallRating ?? null }),
-    title: {
-      type: "plain_text",
-      text: "Rate My Plate",
-      emoji: true,
-    },
-    submit: {
-      type: "plain_text",
-      text: "Submit Ratings",
-    },
-    close: {
-      type: "plain_text",
-      text: "Skip",
-    },
+    title: { type: "plain_text", text: "Rate My Plate", emoji: true },
+    submit: { type: "plain_text", text: "Submit Ratings" },
+    close: { type: "plain_text", text: "Skip" },
     blocks,
   };
 }
@@ -486,6 +534,96 @@ export async function postToChannel(blocks: object[], text: string): Promise<str
   });
 
   return result.ts;
+}
+
+// ─── Monthly Participation Recap ────────────────────────────────────────────
+
+export interface MonthlyRecapData {
+  monthLabel: string;
+  totalParticipants: number;
+  totalVotesCast: number;
+  serviceDaysCount: number;
+  leaderboard: { rank: number; name: string; daysVoted: number; totalDays: number; streak: number }[];
+  perfectAttendance: string[];
+  funStats: { label: string; value: string }[];
+}
+
+export function buildMonthlyRecapBlocks(data: MonthlyRecapData): object[] {
+  const blocks: object[] = [];
+
+  blocks.push({
+    type: "header",
+    text: { type: "plain_text", text: `🏆 ${data.monthLabel} Participation Recap`, emoji: true },
+  });
+
+  blocks.push({
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: `Here's who showed up and rated their meals this month! Out of *${data.serviceDaysCount}* lunch days, *${data.totalParticipants}* people cast a total of *${data.totalVotesCast}* votes.`,
+    },
+  });
+
+  blocks.push({ type: "divider" });
+
+  // Perfect attendance shoutout
+  if (data.perfectAttendance.length > 0) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `🌟 *Perfect Attendance* — voted every single day!\n${data.perfectAttendance.map(n => `> 💪 ${n}`).join("\n")}`,
+      },
+    });
+    blocks.push({ type: "divider" });
+  }
+
+  // Leaderboard table
+  const MEDALS = ["🥇", "🥈", "🥉"];
+  let leaderboardText = "🏅 *Top Participants*\n\n```\n";
+  leaderboardText += "| Rank | Name            | Days  |\n";
+  leaderboardText += "| ---- | --------------- | ----- |\n";
+  for (const p of data.leaderboard.slice(0, 15)) {
+    const medal = p.rank <= 3 ? MEDALS[p.rank - 1] + " " : "  ";
+    const name = p.name.padEnd(15).slice(0, 15);
+    const days = `${p.daysVoted}/${p.totalDays}`;
+    leaderboardText += `| ${medal}${String(p.rank).padStart(2)} | ${name} | ${days.padStart(5)} |\n`;
+  }
+  leaderboardText += "```";
+
+  blocks.push({
+    type: "section",
+    text: { type: "mrkdwn", text: leaderboardText },
+  });
+
+  // Streak callout
+  const topStreaker = data.leaderboard.find(p => p.streak > 0);
+  if (topStreaker && topStreaker.streak >= 3) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `🔥 *Longest active streak:* ${topStreaker.name} with *${topStreaker.streak} days* in a row!`,
+      },
+    });
+  }
+
+  // Fun stats
+  if (data.funStats.length > 0) {
+    const statsText = data.funStats.map(s => `• ${s.label}: *${s.value}*`).join("\n");
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `📊 *Fun Stats*\n${statsText}` },
+    });
+  }
+
+  blocks.push({ type: "divider" });
+  blocks.push({
+    type: "context",
+    elements: [{ type: "mrkdwn", text: "Powered by RateMyPlate 🍽️ | Keep voting to climb the leaderboard!" }],
+  });
+
+  return blocks;
 }
 
 export async function uploadFileToChannel(buffer: Buffer, filename: string, title: string): Promise<void> {

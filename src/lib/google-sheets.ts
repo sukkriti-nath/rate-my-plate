@@ -6,8 +6,12 @@ const SHEET_ID =
   "1urJ2v2NBzTv7DxntfIsdA2yCPJ29szVXhhGeikUvT-c";
 const SHEET_GID = process.env.GOOGLE_SHEET_GID || "1889885856";
 
+const FRIDAY_SHEET_ID =
+  process.env.FRIDAY_SHEET_ID ||
+  "1dtB8h8DuOpDjZUidjs3m0UyJB6yIVe6OzuHB_3pPMTg";
+const FRIDAY_SHEET_GID = process.env.FRIDAY_SHEET_GID || "1889885856";
+
 function parseMenuDate(raw: string): string | null {
-  // Handles "03/23/26" or "3/24/26" -> "2026-03-24"
   const trimmed = raw?.trim();
   if (!trimmed) return null;
 
@@ -22,31 +26,34 @@ function parseMenuDate(raw: string): string | null {
   return `${year}-${month}-${day}`;
 }
 
-export async function fetchMenuFromSheet(): Promise<MenuItem[]> {
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
+/** Normalize a dish value: treat "N/A", empty, or whitespace-only as null */
+function normalizeDish(val: string | null | undefined): string | null {
+  if (!val) return null;
+  const trimmed = val.trim();
+  if (!trimmed || trimmed.toLowerCase() === "n/a") return null;
+  return trimmed;
+}
 
+async function fetchCsv(sheetId: string, gid: string): Promise<string[][]> {
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
   const response = await fetch(csvUrl, { redirect: "follow" });
   if (!response.ok) {
     throw new Error(`Failed to fetch sheet: ${response.status}`);
   }
-
   const csvText = await response.text();
   const parsed = Papa.parse<string[]>(csvText, {
     header: false,
     skipEmptyLines: false,
   });
+  return parsed.data;
+}
 
-  const rows = parsed.data;
-
-  if (rows.length < 7) {
-    throw new Error(`Unexpected sheet format: too few rows (${rows.length}). Content starts with: ${csvText.slice(0, 200)}`);
-  }
-
-  // Find the row that contains day names (Monday, Tuesday, etc.)
+function parseMenuRows(rows: string[], colCount: number, colOffset: number): MenuItem[] {
+  // Find the row that contains day names
   let headerRowIdx = -1;
   for (let i = 0; i < rows.length; i++) {
-    const rowText = rows[i].join(" ").toLowerCase();
-    if (rowText.includes("monday") && rowText.includes("tuesday")) {
+    const rowText = (rows[i] as unknown as string[]).join(" ").toLowerCase();
+    if (rowText.includes("monday") || rowText.includes("tuesday") || rowText.includes("friday")) {
       headerRowIdx = i;
       break;
     }
@@ -56,29 +63,36 @@ export async function fetchMenuFromSheet(): Promise<MenuItem[]> {
     throw new Error("Could not find header row with day names");
   }
 
-  // Header row: (blank, Monday, Tuesday, Wednesday, Thursday, Friday)
-  const dayNames = rows[headerRowIdx].slice(1, 6).map((d) => d.trim());
+  const rowData = rows as unknown as string[][];
+  const dayNames = rowData[headerRowIdx].slice(colOffset, colOffset + colCount).map((d) => d.trim());
+  const breakfastItems = rowData[headerRowIdx + 1]?.slice(colOffset, colOffset + colCount).map((b) => b?.trim() || "") ?? [];
+  const dateRow = rowData[headerRowIdx + 2];
+  const dates = dateRow?.slice(colOffset, colOffset + colCount).map((d) => parseMenuDate(d)) ?? [];
 
-  // Next row: Breakfast bar
-  const breakfastItems = rows[headerRowIdx + 1]?.slice(1, 6).map((b) => b?.trim() || "") ?? [];
+  // Check if there's a "Restaurant" row (Friday sheets have this)
+  let restaurantRow: (string | null)[] = [];
+  let dataStart = headerRowIdx + 4; // default: skip header, breakfast, dates, "Lunch Buffet"
 
-  // Next row: Dates
-  const dateRow = rows[headerRowIdx + 2];
-  const dates = dateRow?.slice(1, 6).map((d) => parseMenuDate(d)) ?? [];
+  const nextRowLabel = rowData[headerRowIdx + 3]?.[0]?.trim().toLowerCase() || "";
+  if (nextRowLabel.includes("lunch")) {
+    // Check if the row AFTER "Lunch Buffet" is "Restaurant"
+    const possibleRestaurant = rowData[headerRowIdx + 4]?.[0]?.trim().toLowerCase() || "";
+    if (possibleRestaurant === "restaurant") {
+      restaurantRow = rowData[headerRowIdx + 4]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
+      dataStart = headerRowIdx + 5; // skip restaurant row too
+    }
+  }
 
-  // Next row: "Lunch Buffet" label (skip)
-  // Then: Starch, Vegan Protein, Veg, Protein 1, Protein 2, Sauce/Sides
-  const dataStart = headerRowIdx + 4; // skip header, breakfast, dates, "Lunch Buffet"
-  const starch = rows[dataStart]?.slice(1, 6).map((s) => s?.trim() || null) ?? [];
-  const veganProtein = rows[dataStart + 1]?.slice(1, 6).map((s) => s?.trim() || null) ?? [];
-  const veg = rows[dataStart + 2]?.slice(1, 6).map((s) => s?.trim() || null) ?? [];
-  const protein1 = rows[dataStart + 3]?.slice(1, 6).map((s) => s?.trim() || null) ?? [];
-  const protein2 = rows[dataStart + 4]?.slice(1, 6).map((s) => s?.trim() || null) ?? [];
-  const sauceSides = rows[dataStart + 5]?.slice(1, 6).map((s) => s?.trim() || null) ?? [];
+  const starch = rowData[dataStart]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
+  const veganProtein = rowData[dataStart + 1]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
+  const veg = rowData[dataStart + 2]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
+  const protein1 = rowData[dataStart + 3]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
+  const protein2 = rowData[dataStart + 4]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
+  const sauceSides = rowData[dataStart + 5]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
 
   const menuItems: MenuItem[] = [];
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < colCount; i++) {
     const date = dates[i];
     if (!date) continue;
 
@@ -86,6 +100,10 @@ export async function fetchMenuFromSheet(): Promise<MenuItem[]> {
       veg[i]?.toLowerCase().includes("no lunch service") ||
       starch[i]?.toLowerCase().includes("no lunch service") ||
       false;
+
+    // Skip if all dishes are null (empty column)
+    const hasDishes = starch[i] || veganProtein[i] || veg[i] || protein1[i] || protein2[i];
+    if (!hasDishes && !isNoService) continue;
 
     menuItems.push({
       date,
@@ -97,11 +115,59 @@ export async function fetchMenuFromSheet(): Promise<MenuItem[]> {
       protein1: isNoService ? null : (protein1[i] || null),
       protein2: isNoService ? null : (protein2[i] || null),
       sauceSides: isNoService ? null : (sauceSides[i] || null),
+      restaurant: restaurantRow[i] || null,
       noService: isNoService,
     });
   }
 
   return menuItems;
+}
+
+export async function fetchMenuFromSheet(): Promise<MenuItem[]> {
+  const rows = await fetchCsv(SHEET_ID, SHEET_GID);
+  if (rows.length < 7) {
+    throw new Error(`Unexpected sheet format: too few rows (${rows.length})`);
+  }
+  return parseMenuRows(rows as unknown as string[], 5, 1);
+}
+
+export async function fetchFridayMenuFromSheet(): Promise<MenuItem[]> {
+  const rows = await fetchCsv(FRIDAY_SHEET_ID, FRIDAY_SHEET_GID);
+  if (rows.length < 7) {
+    throw new Error(`Unexpected Friday sheet format: too few rows (${rows.length})`);
+  }
+  // Friday sheet has multiple Friday columns starting at col 1
+  // Find how many valid date columns there are
+  let headerRowIdx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const rowText = rows[i].join(" ").toLowerCase();
+    if (rowText.includes("friday")) {
+      headerRowIdx = i;
+      break;
+    }
+  }
+  if (headerRowIdx === -1) throw new Error("Could not find Friday header row");
+
+  const dateRow = rows[headerRowIdx + 2];
+  let colCount = 0;
+  for (let c = 1; c < (dateRow?.length || 0); c++) {
+    if (parseMenuDate(dateRow[c])) colCount++;
+    else break;
+  }
+
+  return parseMenuRows(rows as unknown as string[], Math.max(colCount, 1), 1);
+}
+
+/** Fetch both Mon-Thu and Friday menus */
+export async function fetchAllMenus(): Promise<MenuItem[]> {
+  const [weekday, friday] = await Promise.all([
+    fetchMenuFromSheet(),
+    fetchFridayMenuFromSheet().catch((err) => {
+      console.error("Failed to fetch Friday menu:", err);
+      return [] as MenuItem[];
+    }),
+  ]);
+  return [...weekday, ...friday];
 }
 
 export function getMenuItemsList(menu: Record<string, unknown>): string[] {

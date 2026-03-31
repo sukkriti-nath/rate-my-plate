@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchMenuFromSheet } from "@/lib/google-sheets";
+import { fetchAllMenus } from "@/lib/google-sheets";
 import { upsertMenuDay } from "@/lib/db";
 
 export async function GET(request: Request) {
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const menuItems = await fetchMenuFromSheet();
+    const menuItems = await fetchAllMenus();
 
     for (const item of menuItems) {
       upsertMenuDay(item);

@@ -102,6 +102,49 @@ export default function RatingForm({
   const availableDishes = dishes.filter((d) => d.name);
   const reaction = overallNA ? "🤷 Didn't eat" : (OVERALL_REACTIONS[ratingOverall] || "");
   const canSubmit = overallNA || ratingOverall > 0;
+  const alreadyVoted = !!existingVote && !submitted;
+
+  if (alreadyVoted) {
+    const voteOverall = existingVote.rating_overall as number | null;
+    const voteSource = existingVote.slack_user_id ? "Slack" : "web";
+    return (
+      <div className="space-y-4">
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 text-center">
+          <div className="text-3xl mb-2">✅</div>
+          <p className="font-bold text-gray-900 text-lg">You already voted today!</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Submitted via {voteSource} {voteOverall ? `— you rated it ${voteOverall}/5 ${OVERALL_REACTIONS[voteOverall]?.split(" ").slice(1).join(" ") || ""}` : ""}
+          </p>
+        </div>
+        {availableDishes.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your dish ratings</p>
+            {availableDishes.map((dish) => {
+              const ratingKey = `rating_${dish.key}` as string;
+              const val = existingVote[ratingKey] as number | null;
+              return (
+                <div key={dish.key} className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-xl">
+                  <div>
+                    <span className="text-xs text-gray-400 uppercase mr-2">{dish.label}</span>
+                    <span className="text-sm text-gray-700">{dish.name}</span>
+                  </div>
+                  <span className="font-bold text-sm text-gray-700">
+                    {val ? `${val}/5` : "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {(existingVote.comment as string) && (
+          <div className="px-4 py-3 bg-gray-50 rounded-xl">
+            <p className="text-xs text-gray-400 mb-1">Your comment</p>
+            <p className="text-sm text-gray-700">&ldquo;{existingVote.comment as string}&rdquo;</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
