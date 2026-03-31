@@ -11,7 +11,7 @@ import {
   getCachedRating,
   clearCachedRating,
 } from "@/lib/slack-bot";
-import { upsertVote, getMenuForDate, warmDb } from "@/lib/db";
+import { upsertVote, getMenuForDate, getUserVoteForDate, warmDb } from "@/lib/db";
 
 // Eagerly start DB connection on module load (reduces cold start latency)
 warmDb();
@@ -216,30 +216,33 @@ async function handleBlockAction(payload: Record<string, unknown>) {
       console.error("Failed to fetch user email:", err);
     }
 
-    // Save to DB
+    // Save to DB — merge with any existing vote (don't overwrite with nulls)
     try {
+      const existing = await getUserVoteForDate(userEmail, date);
+
       await upsertVote({
         menuDate: date,
         userName,
         userEmail,
         slackUserId: userId,
-        ratingOverall: cached.overall,
-        ratingStarch: cached.dishes.starch ?? null,
-        ratingVeganProtein: cached.dishes.vegan_protein ?? null,
-        ratingVeg: cached.dishes.veg ?? null,
-        ratingProtein1: cached.dishes.protein_1 ?? null,
-        ratingProtein2: cached.dishes.protein_2 ?? null,
-        comment: null,
-        commentStarch: null,
-        commentVeganProtein: null,
-        commentVeg: null,
-        commentProtein1: null,
-        commentProtein2: null,
+        ratingOverall: cached.overall ?? (existing?.rating_overall as number | null) ?? null,
+        ratingStarch: cached.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
+        ratingVeganProtein: cached.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
+        ratingVeg: cached.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
+        ratingProtein1: cached.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
+        ratingProtein2: cached.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+        comment: (existing?.comment as string | null) ?? null,
+        commentStarch: (existing?.comment_starch as string | null) ?? null,
+        commentVeganProtein: (existing?.comment_vegan_protein as string | null) ?? null,
+        commentVeg: (existing?.comment_veg as string | null) ?? null,
+        commentProtein1: (existing?.comment_protein_1 as string | null) ?? null,
+        commentProtein2: (existing?.comment_protein_2 as string | null) ?? null,
       });
 
-      // Build confirmation summary
+      // Build confirmation summary using merged data
       const EMOJIS: Record<number, string> = { 1: "🙁", 2: "😕", 3: "😐", 4: "😋", 5: "🤩" };
-      const overallText = cached.overall ? `${cached.overall} ${EMOJIS[cached.overall]}` : "N/A";
+      const finalOverall = cached.overall ?? (existing?.rating_overall as number | null) ?? null;
+      const overallText = finalOverall ? `${finalOverall} ${EMOJIS[finalOverall]}` : "N/A";
       const dishCount = Object.values(cached.dishes).filter((v) => v !== null && v !== undefined).length;
 
       if (responseUrl) {
@@ -337,26 +340,27 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         if (userInfo.user?.real_name) userName = userInfo.user.real_name;
       } catch { /* use fallback */ }
 
-      // Get cached ratings (may already be submitted, in which case just update comment)
+      // Get cached ratings and existing vote — merge to avoid overwriting
       const cached = getCachedRating(userId, date);
+      const existing = await getUserVoteForDate(userEmail, date);
 
       await upsertVote({
         menuDate: date,
         userName,
         userEmail,
         slackUserId: userId,
-        ratingOverall: cached?.overall ?? null,
-        ratingStarch: cached?.dishes.starch ?? null,
-        ratingVeganProtein: cached?.dishes.vegan_protein ?? null,
-        ratingVeg: cached?.dishes.veg ?? null,
-        ratingProtein1: cached?.dishes.protein_1 ?? null,
-        ratingProtein2: cached?.dishes.protein_2 ?? null,
+        ratingOverall: cached?.overall ?? (existing?.rating_overall as number | null) ?? null,
+        ratingStarch: cached?.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
+        ratingVeganProtein: cached?.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
+        ratingVeg: cached?.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
+        ratingProtein1: cached?.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
+        ratingProtein2: cached?.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
         comment,
-        commentStarch: null,
-        commentVeganProtein: null,
-        commentVeg: null,
-        commentProtein1: null,
-        commentProtein2: null,
+        commentStarch: (existing?.comment_starch as string | null) ?? null,
+        commentVeganProtein: (existing?.comment_vegan_protein as string | null) ?? null,
+        commentVeg: (existing?.comment_veg as string | null) ?? null,
+        commentProtein1: (existing?.comment_protein_1 as string | null) ?? null,
+        commentProtein2: (existing?.comment_protein_2 as string | null) ?? null,
       });
 
       clearCachedRating(userId, date);
