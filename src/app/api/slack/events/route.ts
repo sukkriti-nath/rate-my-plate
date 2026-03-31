@@ -76,20 +76,8 @@ export async function POST(request: Request) {
       return handleViewSubmission(payload);
     }
 
-    // Block actions: respond immediately, process in background via waitUntil-style
-    // Use a fire-and-forget pattern since Lambda won't run after response
-    try {
-      const result = await Promise.race([
-        handleInteraction(payload),
-        new Promise<Response>((resolve) =>
-          setTimeout(() => resolve(NextResponse.json({ ok: true })), 2500)
-        ),
-      ]);
-      return result;
-    } catch (err) {
-      console.error("Interaction handler error:", err);
-      return NextResponse.json({ ok: true });
-    }
+    // Block actions: handle normally — warmDb() at module load keeps cold starts fast
+    return handleInteraction(payload);
   }
 
   return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
