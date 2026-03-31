@@ -5,6 +5,8 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL?.includes("rds.amazonaws.com")
     ? { rejectUnauthorized: false }
     : undefined,
+  connectionTimeoutMillis: 10000,
+  max: 5,
 });
 
 let initialized = false;

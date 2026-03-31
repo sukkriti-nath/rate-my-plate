@@ -16,18 +16,26 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "date is required" }, { status: 400 });
   }
 
-  const menu = await getMenuForDate(date);
-  const stats = await getVoteStatsForDate(date);
-  const votes = await getVotesForDate(date);
+  try {
+    const menu = await getMenuForDate(date);
+    const stats = await getVoteStatsForDate(date);
+    const votes = await getVotesForDate(date);
 
-  // If user is logged in, include their vote
-  const session = await getSession();
-  let userVote = null;
-  if (session) {
-    userVote = await getUserVoteForDate(session.email, date);
+    // If user is logged in, include their vote
+    const session = await getSession();
+    let userVote = null;
+    if (session) {
+      userVote = await getUserVoteForDate(session.email, date);
+    }
+
+    return NextResponse.json({ menu, stats, votes, userVote });
+  } catch (error) {
+    console.error("GET /api/votes error:", error);
+    return NextResponse.json(
+      { error: "Database error", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ menu, stats, votes, userVote });
 }
 
 export async function POST(request: Request) {
