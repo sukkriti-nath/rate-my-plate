@@ -12,9 +12,47 @@ import {
   clearCachedRating,
 } from "@/lib/slack-bot";
 import { upsertVote, getMenuForDate, getUserVoteForDate, warmDb } from "@/lib/db";
+import { syncVoteToSheet } from "@/lib/google-sheets-writer";
 
 // Eagerly start DB connection on module load (reduces cold start latency)
 warmDb();
+
+/** Fire-and-forget sync to Google Sheets after a vote is saved */
+async function syncVoteToSheetSafe(
+  date: string,
+  userName: string,
+  userEmail: string,
+  menu: Record<string, unknown>,
+  ratings: {
+    overall: number | null;
+    starch: number | null;
+    veganProtein: number | null;
+    veg: number | null;
+    protein1: number | null;
+    protein2: number | null;
+  },
+  comment: string | null,
+) {
+  syncVoteToSheet({
+    date,
+    dayName: (menu.day_name as string) || "",
+    userName,
+    userEmail,
+    ratingOverall: ratings.overall,
+    starch: (menu.starch as string) || null,
+    ratingStarch: ratings.starch,
+    veganProtein: (menu.vegan_protein as string) || null,
+    ratingVeganProtein: ratings.veganProtein,
+    veg: (menu.veg as string) || null,
+    ratingVeg: ratings.veg,
+    protein1: (menu.protein_1 as string) || null,
+    ratingProtein1: ratings.protein1,
+    protein2: (menu.protein_2 as string) || null,
+    ratingProtein2: ratings.protein2,
+    comment,
+    timestamp: new Date().toISOString(),
+  }).catch((err) => console.error("Google Sheets sync failed:", err));
+}
 
 function verifySlackSignature(
   body: string,
@@ -227,6 +265,19 @@ async function handleBlockAction(payload: Record<string, unknown>) {
         commentProtein2: (existing?.comment_protein_2 as string | null) ?? null,
       });
 
+      // Sync to Google Sheets (fire-and-forget)
+      const menuForSync = await getMenuForDate(date);
+      if (menuForSync) {
+        syncVoteToSheetSafe(date, userName, userEmail, menuForSync as Record<string, unknown>, {
+          overall: cached.overall ?? (existing?.rating_overall as number | null) ?? null,
+          starch: cached.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
+          veganProtein: cached.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
+          veg: cached.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
+          protein1: cached.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
+          protein2: cached.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+        }, (existing?.comment as string | null) ?? null);
+      }
+
       // Build confirmation summary using merged data
       const EMOJIS: Record<number, string> = { 1: "🙁", 2: "😕", 3: "😐", 4: "😋", 5: "🤩" };
       const finalOverall = cached.overall ?? (existing?.rating_overall as number | null) ?? null;
@@ -335,17 +386,26 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       const cached = await getCachedRating(userId, date);
       const existing = await getUserVoteForDate(userEmail, date);
 
+      const mergedRatings = {
+        overall: cached?.overall ?? (existing?.rating_overall as number | null) ?? null,
+        starch: cached?.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
+        veganProtein: cached?.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
+        veg: cached?.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
+        protein1: cached?.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
+        protein2: cached?.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+      };
+
       await upsertVote({
         menuDate: date,
         userName,
         userEmail,
         slackUserId: userId,
-        ratingOverall: cached?.overall ?? (existing?.rating_overall as number | null) ?? null,
-        ratingStarch: cached?.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
-        ratingVeganProtein: cached?.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
-        ratingVeg: cached?.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
-        ratingProtein1: cached?.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
-        ratingProtein2: cached?.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+        ratingOverall: mergedRatings.overall,
+        ratingStarch: mergedRatings.starch,
+        ratingVeganProtein: mergedRatings.veganProtein,
+        ratingVeg: mergedRatings.veg,
+        ratingProtein1: mergedRatings.protein1,
+        ratingProtein2: mergedRatings.protein2,
         comment,
         commentStarch: (existing?.comment_starch as string | null) ?? null,
         commentVeganProtein: (existing?.comment_vegan_protein as string | null) ?? null,
@@ -353,6 +413,12 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         commentProtein1: (existing?.comment_protein_1 as string | null) ?? null,
         commentProtein2: (existing?.comment_protein_2 as string | null) ?? null,
       });
+
+      // Sync to Google Sheets
+      const commentMenu = await getMenuForDate(date);
+      if (commentMenu) {
+        syncVoteToSheetSafe(date, userName, userEmail, commentMenu as Record<string, unknown>, mergedRatings, comment);
+      }
 
       await clearCachedRating(userId, date);
     }
@@ -407,6 +473,19 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         commentProtein1: parsed.commentProtein1,
         commentProtein2: parsed.commentProtein2,
       });
+
+      // Sync to Google Sheets
+      const legacyMenu = await getMenuForDate(parsed.date);
+      if (legacyMenu) {
+        syncVoteToSheetSafe(parsed.date, userName, userEmail, legacyMenu as Record<string, unknown>, {
+          overall: parsed.ratingOverall,
+          starch: parsed.ratingStarch,
+          veganProtein: parsed.ratingVeganProtein,
+          veg: parsed.ratingVeg,
+          protein1: parsed.ratingProtein1,
+          protein2: parsed.ratingProtein2,
+        }, parsed.comment);
+      }
 
       // Send DM confirmation
       try {
