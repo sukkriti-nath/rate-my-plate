@@ -12,6 +12,12 @@ function getTodayDate(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function getPTHour(): number {
+  const now = new Date();
+  const ptNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  return ptNow.getHours();
+}
+
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
 }
@@ -85,6 +91,8 @@ export default async function Home({ searchParams }: PageProps) {
   const dayName = menu.day_name as string;
   const restaurant = menu.restaurant as string | null;
   const greeting = getTimeGreeting();
+  const ptHour = getPTHour();
+  const votingClosed = isToday && ptHour < 12;
   const dateLabel = new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
@@ -126,7 +134,17 @@ export default async function Home({ searchParams }: PageProps) {
             <span className="text-xl">✍️</span>
             <h2 className="font-display text-xl text-gray-900 font-bold">Rate It</h2>
           </div>
-          {session ? (
+          {votingClosed ? (
+            <div className="text-center py-6">
+              <div className="text-3xl mb-3">🕐</div>
+              <p className="text-gray-500 mb-2">
+                Voting opens at <span className="font-bold text-gray-900">12pm PT</span>
+              </p>
+              <p className="text-sm text-gray-400">
+                Come back after lunch to rate today&apos;s meal!
+              </p>
+            </div>
+          ) : session ? (
             <RatingForm
               date={selectedDate}
               dishes={dishes}

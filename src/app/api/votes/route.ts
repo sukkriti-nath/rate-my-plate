@@ -68,6 +68,29 @@ export async function POST(request: Request) {
     );
   }
 
+  // Enforce voting window: 12pm–12am PT on the voting day, no back-voting beyond 7 days
+  const now = new Date();
+  const ptNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  const ptHour = ptNow.getHours();
+  const ptToday = ptNow.toISOString().split("T")[0];
+
+  // No back-voting beyond 7 days
+  const daysDiff = (new Date(ptToday + "T12:00:00").getTime() - new Date(date + "T12:00:00").getTime()) / (1000 * 60 * 60 * 24);
+  if (daysDiff < 0 || daysDiff > 7) {
+    return NextResponse.json(
+      { error: "Cannot vote for dates outside the past 7 days" },
+      { status: 400 }
+    );
+  }
+
+  // Voting opens at 12pm PT for the current day
+  if (date === ptToday && ptHour < 12) {
+    return NextResponse.json(
+      { error: "Voting opens at 12pm PT. Come back after lunch!" },
+      { status: 400 }
+    );
+  }
+
   // Validate ratings are in range if provided (null/undefined = N/A)
   const validateRating = (r: unknown): number | null => {
     if (r === null || r === undefined || r === "na") return null;
