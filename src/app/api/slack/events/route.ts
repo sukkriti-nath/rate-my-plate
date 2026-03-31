@@ -245,19 +245,22 @@ async function handleBlockAction(payload: Record<string, unknown>) {
       const overallText = finalOverall ? `${finalOverall} ${EMOJIS[finalOverall]}` : "N/A";
       const dishCount = Object.values(cached.dishes).filter((v) => v !== null && v !== undefined).length;
 
+      const isUpdate = !!existing;
       if (responseUrl) {
         await fetch(responseUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             replace_original: true,
-            text: "Ratings submitted!",
+            text: isUpdate ? "Ratings updated!" : "Ratings submitted!",
             blocks: [
               {
                 type: "section",
                 text: {
                   type: "mrkdwn",
-                  text: `🎉 *Ratings submitted!*\n\n⭐ Overall: *${overallText}*\n🍽️ Dishes rated: *${dishCount}*\n\nThanks for your feedback — it helps us improve the menu! 🙏`,
+                  text: isUpdate
+                    ? `✏️ *Ratings updated!*\n\n⭐ Overall: *${overallText}*\n🍽️ Dishes rated: *${dishCount}*\n\nYour previous ratings have been updated. Thanks! 🙏`
+                    : `🎉 *Ratings submitted!*\n\n⭐ Overall: *${overallText}*\n🍽️ Dishes rated: *${dishCount}*\n\nThanks for your feedback — it helps us improve the menu! 🙏`,
                 },
               },
             ],
