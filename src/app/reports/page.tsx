@@ -133,45 +133,42 @@ export default function ReportsPage() {
       <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
         <h2 className="font-display text-xl text-gray-900 mb-4">📊 Executive Summary</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
+          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black flex flex-col justify-between">
+            <div className="text-sm text-gray-900 mb-1 font-bold">Overall Average</div>
             <div className={`text-3xl font-bold ${ratingColor(report.summary.avgOverall)}`}>
               {report.summary.avgOverall.toFixed(1)}
             </div>
-            <div className="text-lg">{ratingEmoji(report.summary.avgOverall)}</div>
-            <div className="text-xs text-gray-400 mt-1">This week&apos;s overall average</div>
+            <div className="text-sm font-bold text-gray-500 mt-0.5">{ratingEmoji(report.summary.avgOverall)}</div>
           </div>
-          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
+          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black flex flex-col justify-between">
+            <div className="text-sm text-gray-900 mb-1 font-bold">Avg Votes / Day</div>
             <div className="text-3xl font-bold text-gray-900">
               {report.summary.totalDaysWithData > 0 ? Math.round(report.summary.totalVotes / report.summary.totalDaysWithData) : 0}
             </div>
-            <div className="text-xs text-gray-400 mt-1">Avg Votes / Day</div>
+            <div className="text-sm font-bold text-gray-500 mt-0.5">{report.summary.totalVotes} total</div>
           </div>
           {(() => {
             const mostActive = [...report.dayByDay].filter((d) => d.totalVotes > 0).sort((a, b) => b.totalVotes - a.totalVotes)[0];
             return (
-              <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
+              <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black flex flex-col justify-between">
                 <div className="text-sm text-gray-900 mb-1 font-bold">Most Active Day</div>
                 <div className="text-3xl font-bold text-gray-900">
                   {mostActive?.dayName || "—"}
                 </div>
-                {mostActive && (
-                  <div className="text-sm font-bold text-gray-500 mt-0.5">
-                    {mostActive.totalVotes} votes
-                  </div>
-                )}
+                <div className="text-sm font-bold text-gray-500 mt-0.5">
+                  {mostActive ? `${mostActive.totalVotes} votes` : "\u00A0"}
+                </div>
               </div>
             );
           })()}
-          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
+          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black flex flex-col justify-between">
             <div className="text-sm text-gray-900 mb-1 font-bold">Best Day of the Week</div>
             <div className="text-3xl font-bold text-green-500">
               {report.summary.bestDay?.name || "—"}
             </div>
-            {report.summary.bestDay && (
-              <div className="text-lg font-bold text-green-500 mt-0.5">
-                {Math.round(report.summary.bestDay.avg)}/5
-              </div>
-            )}
+            <div className="text-sm font-bold text-green-500 mt-0.5">
+              {report.summary.bestDay ? `${Math.round(report.summary.bestDay.avg)}/5` : "\u00A0"}
+            </div>
           </div>
         </div>
       </section>
