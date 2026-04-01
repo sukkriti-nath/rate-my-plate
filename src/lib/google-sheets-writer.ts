@@ -1,64 +1,20 @@
-import fs from "fs";
-import path from "path";
 import { google } from "googleapis";
 
 // ─── Auth & Client ──────────────────────────────────────────────────────────
 
-/** True when Sheets API can use a service account (inline JSON, base64, or key file path). */
-export function isGoogleServiceAccountConfigured(): boolean {
-  return !!(
-    process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH?.trim() ||
-    process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()
-  );
-}
-
-function parseServiceAccountCredentials(): Record<string, string> {
-  const filePath = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH?.trim();
-  if (filePath) {
-    const resolved = path.isAbsolute(filePath)
-      ? filePath
-      : path.join(process.cwd(), filePath);
-    let raw: string;
-    try {
-      raw = fs.readFileSync(resolved, "utf8");
-    } catch (e) {
-      throw new Error(
-        `GOOGLE_SERVICE_ACCOUNT_JSON_PATH: cannot read ${resolved}: ${e instanceof Error ? e.message : e}`
-      );
-    }
-    return JSON.parse(raw) as Record<string, string>;
-  }
-
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim();
-  if (!raw) {
-    throw new Error(
-      "Set GOOGLE_SERVICE_ACCOUNT_JSON (single-line or base64) or GOOGLE_SERVICE_ACCOUNT_JSON_PATH to a .json key file"
-    );
-  }
-
-  try {
-    return JSON.parse(raw) as Record<string, string>;
-  } catch (firstErr) {
-    try {
-      const decoded = Buffer.from(raw, "base64").toString("utf8").trim();
-      if (!decoded) {
-        throw new Error("base64 decoded to empty string");
-      }
-      return JSON.parse(decoded) as Record<string, string>;
-    } catch {
-      const hint =
-        "Multi-line JSON in .env is not supported — only the first line loads. " +
-        "Use GOOGLE_SERVICE_ACCOUNT_JSON_PATH=./google-service-account.json pointing at your downloaded key, " +
-        "or minify JSON to one line / base64.";
-      throw new Error(
-        `GOOGLE_SERVICE_ACCOUNT_JSON: invalid JSON. ${hint} (${firstErr instanceof Error ? firstErr.message : String(firstErr)})`
-      );
-    }
-  }
-}
-
 function getAuthClient() {
-  const credentials = parseServiceAccountCredentials();
+  const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!credentialsJson) {
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not configured");
+  }
+
+  // Support both raw JSON and base64-encoded
+  let credentials: Record<string, string>;
+  try {
+    credentials = JSON.parse(credentialsJson);
+  } catch {
+    credentials = JSON.parse(Buffer.from(credentialsJson, "base64").toString());
+  }
 
   return new google.auth.GoogleAuth({
     credentials,
@@ -66,8 +22,7 @@ function getAuthClient() {
   });
 }
 
-/** Same client as vote sync — use for reading private spreadsheets too. */
-export function getGoogleSheetsClient() {
+function getSheetsClient() {
   return google.sheets({ version: "v4", auth: getAuthClient() });
 }
 
@@ -75,6 +30,16 @@ function getOutputSheetId(): string {
   const id = process.env.VOTES_GOOGLE_SHEET_ID;
   if (!id) throw new Error("VOTES_GOOGLE_SHEET_ID is not configured");
   return id;
+}
+
+// ─── Write Queue (prevents race conditions on concurrent votes) ─────────────
+
+let writeQueue: Promise<void> = Promise.resolve();
+
+function enqueue<T>(fn: () => Promise<T>): Promise<T> {
+  const task = writeQueue.then(fn, fn); // run even if prior task failed
+  writeQueue = task.then(() => {}, () => {}); // swallow to keep chain alive
+  return task;
 }
 
 // ─── Raw Votes Sync (called on every vote) ──────────────────────────────────
@@ -105,8 +70,12 @@ let headersInitialized = false;
  * Sync a single vote to the "Raw Votes" tab in Google Sheets.
  * Upserts by (date, email) — updates existing row or appends new one.
  */
-export async function syncVoteToSheet(vote: VoteRow): Promise<void> {
-  const sheets = getGoogleSheetsClient();
+export function syncVoteToSheet(vote: VoteRow): Promise<void> {
+  return enqueue(() => _syncVoteToSheet(vote));
+}
+
+async function _syncVoteToSheet(vote: VoteRow): Promise<void> {
+  const sheets = getSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Raw Votes";
 
@@ -184,8 +153,12 @@ export interface DailySummaryRow {
   bottomDishRating: number;
 }
 
-export async function syncDailySummary(summary: DailySummaryRow): Promise<void> {
-  const sheets = getGoogleSheetsClient();
+export function syncDailySummary(summary: DailySummaryRow): Promise<void> {
+  return enqueue(() => _syncDailySummary(summary));
+}
+
+async function _syncDailySummary(summary: DailySummaryRow): Promise<void> {
+  const sheets = getSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Daily Summary";
 
@@ -234,7 +207,7 @@ export async function syncDailySummary(summary: DailySummaryRow): Promise<void> 
 // ─── Initialize Sheet Tabs with Headers ─────────────────────────────────────
 
 export async function initializeSheetTabs(): Promise<void> {
-  const sheets = getGoogleSheetsClient();
+  const sheets = getSheetsClient();
   const sheetId = getOutputSheetId();
 
   const tabConfigs = [
@@ -356,7 +329,7 @@ export interface BiWeeklyTrendsRow {
 }
 
 export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<void> {
-  const sheets = getGoogleSheetsClient();
+  const sheets = getSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Bi-Weekly Trends";
 
