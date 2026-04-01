@@ -72,6 +72,13 @@ function LoginContent() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const form = e.currentTarget.closest("form");
+                  if (form) form.requestSubmit();
+                }
+              }}
               placeholder="yourname@kikoff.com"
               required
               className="w-full px-5 py-4 rounded-xl border-2 border-black text-center text-gray-700 text-lg
