@@ -194,7 +194,7 @@ export default function LiveResults({
           <div className="text-5xl font-bold text-kikoff-dark">
             {stats.averageOverall.toFixed(1)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">avg rating</div>
+          <div className="text-xs text-gray-500 mt-1">average overall score</div>
         </div>
         <div className="text-center">
           <div className="text-5xl font-bold text-kikoff-dark">
