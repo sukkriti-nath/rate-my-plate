@@ -69,16 +69,10 @@ function formatDate(dateStr: string): string {
 export default function ReportsPage() {
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
   const [weeksAgo, setWeeksAgo] = useState(0);
-  const [slackHandle, setSlackHandle] = useState("");
-  const [email, setEmail] = useState("");
-  const [sendResults, setSendResults] = useState<{ recipient: string; method: string; success: boolean; error?: string }[]>([]);
 
   useEffect(() => {
     setLoading(true);
-    setSent(false);
     fetch(`/api/reports/generate?weeksAgo=${weeksAgo}`)
       .then((r) => r.json())
       .then((data) => {
@@ -87,46 +81,6 @@ export default function ReportsPage() {
       })
       .catch(() => setLoading(false));
   }, [weeksAgo]);
-
-  async function handleSendSlack() {
-    if (!report) return;
-    const handle = slackHandle.trim();
-    if (!handle) { alert("Please enter a Slack handle"); return; }
-    setSending(true);
-    setSent(false);
-    setSendResults([]);
-    try {
-      const res = await fetch("/api/reports/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weeksAgo, slackHandles: [handle], emails: [] }),
-      });
-      const data = await res.json();
-      setSendResults(data.results || []);
-      setSent(true);
-    } catch { alert("Failed to send report"); }
-    setSending(false);
-  }
-
-  async function handleSendEmail() {
-    if (!report) return;
-    const addr = email.trim();
-    if (!addr) { alert("Please enter an email address"); return; }
-    setSending(true);
-    setSent(false);
-    setSendResults([]);
-    try {
-      const res = await fetch("/api/reports/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weeksAgo, slackHandles: [], emails: [addr] }),
-      });
-      const data = await res.json();
-      setSendResults(data.results || []);
-      setSent(true);
-    } catch { alert("Failed to send report"); }
-    setSending(false);
-  }
 
   if (loading) {
     return (
@@ -328,79 +282,6 @@ export default function ReportsPage() {
         </section>
       )}
 
-      {/* Download & Send Report */}
-      <section className="bg-kikoff-dark rounded-xl border-2 border-black shadow-[8px_8px_0px_0px_#000] p-6">
-        <h2 className="font-display text-xl text-white mb-2 text-center">Export & Share Report</h2>
-
-        {/* PDF Download */}
-        <div className="text-center mb-6">
-          <a
-            href={`/api/reports/pdf?weeksAgo=${weeksAgo}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-8 py-3 rounded-xl font-bold text-kikoff-dark bg-kikoff border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-          >
-            📄 Download Report (.docx)
-          </a>
-        </div>
-
-        {/* Send via Slack */}
-        <div className="bg-white/10 rounded-xl border-2 border-white/20 p-5 mb-3">
-          <p className="text-gray-300 text-sm mb-3 font-medium">Send via Slack DM</p>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="Slack handle (e.g. @sukkriti)"
-              value={slackHandle}
-              onChange={(e) => setSlackHandle(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-gray-500 border-2 border-white/20 focus:border-kikoff focus:outline-none text-sm"
-            />
-            <button
-              onClick={handleSendSlack}
-              disabled={sending}
-              className={`px-6 py-2.5 rounded-xl font-bold text-kikoff-dark transition-all shrink-0 border-2 border-black shadow-[2px_2px_0px_0px_#000] ${
-                sending ? "bg-gray-400 cursor-wait" : "bg-kikoff hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
-              }`}
-            >
-              {sending ? "..." : "📤 Send"}
-            </button>
-          </div>
-        </div>
-
-        {/* Send via Email */}
-        <div className="bg-white/10 rounded-xl border-2 border-white/20 p-5">
-          <p className="text-gray-300 text-sm mb-3 font-medium">Send via Email</p>
-          <div className="flex gap-3">
-            <input
-              type="email"
-              placeholder="Email (e.g. sukkriti@kikoff.com)"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-gray-500 border-2 border-white/20 focus:border-kikoff focus:outline-none text-sm"
-            />
-            <button
-              onClick={handleSendEmail}
-              disabled={sending}
-              className={`px-6 py-2.5 rounded-xl font-bold text-kikoff-dark transition-all shrink-0 border-2 border-black shadow-[2px_2px_0px_0px_#000] ${
-                sending ? "bg-gray-400 cursor-wait" : "bg-kikoff hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
-              }`}
-            >
-              {sending ? "..." : "📧 Send"}
-            </button>
-          </div>
-        </div>
-
-        {/* Results */}
-        {sent && sendResults.length > 0 && (
-          <div className="mt-4 space-y-1">
-            {sendResults.map((r, i) => (
-              <p key={i} className={`text-sm ${r.success ? "text-green-400" : "text-red-400"}`}>
-                {r.success ? "✅" : "❌"} {r.recipient} — {r.success ? "Sent!" : r.error}
-              </p>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
