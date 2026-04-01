@@ -617,31 +617,54 @@ export interface CachedRating {
 const DISH_COLUMNS = ["starch", "vegan_protein", "veg", "protein_1", "protein_2"] as const;
 
 export async function setCachedOverall(userId: string, date: string, overall: number | null): Promise<void> {
-  const db = await getDb();
-  await db.query(
-    `INSERT INTO slack_rating_drafts (slack_user_id, menu_date, overall, updated_at)
-     VALUES ($1, $2, $3, NOW()::text)
-     ON CONFLICT (slack_user_id, menu_date) DO UPDATE SET overall = $3, updated_at = NOW()::text`,
-    [userId, date, overall]
-  );
+  try {
+    const db = await getDb();
+    await db.query(
+      `INSERT INTO slack_rating_drafts (slack_user_id, menu_date, overall, updated_at)
+       VALUES ($1, $2, $3, NOW()::text)
+       ON CONFLICT (slack_user_id, menu_date) DO UPDATE SET overall = $3, updated_at = NOW()::text`,
+      [userId, date, overall]
+    );
+  } catch (err) {
+    console.error("Failed to cache overall rating:", err);
+    // Retry once with a fresh connection
+    const db = await getDb();
+    await db.query(
+      `INSERT INTO slack_rating_drafts (slack_user_id, menu_date, overall, updated_at)
+       VALUES ($1, $2, $3, NOW()::text)
+       ON CONFLICT (slack_user_id, menu_date) DO UPDATE SET overall = $3, updated_at = NOW()::text`,
+      [userId, date, overall]
+    );
+  }
 }
 
 export async function setCachedDish(userId: string, date: string, dishKey: string, rating: number | null): Promise<void> {
   const col = `dish_${dishKey}`;
-  const db = await getDb();
-  // First ensure row exists
-  await db.query(
-    `INSERT INTO slack_rating_drafts (slack_user_id, menu_date, updated_at)
-     VALUES ($1, $2, NOW()::text)
-     ON CONFLICT (slack_user_id, menu_date) DO NOTHING`,
-    [userId, date]
-  );
-  // Then update the specific dish column
-  await db.query(
-    `UPDATE slack_rating_drafts SET ${col} = $1, updated_at = NOW()::text
-     WHERE slack_user_id = $2 AND menu_date = $3`,
-    [rating, userId, date]
-  );
+  try {
+    const db = await getDb();
+    // First ensure row exists
+    await db.query(
+      `INSERT INTO slack_rating_drafts (slack_user_id, menu_date, updated_at)
+       VALUES ($1, $2, NOW()::text)
+       ON CONFLICT (slack_user_id, menu_date) DO NOTHING`,
+      [userId, date]
+    );
+    // Then update the specific dish column
+    await db.query(
+      `UPDATE slack_rating_drafts SET ${col} = $1, updated_at = NOW()::text
+       WHERE slack_user_id = $2 AND menu_date = $3`,
+      [rating, userId, date]
+    );
+  } catch (err) {
+    console.error(`Failed to cache dish rating (${dishKey}):`, err);
+    const db = await getDb();
+    await db.query(
+      `INSERT INTO slack_rating_drafts (slack_user_id, menu_date, ${col}, updated_at)
+       VALUES ($1, $2, $3, NOW()::text)
+       ON CONFLICT (slack_user_id, menu_date) DO UPDATE SET ${col} = $3, updated_at = NOW()::text`,
+      [userId, date, rating]
+    );
+  }
 }
 
 export async function getCachedRating(userId: string, date: string): Promise<CachedRating | undefined> {
