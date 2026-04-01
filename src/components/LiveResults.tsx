@@ -46,9 +46,11 @@ function ratingEmoji(avg: number): string {
 
 export default function LiveResults({
   date,
+  isToday = false,
   pollInterval = 5000,
 }: {
   date: string;
+  isToday?: boolean;
   pollInterval?: number;
 }) {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -75,8 +77,30 @@ export default function LiveResults({
     return () => clearInterval(interval);
   }, [fetchData, pollInterval]);
 
+  const headerBlock = (
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2.5">
+        <span className="text-xl">📊</span>
+        <h2 className="font-display text-xl text-gray-900 font-bold">
+          {isToday ? "Live Results from All Kiksters" : "Results from All Kiksters"}
+        </h2>
+      </div>
+      {isToday && (
+        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-kikoff animate-pulse-glow" />
+          live
+        </div>
+      )}
+    </div>
+  );
+
   if (!stats) {
-    return <div className="text-gray-400 text-center py-8">Loading results...</div>;
+    return (
+      <div>
+        {headerBlock}
+        <div className="text-gray-400 text-center py-8">Loading results...</div>
+      </div>
+    );
   }
 
   if (stats.totalVotes === 0) {
@@ -85,14 +109,17 @@ export default function LiveResults({
     const isBeforeNoon = date === today && ptHour < 12;
 
     return (
-      <div className="text-center py-8">
-        <div className="text-4xl mb-3">{isBeforeNoon ? "⏰" : "🍽️"}</div>
-        <p className="text-gray-400 text-lg">{isBeforeNoon ? "Voting hasn\u2019t opened yet" : "No votes yet"}</p>
-        <p className="text-gray-300 text-sm mt-1">
-          {isBeforeNoon
-            ? "Come back after lunch to cast your vote!"
-            : "Be the first to rate today\u2019s lunch!"}
-        </p>
+      <div>
+        {headerBlock}
+        <div className="text-center py-8">
+          <div className="text-4xl mb-3">{isBeforeNoon ? "⏰" : "🍽️"}</div>
+          <p className="text-gray-400 text-lg">{isBeforeNoon ? "Voting hasn\u2019t opened yet" : "No votes yet"}</p>
+          <p className="text-gray-300 text-sm mt-1">
+            {isBeforeNoon
+              ? "Come back after lunch to cast your vote!"
+              : "Be the first to rate today\u2019s lunch!"}
+          </p>
+        </div>
       </div>
     );
   }
@@ -109,8 +136,49 @@ export default function LiveResults({
     .filter((d) => stats.dishRatings[d.key] && stats.dishRatings[d.key].votes > 0)
     .sort((a, b) => (stats.dishRatings[b.key]?.avg || 0) - (stats.dishRatings[a.key]?.avg || 0));
 
+  // Get unique avatars from voters for the header stack
+  const voterAvatars = votes
+    .filter((v) => v.avatar_url)
+    .reduce((acc, v) => {
+      if (!acc.find((a) => a.url === v.avatar_url)) {
+        acc.push({ url: v.avatar_url!, name: v.user_name });
+      }
+      return acc;
+    }, [] as { url: string; name: string }[])
+    .slice(0, 4);
+
   return (
     <div className="space-y-6">
+      {/* Header with avatar stack */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          {voterAvatars.length > 0 ? (
+            <div className="flex -space-x-2">
+              {voterAvatars.map((avatar, i) => (
+                <img
+                  key={i}
+                  src={avatar.url}
+                  alt={avatar.name}
+                  className="w-7 h-7 rounded-full border-2 border-white object-cover"
+                  style={{ zIndex: voterAvatars.length - i }}
+                />
+              ))}
+            </div>
+          ) : (
+            <span className="text-xl">📊</span>
+          )}
+          <h2 className="font-display text-xl text-gray-900 font-bold">
+            {isToday ? "Live Results from All Kiksters" : "Results from All Kiksters"}
+          </h2>
+        </div>
+        {isToday && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-kikoff animate-pulse-glow" />
+            live
+          </div>
+        )}
+      </div>
+
       {/* Overall Summary */}
       <div className="flex items-center justify-center gap-8">
         <div className="text-center">

@@ -1,10 +1,28 @@
-import { getMenuForDate, getRecentServiceDates } from "@/lib/db";
+import { getMenuForDate, getRecentServiceDates, getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getUserVoteForDate } from "@/lib/db";
 import RatingForm from "@/components/RatingForm";
 import LiveResults from "@/components/LiveResults";
 import DatePicker from "@/components/DatePicker";
 import Link from "next/link";
+
+async function getUserAvatar(email: string): Promise<string | null> {
+  try {
+    const db = await getDb();
+    const result = await db.query(
+      "SELECT avatar_url FROM user_avatars WHERE email = $1",
+      [email]
+    );
+    if (result.rows[0]?.avatar_url) return result.rows[0].avatar_url as string;
+    const voteResult = await db.query(
+      "SELECT avatar_url FROM votes WHERE user_email = $1 AND avatar_url IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+      [email]
+    );
+    return (voteResult.rows[0]?.avatar_url as string) || null;
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -86,8 +104,10 @@ export default async function Home({ searchParams }: PageProps) {
   ];
 
   let existingVote = null;
+  let userAvatarUrl: string | null = null;
   if (session) {
     existingVote = await getUserVoteForDate(session.email, selectedDate) as Record<string, unknown> | null;
+    userAvatarUrl = await getUserAvatar(session.email);
   }
 
   const dayName = menu.day_name as string;
@@ -133,8 +153,16 @@ export default async function Home({ searchParams }: PageProps) {
       {/* Rating Section */}
       <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
         <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <span className="text-xl">{existingVote ? "📋" : "✍️"}</span>
+          <div className="flex items-center gap-2.5 mb-5">
+            {userAvatarUrl ? (
+              <img src={userAvatarUrl} alt="" className="w-7 h-7 rounded-full border-2 border-kikoff-dark/20 object-cover" />
+            ) : session ? (
+              <div className="w-7 h-7 rounded-full bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold">
+                {session.displayName.charAt(0)}
+              </div>
+            ) : (
+              <span className="text-xl">✍️</span>
+            )}
             <h2 className="font-display text-xl text-gray-900 font-bold">{existingVote ? "Your Rating" : "Rate It"}</h2>
           </div>
           {votingClosed ? (
@@ -173,19 +201,7 @@ export default async function Home({ searchParams }: PageProps) {
       {/* Live Results */}
       <section className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
         <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">📊</span>
-              <h2 className="font-display text-xl text-gray-900 font-bold">{isToday ? "Live Results from All Kiksters" : "Results from All Kiksters"}</h2>
-            </div>
-            {isToday && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-kikoff animate-pulse-glow" />
-                live
-              </div>
-            )}
-          </div>
-          <LiveResults date={selectedDate} />
+          <LiveResults date={selectedDate} isToday={isToday} />
         </div>
       </section>
     </div>
