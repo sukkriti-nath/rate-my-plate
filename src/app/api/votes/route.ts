@@ -7,6 +7,7 @@ import {
   getMenuForDate,
 } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { syncVoteToSheet } from "@/lib/google-sheets-writer";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -134,6 +135,7 @@ export async function POST(request: Request) {
     menuDate: date,
     userName: session.displayName,
     userEmail: session.email,
+    avatarUrl: null,
     ratingOverall: parsedOverall,
     ratingStarch: parsedStarch,
     ratingVeganProtein: parsedVeganProtein,
@@ -147,6 +149,27 @@ export async function POST(request: Request) {
     commentProtein1: commentProtein1 || null,
     commentProtein2: commentProtein2 || null,
   });
+
+  // Sync to Google Sheet (fire-and-forget — don't block the response)
+  syncVoteToSheet({
+    date,
+    dayName: (menu.day_name as string) || "",
+    userName: session.displayName,
+    userEmail: session.email,
+    ratingOverall: parsedOverall,
+    starch: (menu.starch as string) || null,
+    ratingStarch: parsedStarch,
+    veganProtein: (menu.vegan_protein as string) || null,
+    ratingVeganProtein: parsedVeganProtein,
+    veg: (menu.veg as string) || null,
+    ratingVeg: parsedVeg,
+    protein1: (menu.protein_1 as string) || null,
+    ratingProtein1: parsedProtein1,
+    protein2: (menu.protein_2 as string) || null,
+    ratingProtein2: parsedProtein2,
+    comment: comment || null,
+    timestamp: new Date().toISOString(),
+  }).catch((err) => console.error("Google Sheets sync failed:", err));
 
   const stats = await getVoteStatsForDate(date);
   return NextResponse.json({ success: true, stats });

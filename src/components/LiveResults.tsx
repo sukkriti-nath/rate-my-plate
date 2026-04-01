@@ -22,6 +22,7 @@ interface Stats {
 
 interface Vote {
   user_name: string;
+  avatar_url: string | null;
   rating_overall: number;
   comment: string | null;
   created_at: string;
@@ -77,11 +78,19 @@ export default function LiveResults({
   }
 
   if (stats.totalVotes === 0) {
+    const ptHour = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })).getHours();
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })).toISOString().split("T")[0];
+    const isBeforeNoon = date === today && ptHour < 12;
+
     return (
       <div className="text-center py-8">
-        <div className="text-4xl mb-3">🍽️</div>
-        <p className="text-gray-400 text-lg">No votes yet</p>
-        <p className="text-gray-300 text-sm mt-1">Be the first to rate today&apos;s lunch!</p>
+        <div className="text-4xl mb-3">{isBeforeNoon ? "⏰" : "🍽️"}</div>
+        <p className="text-gray-400 text-lg">{isBeforeNoon ? "Voting hasn\u2019t opened yet" : "No votes yet"}</p>
+        <p className="text-gray-300 text-sm mt-1">
+          {isBeforeNoon
+            ? "Come back after lunch to cast your vote!"
+            : "Be the first to rate today\u2019s lunch!"}
+        </p>
       </div>
     );
   }
@@ -106,7 +115,6 @@ export default function LiveResults({
           <div className="text-5xl font-bold text-kikoff-dark">
             {stats.averageOverall.toFixed(1)}
           </div>
-          <div className="text-2xl mt-1">{ratingEmoji(stats.averageOverall)}</div>
           <div className="text-xs text-gray-500 mt-1">overall</div>
         </div>
         <div className="text-center">
@@ -203,9 +211,17 @@ export default function LiveResults({
                 className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0 animate-slide-up"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                <div className="w-8 h-8 rounded-xl bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold shrink-0 border-2 border-black">
-                  {vote.user_name.charAt(0).toUpperCase()}
-                </div>
+                {vote.avatar_url ? (
+                  <img
+                    src={vote.avatar_url}
+                    alt={vote.user_name}
+                    className="w-8 h-8 rounded-xl border-2 border-black shrink-0 object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold shrink-0 border-2 border-black">
+                    {vote.user_name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700">

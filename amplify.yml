@@ -6,7 +6,7 @@ frontend:
         - npm ci
     build:
       commands:
-        - env | grep -E '^(DATABASE_URL|GOOGLE_SHEET|FRIDAY_SHEET|SLACK_|JWT_SECRET|NEXT_PUBLIC_|CRON_SECRET)' > .env.production
+        - env | grep -E '^(DATABASE_URL|GOOGLE_SHEET|GOOGLE_SERVICE|FRIDAY_SHEET|SLACK_|JWT_SECRET|NEXT_PUBLIC_|CRON_SECRET|VOTES_GOOGLE)' > .env.production
         - npm run build
   artifacts:
     baseDirectory: .next

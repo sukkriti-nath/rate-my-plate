@@ -12,9 +12,47 @@ import {
   clearCachedRating,
 } from "@/lib/slack-bot";
 import { upsertVote, getMenuForDate, getUserVoteForDate, warmDb } from "@/lib/db";
+import { syncVoteToSheet } from "@/lib/google-sheets-writer";
 
 // Eagerly start DB connection on module load (reduces cold start latency)
 warmDb();
+
+/** Fire-and-forget sync to Google Sheets after a vote is saved */
+async function syncVoteToSheetSafe(
+  date: string,
+  userName: string,
+  userEmail: string,
+  menu: Record<string, unknown>,
+  ratings: {
+    overall: number | null;
+    starch: number | null;
+    veganProtein: number | null;
+    veg: number | null;
+    protein1: number | null;
+    protein2: number | null;
+  },
+  comment: string | null,
+) {
+  syncVoteToSheet({
+    date,
+    dayName: (menu.day_name as string) || "",
+    userName,
+    userEmail,
+    ratingOverall: ratings.overall,
+    starch: (menu.starch as string) || null,
+    ratingStarch: ratings.starch,
+    veganProtein: (menu.vegan_protein as string) || null,
+    ratingVeganProtein: ratings.veganProtein,
+    veg: (menu.veg as string) || null,
+    ratingVeg: ratings.veg,
+    protein1: (menu.protein_1 as string) || null,
+    ratingProtein1: ratings.protein1,
+    protein2: (menu.protein_2 as string) || null,
+    ratingProtein2: ratings.protein2,
+    comment,
+    timestamp: new Date().toISOString(),
+  }).catch((err) => console.error("Google Sheets sync failed:", err));
+}
 
 function verifySlackSignature(
   body: string,
@@ -76,20 +114,8 @@ export async function POST(request: Request) {
       return handleViewSubmission(payload);
     }
 
-    // Block actions: respond immediately, process in background via waitUntil-style
-    // Use a fire-and-forget pattern since Lambda won't run after response
-    try {
-      const result = await Promise.race([
-        handleInteraction(payload),
-        new Promise<Response>((resolve) =>
-          setTimeout(() => resolve(NextResponse.json({ ok: true })), 2500)
-        ),
-      ]);
-      return result;
-    } catch (err) {
-      console.error("Interaction handler error:", err);
-      return NextResponse.json({ ok: true });
-    }
+    // Block actions: handle normally — warmDb() at module load keeps cold starts fast
+    return handleInteraction(payload);
   }
 
   return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
@@ -207,11 +233,13 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     // Get user email from Slack
     let userEmail = `${user.username}@kikoff.com`;
     let userName = user.name || user.username;
+    let avatarUrl: string | null = null;
     try {
       const slack = getSlackClient();
       const userInfo = await slack.users.info({ user: userId });
       if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
       if (userInfo.user?.real_name) userName = userInfo.user.real_name;
+      if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
     } catch (err) {
       console.error("Failed to fetch user email:", err);
     }
@@ -225,6 +253,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
         userName,
         userEmail,
         slackUserId: userId,
+        avatarUrl,
         ratingOverall: cached.overall ?? (existing?.rating_overall as number | null) ?? null,
         ratingStarch: cached.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
         ratingVeganProtein: cached.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
@@ -238,6 +267,19 @@ async function handleBlockAction(payload: Record<string, unknown>) {
         commentProtein1: (existing?.comment_protein_1 as string | null) ?? null,
         commentProtein2: (existing?.comment_protein_2 as string | null) ?? null,
       });
+
+      // Sync to Google Sheets (fire-and-forget)
+      const menuForSync = await getMenuForDate(date);
+      if (menuForSync) {
+        syncVoteToSheetSafe(date, userName, userEmail, menuForSync as Record<string, unknown>, {
+          overall: cached.overall ?? (existing?.rating_overall as number | null) ?? null,
+          starch: cached.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
+          veganProtein: cached.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
+          veg: cached.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
+          protein1: cached.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
+          protein2: cached.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+        }, (existing?.comment as string | null) ?? null);
+      }
 
       // Build confirmation summary using merged data
       const EMOJIS: Record<number, string> = { 1: "🙁", 2: "😕", 3: "😐", 4: "😋", 5: "🤩" };
@@ -336,28 +378,40 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       // Get user email
       let userEmail = `${user.username}@kikoff.com`;
       let userName = user.name || user.username;
+      let avatarUrl: string | null = null;
       try {
         const slack = getSlackClient();
         const userInfo = await slack.users.info({ user: userId });
         if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
         if (userInfo.user?.real_name) userName = userInfo.user.real_name;
+        if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
       } catch { /* use fallback */ }
 
       // Get cached ratings and existing vote — merge to avoid overwriting
       const cached = await getCachedRating(userId, date);
       const existing = await getUserVoteForDate(userEmail, date);
 
+      const mergedRatings = {
+        overall: cached?.overall ?? (existing?.rating_overall as number | null) ?? null,
+        starch: cached?.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
+        veganProtein: cached?.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
+        veg: cached?.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
+        protein1: cached?.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
+        protein2: cached?.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+      };
+
       await upsertVote({
         menuDate: date,
         userName,
         userEmail,
         slackUserId: userId,
-        ratingOverall: cached?.overall ?? (existing?.rating_overall as number | null) ?? null,
-        ratingStarch: cached?.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
-        ratingVeganProtein: cached?.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
-        ratingVeg: cached?.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
-        ratingProtein1: cached?.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
-        ratingProtein2: cached?.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+        avatarUrl,
+        ratingOverall: mergedRatings.overall,
+        ratingStarch: mergedRatings.starch,
+        ratingVeganProtein: mergedRatings.veganProtein,
+        ratingVeg: mergedRatings.veg,
+        ratingProtein1: mergedRatings.protein1,
+        ratingProtein2: mergedRatings.protein2,
         comment,
         commentStarch: (existing?.comment_starch as string | null) ?? null,
         commentVeganProtein: (existing?.comment_vegan_protein as string | null) ?? null,
@@ -365,6 +419,12 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         commentProtein1: (existing?.comment_protein_1 as string | null) ?? null,
         commentProtein2: (existing?.comment_protein_2 as string | null) ?? null,
       });
+
+      // Sync to Google Sheets
+      const commentMenu = await getMenuForDate(date);
+      if (commentMenu) {
+        syncVoteToSheetSafe(date, userName, userEmail, commentMenu as Record<string, unknown>, mergedRatings, comment);
+      }
 
       await clearCachedRating(userId, date);
     }
@@ -380,11 +440,13 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
 
       let userEmail = `${user.username}@kikoff.com`;
       let userName = user.name || user.username;
+      let avatarUrl: string | null = null;
       try {
         const slack = getSlackClient();
         const userInfo = await slack.users.info({ user: slackUserId });
         if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
         if (userInfo.user?.real_name) userName = userInfo.user.real_name;
+        if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
       } catch { /* use fallback */ }
 
       if (
@@ -406,6 +468,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         userName,
         userEmail,
         slackUserId,
+        avatarUrl,
         ratingOverall: parsed.ratingOverall,
         ratingStarch: parsed.ratingStarch,
         ratingVeganProtein: parsed.ratingVeganProtein,
@@ -419,6 +482,19 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         commentProtein1: parsed.commentProtein1,
         commentProtein2: parsed.commentProtein2,
       });
+
+      // Sync to Google Sheets
+      const legacyMenu = await getMenuForDate(parsed.date);
+      if (legacyMenu) {
+        syncVoteToSheetSafe(parsed.date, userName, userEmail, legacyMenu as Record<string, unknown>, {
+          overall: parsed.ratingOverall,
+          starch: parsed.ratingStarch,
+          veganProtein: parsed.ratingVeganProtein,
+          veg: parsed.ratingVeg,
+          protein1: parsed.ratingProtein1,
+          protein2: parsed.ratingProtein2,
+        }, parsed.comment);
+      }
 
       // Send DM confirmation
       try {

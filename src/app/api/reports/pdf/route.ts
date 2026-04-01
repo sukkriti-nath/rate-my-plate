@@ -12,7 +12,7 @@ const RED = "ef4444";
 const GRAY = "666666";
 const LIGHT_BG = "f8f9fa";
 
-function getBiWeeklyRange(weeksAgo: number = 0) {
+function getWeeklyRange(weeksAgo: number = 0) {
   const now = new Date();
   const pt = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
   const day = pt.getDay();
@@ -20,9 +20,9 @@ function getBiWeeklyRange(weeksAgo: number = 0) {
   const thisMonday = new Date(pt);
   thisMonday.setDate(pt.getDate() + diffToMonday);
   const startMonday = new Date(thisMonday);
-  startMonday.setDate(thisMonday.getDate() - weeksAgo * 14);
+  startMonday.setDate(thisMonday.getDate() - weeksAgo * 7);
   const endFriday = new Date(startMonday);
-  endFriday.setDate(startMonday.getDate() + 11);
+  endFriday.setDate(startMonday.getDate() + 4);
   const fmt = (d: Date) => d.toISOString().split("T")[0];
   const labelFmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return { startDate: fmt(startMonday), endDate: fmt(endFriday), label: `${labelFmt(startMonday)} – ${labelFmt(endFriday)}` };
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const weeksAgo = parseInt(searchParams.get("weeksAgo") || "0", 10);
 
-  const { startDate, endDate, label } = getBiWeeklyRange(weeksAgo);
+  const { startDate, endDate, label } = getWeeklyRange(weeksAgo);
   const rankings = await getWeeklyRankings(startDate, endDate);
   const comments = await getCommentsForDateRange(startDate, endDate);
   const menus = await getMenuForWeek(startDate, endDate);
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
     spacing: { after: 40 },
     children: [
       new TextRun({ text: "RateMyPlate", bold: true, size: 40, color: DARK }),
-      new TextRun({ text: "  Bi-Weekly Food Report", size: 24, color: GREEN }),
+      new TextRun({ text: "  Weekly Power Rankings", size: 24, color: GREEN }),
     ],
   }));
   sections.push(new Paragraph({

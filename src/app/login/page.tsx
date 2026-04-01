@@ -72,6 +72,13 @@ function LoginContent() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const form = e.currentTarget.closest("form");
+                  if (form) form.requestSubmit();
+                }
+              }}
               placeholder="yourname@kikoff.com"
               required
               className="w-full px-5 py-4 rounded-xl border-2 border-black text-center text-gray-700 text-lg
@@ -86,7 +93,7 @@ function LoginContent() {
               bg-kikoff text-kikoff-dark border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none
               disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {submitting ? "Signing in..." : "Let's Eat! 🍴"}
+            {submitting ? "Signing in..." : "Let's rate your plate! 🍴"}
           </button>
         </form>
 

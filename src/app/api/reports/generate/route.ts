@@ -8,7 +8,7 @@ const REPORT_RECIPIENTS = [
   { email: "sukkriti@kikoff.com", name: "Sukkriti" },
 ];
 
-function getBiWeeklyRange(weeksAgo: number = 0): { startDate: string; endDate: string; label: string } {
+function getWeeklyRange(weeksAgo: number = 0): { startDate: string; endDate: string; label: string } {
   const now = new Date();
   const pt = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
 
@@ -18,13 +18,13 @@ function getBiWeeklyRange(weeksAgo: number = 0): { startDate: string; endDate: s
   const thisMonday = new Date(pt);
   thisMonday.setDate(pt.getDate() + diffToMonday);
 
-  // Go back weeksAgo * 2 weeks for bi-weekly
+  // Go back weeksAgo * 1 week
   const startMonday = new Date(thisMonday);
-  startMonday.setDate(thisMonday.getDate() - (weeksAgo * 14));
+  startMonday.setDate(thisMonday.getDate() - (weeksAgo * 7));
 
-  // Two weeks: Monday to Friday of next week
+  // One week: Monday to Friday of the same week
   const endFriday = new Date(startMonday);
-  endFriday.setDate(startMonday.getDate() + 11); // Mon + 11 = next week Friday
+  endFriday.setDate(startMonday.getDate() + 4); // Mon + 4 = Friday
 
   const fmt = (d: Date) => d.toISOString().split("T")[0];
   const labelFmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -146,7 +146,7 @@ async function generateReport(startDate: string, endDate: string, label: string)
 function formatReportForSlack(report: ReportData): string {
   const lines: string[] = [];
 
-  lines.push(`📋 *Bi-Weekly Food Report: ${report.period}*`);
+  lines.push(`🏆 *Weekly Power Rankings: ${report.period}*`);
   lines.push("");
 
   // Executive Summary
@@ -193,9 +193,13 @@ function formatReportForSlack(report: ReportData): string {
     lines.push("*🍴 Friday Catering Spotlight*");
     for (const fri of report.fridaySpotlight) {
       const rest = fri.restaurant ? `*${fri.restaurant}*` : "Friday lunch";
-      lines.push(`• ${rest}: ${fri.avgOverall.toFixed(1)}/5 (${fri.totalVotes} votes)`);
-      for (const dish of fri.dishes) {
-        lines.push(`  · ${dish.name} (${dish.category}): ${dish.avg.toFixed(1)}/5`);
+      if (fri.totalVotes > 0) {
+        lines.push(`• ${rest}: ${fri.avgOverall.toFixed(1)}/5 (${fri.totalVotes} votes)`);
+        for (const dish of fri.dishes) {
+          lines.push(`  · ${dish.name} (${dish.category}): ${dish.avg.toFixed(1)}/5`);
+        }
+      } else {
+        lines.push(`• ${rest}: N/A`);
       }
     }
     lines.push("");
@@ -216,7 +220,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const weeksAgo = parseInt(searchParams.get("weeksAgo") || "0", 10);
 
-  const { startDate, endDate, label } = getBiWeeklyRange(weeksAgo);
+  const { startDate, endDate, label } = getWeeklyRange(weeksAgo);
   const report = await generateReport(startDate, endDate, label);
 
   return NextResponse.json({ report });
@@ -228,7 +232,7 @@ export async function POST(request: Request) {
   const slackHandles: string[] = body.slackHandles || []; // e.g. ["@sukkriti", "@trevor"]
   const emails: string[] = body.emails || []; // e.g. ["sukkriti@kikoff.com"]
 
-  const { startDate, endDate, label } = getBiWeeklyRange(weeksAgo);
+  const { startDate, endDate, label } = getWeeklyRange(weeksAgo);
   const report = await generateReport(startDate, endDate, label);
   const reportText = formatReportForSlack(report);
   const results: { recipient: string; method: string; success: boolean; error?: string }[] = [];

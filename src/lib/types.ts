@@ -18,6 +18,7 @@ export interface Vote {
   userName: string;
   userEmail: string;
   slackUserId: string | null;
+  avatarUrl: string | null;
   ratingOverall: number | null;
   ratingStarch: number | null;
   ratingVeganProtein: number | null;
@@ -54,4 +55,5 @@ export interface VoteStats {
 export interface UserSession {
   email: string;
   displayName: string;
+  avatarUrl?: string | null;
 }

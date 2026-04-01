@@ -145,11 +145,11 @@ export default function ReportsPage() {
         <p className="text-gray-400 mb-6">No votes have been collected for this period.</p>
         <div className="flex justify-center gap-3">
           <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
-            ← Previous 2 weeks
+            ← Previous week
           </button>
           {weeksAgo > 0 && (
             <button onClick={() => setWeeksAgo((w) => w - 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
-              Next 2 weeks →
+              Next week →
             </button>
           )}
         </div>
@@ -161,7 +161,7 @@ export default function ReportsPage() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="font-display text-3xl text-gray-900">📋 Bi-Weekly Report</h1>
+        <h1 className="font-display text-3xl text-gray-900">🏆 Weekly Power Rankings</h1>
         <p className="text-gray-400 mt-1">{report.period}</p>
         <div className="flex justify-center gap-3 mt-4">
           <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
@@ -279,7 +279,6 @@ export default function ReportsPage() {
       {report.fridaySpotlight.length > 0 && (
         <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <h2 className="font-display text-xl text-gray-900 mb-4">🍴 Friday Catering Spotlight</h2>
-          <p className="text-sm text-gray-400 mb-4">Granular feedback for Friday catering — use this to optimize vendor selection and reduce waste.</p>
           {report.fridaySpotlight.map((fri) => (
             <div key={fri.date} className="p-4 bg-kikoff/20 rounded-xl border-2 border-black mb-3">
               <div className="flex items-center justify-between mb-2">
@@ -288,11 +287,17 @@ export default function ReportsPage() {
                   <span className="text-xs text-gray-400 ml-2">{formatDate(fri.date)}</span>
                 </div>
                 <div>
-                  <span className={`text-xl font-bold ${ratingColor(fri.avgOverall)}`}>{fri.avgOverall.toFixed(1)}</span>
-                  <span className="text-sm text-gray-400">/5 ({fri.totalVotes} votes)</span>
+                  {fri.totalVotes > 0 ? (
+                    <>
+                      <span className={`text-xl font-bold ${ratingColor(fri.avgOverall)}`}>{fri.avgOverall.toFixed(1)}</span>
+                      <span className="text-sm text-gray-400">/5 ({fri.totalVotes} votes)</span>
+                    </>
+                  ) : (
+                    <span className="text-xl font-bold text-gray-400">N/A</span>
+                  )}
                 </div>
               </div>
-              {fri.dishes.length > 0 && (
+              {fri.totalVotes > 0 && fri.dishes.length > 0 && (
                 <div className="space-y-1 mt-2">
                   {fri.dishes.sort((a, b) => b.avg - a.avg).map((dish, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">

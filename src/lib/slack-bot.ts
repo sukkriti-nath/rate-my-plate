@@ -486,6 +486,143 @@ export function buildPowerRankingsBlocks(rankings: WeeklyDayRanking[]): object[]
   return blocks;
 }
 
+// ─── Bi-Weekly Trends Report ────────────────────────────────────────────────
+
+import type { BiWeeklyTrendsData } from "@/lib/db";
+
+export function buildBiWeeklyTrendsBlocks(data: BiWeeklyTrendsData): object[] {
+  if (data.dayRankings.length === 0) {
+    return [
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: "No Mon-Thu ratings found for this period. 🤷" },
+      },
+    ];
+  }
+
+  const blocks: object[] = [];
+  const sortedDays = [...data.dayRankings].sort((a, b) => b.avgOverall - a.avgOverall);
+  const bestDay = sortedDays[0];
+  const worstDay = sortedDays[sortedDays.length - 1];
+
+  // Header
+  blocks.push({
+    type: "header",
+    text: { type: "plain_text", text: "📊 Bi-Weekly Trends Report", emoji: true },
+  });
+
+  blocks.push({
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: `*${data.startDate} → ${data.endDate}* (Mon-Thu only)\n\n`
+        + `📈 *Avg Overall:* ${data.avgOverall.toFixed(1)}/5.0\n`
+        + `🗳️ *Total Votes:* ${data.totalVotes}\n`
+        + `📅 *Days Rated:* ${data.totalDays}`,
+    },
+  });
+
+  blocks.push({ type: "divider" });
+
+  // Best & Worst Days
+  const medalEmojis = ["🥇", "🥈", "🥉"];
+
+  blocks.push({
+    type: "section",
+    text: { type: "mrkdwn", text: "*📊 Ranked Days This Period*" },
+  });
+
+  for (let i = 0; i < sortedDays.length; i++) {
+    const day = sortedDays[i];
+    const medal = medalEmojis[i] || `#${i + 1}`;
+    const menuItems = [
+      day.menu.starch,
+      day.menu.vegan_protein,
+      day.menu.protein_1,
+      day.menu.protein_2,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `${medal} *${day.dayName} (${day.date})* — ${starRating(day.avgOverall)} ${day.avgOverall.toFixed(1)}/5.0 _(${day.totalVotes} votes)_\n> _${menuItems}_`,
+      },
+    });
+  }
+
+  blocks.push({ type: "divider" });
+
+  // Team Favorites by Category
+  if (data.categoryFavorites.length > 0) {
+    let favsText = "*✅ Team Favorites by Category*\n\n";
+    for (const fav of data.categoryFavorites) {
+      favsText += `> 🟢 *${fav.category}:* ${fav.dishName} — ${fav.avgRating.toFixed(1)}/5.0 _(${fav.timesServed} ratings)_\n`;
+    }
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: favsText },
+    });
+  }
+
+  // Least Favorites by Category
+  if (data.categoryWorst.length > 0) {
+    let worstText = "*❌ Least Favorites by Category*\n\n";
+    for (const w of data.categoryWorst) {
+      worstText += `> 🔴 *${w.category}:* ${w.dishName} — ${w.avgRating.toFixed(1)}/5.0 _(${w.timesServed} ratings)_\n`;
+    }
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: worstText },
+    });
+  }
+
+  blocks.push({ type: "divider" });
+
+  // Recommendations
+  const bestDishName = data.categoryFavorites.length > 0
+    ? data.categoryFavorites.sort((a, b) => b.avgRating - a.avgRating)[0]
+    : null;
+  const worstDishName = data.categoryWorst.length > 0
+    ? data.categoryWorst.sort((a, b) => a.avgRating - b.avgRating)[0]
+    : null;
+
+  const bestMenuItems = [bestDay.menu.starch, bestDay.menu.protein_1, bestDay.menu.protein_2]
+    .filter(Boolean)
+    .join(", ");
+  const worstMenuItems = [worstDay.menu.starch, worstDay.menu.protein_1, worstDay.menu.protein_2]
+    .filter(Boolean)
+    .join(", ");
+
+  let recsText = "*💡 Recommendations*\n\n";
+  if (bestDishName) {
+    recsText += `> 🟢 *ORDER MORE:* ${bestDishName.dishName} (${bestDishName.category}) — rated ${bestDishName.avgRating.toFixed(1)}, team favorite\n`;
+  }
+  if (worstDishName) {
+    recsText += `> 🔴 *PHASE OUT:* ${worstDishName.dishName} (${worstDishName.category}) — rated ${worstDishName.avgRating.toFixed(1)}, consistently low\n`;
+  }
+  recsText += `> 🟢 *REPLICATE:* ${bestDay.dayName}'s menu (${bestDay.date}) scored ${bestDay.avgOverall.toFixed(1)} — _${bestMenuItems}_\n`;
+  recsText += `> 🟡 *IMPROVE:* ${worstDay.dayName}'s menu (${worstDay.date}) scored ${worstDay.avgOverall.toFixed(1)} — _${worstMenuItems}_\n`;
+
+  blocks.push({
+    type: "section",
+    text: { type: "mrkdwn", text: recsText },
+  });
+
+  blocks.push({ type: "divider" });
+
+  blocks.push({
+    type: "context",
+    elements: [
+      { type: "mrkdwn", text: "Powered by RateMyPlate 🍽️ | Bi-weekly report • Mon-Thu in-house catering only" },
+    ],
+  });
+
+  return blocks;
+}
+
 // ─── Post message to channel ────────────────────────────────────────────────
 
 export async function postToChannel(blocks: object[], text: string): Promise<string | undefined> {
