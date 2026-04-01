@@ -111,22 +111,22 @@ function LoginContent() {
 
         {/* Fun stats teaser */}
         <div className="mt-10 grid grid-cols-4 gap-4 text-center max-w-xs mx-auto">
-          <div className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center">
+          <a href="/" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
             <div className="text-2xl">🗳️</div>
             <div className="text-[10px] text-gray-500 mt-1 font-bold">Vote</div>
-          </div>
-          <div className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center">
+          </a>
+          <a href="/reports" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
             <div className="text-2xl">🏆</div>
             <div className="text-[10px] text-gray-500 mt-1 font-bold">Rankings</div>
-          </div>
-          <div className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center">
+          </a>
+          <a href="/leaderboard" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
             <div className="text-2xl">🥇</div>
             <div className="text-[10px] text-gray-500 mt-1 font-bold">Leaderboard</div>
-          </div>
-          <div className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center">
+          </a>
+          <a href="/reports" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
             <div className="text-2xl">📊</div>
             <div className="text-[10px] text-gray-500 mt-1 font-bold">Reports</div>
-          </div>
+          </a>
         </div>
       </div>
     </div>
