@@ -60,11 +60,11 @@ export default function Navbar() {
               ) : (
                 <Image src="/logo.png" alt="RateMyPlate" width={30} height={30} className="rounded-full border-2 border-kikoff-dark/20" />
               )}
-              <span className="font-display text-[15px] sm:text-base text-kikoff-dark tracking-tight font-extrabold uppercase">
+              <span className="font-display text-lg sm:text-xl text-kikoff-dark font-extrabold">
                 {isSnacksApp ? (
-                  <>Snack<span className="bg-amber-500 text-white px-1.5 py-0.5 rounded-md mx-0.5">Over</span>flow</>
+                  <>Snack<span className="bg-amber-500 text-white px-1.5 py-0.5 rounded-xl mx-0.5">Over</span>flow</>
                 ) : (
-                  <>Rate<span className="bg-kikoff-dark text-kikoff px-1.5 py-0.5 rounded-md mx-0.5">My</span>Plate</>
+                  <>Rate<span className="bg-kikoff-dark text-kikoff px-1.5 py-0.5 rounded-xl mx-0.5">My</span>Plate</>
                 )}
               </span>
             </Link>
