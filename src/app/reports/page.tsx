@@ -145,11 +145,11 @@ export default function ReportsPage() {
         <p className="text-gray-400 mb-6">No votes have been collected for this period.</p>
         <div className="flex justify-center gap-3">
           <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
-            ← Previous 2 weeks
+            ← Previous week
           </button>
           {weeksAgo > 0 && (
             <button onClick={() => setWeeksAgo((w) => w - 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
-              Next 2 weeks →
+              Next week →
             </button>
           )}
         </div>
@@ -161,7 +161,7 @@ export default function ReportsPage() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="font-display text-3xl text-gray-900">📋 Bi-Weekly Report</h1>
+        <h1 className="font-display text-3xl text-gray-900">🏆 Weekly Power Rankings</h1>
         <p className="text-gray-400 mt-1">{report.period}</p>
         <div className="flex justify-center gap-3 mt-4">
           <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
