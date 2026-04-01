@@ -201,7 +201,7 @@ export default function LiveResults({
             {stats.totalVotes}
           </div>
           <div className="text-sm text-gray-500">
-            vote{stats.totalVotes !== 1 ? "s" : ""}
+            total votes
           </div>
         </div>
       </div>
