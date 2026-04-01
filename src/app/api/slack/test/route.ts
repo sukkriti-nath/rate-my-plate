@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildDailyMenuBlocks, postToChannel, buildPowerRankingsBlocks } from "@/lib/slack-bot";
+import { buildDailyMenuBlocks, postToChannel, buildPowerRankingsBlocks, sendDirectMessage } from "@/lib/slack-bot";
 import { fetchMenuFromSheet } from "@/lib/google-sheets";
 import { upsertMenuDay, getMenuForDate, getWeeklyRankings } from "@/lib/db";
 
@@ -119,6 +119,38 @@ export async function GET(request: Request) {
         daysRanked: rankings.length,
         messageTs: ts,
       });
+    }
+
+    // ─── DM preview to a specific user ────────────────────────────────
+    if (action === "dm") {
+      const userId = searchParams.get("user") || "U09L4ET6KUH"; // default: Sukkriti
+      const now = new Date();
+      const ptDate = new Date(
+        now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
+      );
+      const today = dateParam || ptDate.toISOString().split("T")[0];
+
+      let menu = await getMenuForDate(today);
+      if (!menu) {
+        const menuItems = await fetchMenuFromSheet();
+        for (const item of menuItems) {
+          await upsertMenuDay(item);
+        }
+        menu = await getMenuForDate(today);
+      }
+
+      if (!menu || menu.no_service) {
+        return NextResponse.json({ success: false, message: `No lunch service for ${today}` });
+      }
+
+      const blocks = await buildDailyMenuBlocks(today);
+      if (!blocks) {
+        return NextResponse.json({ success: false, message: "Could not build menu blocks" });
+      }
+
+      await sendDirectMessage(userId, `Today's lunch is ready! Rate it now 🍽️`, blocks);
+
+      return NextResponse.json({ success: true, action: "dm", date: today, userId });
     }
 
     // ─── Preview (default) — shows blocks without posting ────────────
