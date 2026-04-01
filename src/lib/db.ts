@@ -91,6 +91,7 @@ async function initDb() {
     `ALTER TABLE votes ADD COLUMN IF NOT EXISTS comment_protein_1 TEXT`,
     `ALTER TABLE votes ADD COLUMN IF NOT EXISTS comment_protein_2 TEXT`,
     `ALTER TABLE menu_days ADD COLUMN IF NOT EXISTS restaurant TEXT`,
+    `ALTER TABLE votes ADD COLUMN IF NOT EXISTS avatar_url TEXT`,
   ];
 
   for (const sql of migrations) {
@@ -179,6 +180,7 @@ export async function upsertVote(vote: {
   userName: string;
   userEmail: string;
   slackUserId?: string | null;
+  avatarUrl?: string | null;
   ratingOverall: number | null;
   ratingStarch: number | null;
   ratingVeganProtein: number | null;
@@ -194,8 +196,8 @@ export async function upsertVote(vote: {
 }) {
   const db = await getDb();
   return await db.query(
-    `INSERT INTO votes (menu_date, user_name, user_email, slack_user_id, rating_overall, rating_starch, rating_vegan_protein, rating_veg, rating_protein_1, rating_protein_2, comment, comment_starch, comment_vegan_protein, comment_veg, comment_protein_1, comment_protein_2)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    `INSERT INTO votes (menu_date, user_name, user_email, slack_user_id, avatar_url, rating_overall, rating_starch, rating_vegan_protein, rating_veg, rating_protein_1, rating_protein_2, comment, comment_starch, comment_vegan_protein, comment_veg, comment_protein_1, comment_protein_2)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     ON CONFLICT (menu_date, user_email) DO UPDATE SET
       rating_overall = EXCLUDED.rating_overall,
       rating_starch = EXCLUDED.rating_starch,
@@ -210,12 +212,14 @@ export async function upsertVote(vote: {
       comment_protein_1 = EXCLUDED.comment_protein_1,
       comment_protein_2 = EXCLUDED.comment_protein_2,
       slack_user_id = EXCLUDED.slack_user_id,
+      avatar_url = COALESCE(EXCLUDED.avatar_url, votes.avatar_url),
       created_at = NOW()::text`,
     [
       vote.menuDate,
       vote.userName,
       vote.userEmail,
       vote.slackUserId ?? null,
+      vote.avatarUrl ?? null,
       vote.ratingOverall,
       vote.ratingStarch,
       vote.ratingVeganProtein,

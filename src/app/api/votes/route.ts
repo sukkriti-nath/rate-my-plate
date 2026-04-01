@@ -135,6 +135,7 @@ export async function POST(request: Request) {
     menuDate: date,
     userName: session.displayName,
     userEmail: session.email,
+    avatarUrl: null,
     ratingOverall: parsedOverall,
     ratingStarch: parsedStarch,
     ratingVeganProtein: parsedVeganProtein,

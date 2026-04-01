@@ -203,9 +203,17 @@ export default function LiveResults({
                 className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0 animate-slide-up"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                <div className="w-8 h-8 rounded-xl bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold shrink-0 border-2 border-black">
-                  {vote.user_name.charAt(0).toUpperCase()}
-                </div>
+                {vote.avatar_url ? (
+                  <img
+                    src={vote.avatar_url}
+                    alt={vote.user_name}
+                    className="w-8 h-8 rounded-xl border-2 border-black shrink-0 object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold shrink-0 border-2 border-black">
+                    {vote.user_name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700">

@@ -233,11 +233,13 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     // Get user email from Slack
     let userEmail = `${user.username}@kikoff.com`;
     let userName = user.name || user.username;
+    let avatarUrl: string | null = null;
     try {
       const slack = getSlackClient();
       const userInfo = await slack.users.info({ user: userId });
       if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
       if (userInfo.user?.real_name) userName = userInfo.user.real_name;
+      if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
     } catch (err) {
       console.error("Failed to fetch user email:", err);
     }
@@ -251,6 +253,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
         userName,
         userEmail,
         slackUserId: userId,
+        avatarUrl,
         ratingOverall: cached.overall ?? (existing?.rating_overall as number | null) ?? null,
         ratingStarch: cached.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
         ratingVeganProtein: cached.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
@@ -375,11 +378,13 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       // Get user email
       let userEmail = `${user.username}@kikoff.com`;
       let userName = user.name || user.username;
+      let avatarUrl: string | null = null;
       try {
         const slack = getSlackClient();
         const userInfo = await slack.users.info({ user: userId });
         if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
         if (userInfo.user?.real_name) userName = userInfo.user.real_name;
+        if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
       } catch { /* use fallback */ }
 
       // Get cached ratings and existing vote — merge to avoid overwriting
@@ -400,6 +405,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         userName,
         userEmail,
         slackUserId: userId,
+        avatarUrl,
         ratingOverall: mergedRatings.overall,
         ratingStarch: mergedRatings.starch,
         ratingVeganProtein: mergedRatings.veganProtein,
@@ -434,11 +440,13 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
 
       let userEmail = `${user.username}@kikoff.com`;
       let userName = user.name || user.username;
+      let avatarUrl: string | null = null;
       try {
         const slack = getSlackClient();
         const userInfo = await slack.users.info({ user: slackUserId });
         if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
         if (userInfo.user?.real_name) userName = userInfo.user.real_name;
+        if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
       } catch { /* use fallback */ }
 
       if (
@@ -460,6 +468,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         userName,
         userEmail,
         slackUserId,
+        avatarUrl,
         ratingOverall: parsed.ratingOverall,
         ratingStarch: parsed.ratingStarch,
         ratingVeganProtein: parsed.ratingVeganProtein,
