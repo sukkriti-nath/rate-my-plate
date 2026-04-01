@@ -7,7 +7,7 @@ import {
   getMenuForDate,
 } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { syncVoteToSheet, syncSuperReviewers } from "@/lib/google-sheets-writer";
+import { syncVoteToSheet, syncDailySummary, syncSuperReviewers } from "@/lib/google-sheets-writer";
 import { getVotingStreaks } from "@/lib/db";
 
 export async function GET(request: Request) {
@@ -171,6 +171,29 @@ export async function POST(request: Request) {
     comment: comment || null,
     timestamp: new Date().toISOString(),
   }).catch((err) => console.error("Google Sheets sync failed:", err));
+
+  // Sync Daily Summary to Google Sheet (fire-and-forget)
+  getVoteStatsForDate(date).then(async (stats) => {
+    const dishAvgs = [
+      { name: (menu.starch as string) || "Starch", avg: stats.dishRatings.starch.avg },
+      { name: (menu.vegan_protein as string) || "Vegan Protein", avg: stats.dishRatings.veganProtein.avg },
+      { name: (menu.veg as string) || "Veg", avg: stats.dishRatings.veg.avg },
+      { name: (menu.protein_1 as string) || "Protein 1", avg: stats.dishRatings.protein1.avg },
+      { name: (menu.protein_2 as string) || "Protein 2", avg: stats.dishRatings.protein2.avg },
+    ].filter((d) => d.avg > 0);
+    const topDish = dishAvgs.length ? dishAvgs.reduce((a, b) => (a.avg >= b.avg ? a : b)) : { name: "N/A", avg: 0 };
+    const bottomDish = dishAvgs.length ? dishAvgs.reduce((a, b) => (a.avg <= b.avg ? a : b)) : { name: "N/A", avg: 0 };
+    await syncDailySummary({
+      date,
+      dayName: (menu.day_name as string) || "",
+      totalVotes: stats.totalVotes,
+      avgOverall: stats.averageOverall,
+      topDish: topDish.name,
+      topDishRating: topDish.avg,
+      bottomDish: bottomDish.name,
+      bottomDishRating: bottomDish.avg,
+    });
+  }).catch((err) => console.error("Daily Summary sync failed:", err));
 
   // Sync Super Reviewers leaderboard (fire-and-forget)
   getVotingStreaks().then((streaks) => {
