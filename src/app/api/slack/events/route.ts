@@ -264,15 +264,44 @@ async function handleBlockAction(payload: Record<string, unknown>) {
   if (action.action_id === "submit_inline_ratings") {
     const date = action.value || "";
 
-    // Try to get cached rating, retry once after a short delay if not found
+    // Try to get cached rating with multiple retries (DB writes may be slightly delayed)
     let cached = await getCachedRating(userId, date);
     if (!cached) {
-      await new Promise((r) => setTimeout(r, 1000));
-      cached = await getCachedRating(userId, date);
+      console.log(`[submit] No cached rating on first try for user=${userId} date=${date}, retrying...`);
+      for (let retry = 0; retry < 3 && !cached; retry++) {
+        await new Promise((r) => setTimeout(r, 1000 * (retry + 1)));
+        cached = await getCachedRating(userId, date);
+      }
     }
 
     if (!cached) {
-      // No cached data — show friendly message
+      console.error(`[submit] No cached rating found after retries for user=${userId} date=${date}`);
+
+      // Check if this user already submitted for this date (cache was cleared after previous submit)
+      let userEmail = `${user.username}@kikoff.com`;
+      try {
+        const info = await fetchSlackUserInfo(userId);
+        if (info.email) userEmail = info.email;
+      } catch { /* use fallback email */ }
+
+      const existingVote = await getUserVoteForDate(userEmail, date);
+      if (existingVote) {
+        // They already voted — the cache was cleared after their previous submission
+        if (responseUrl) {
+          await fetch(responseUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              replace_original: true,
+              response_type: "ephemeral",
+              text: "✅ Your ratings for this day have already been submitted! To update them, select new ratings from the overall dropdown above.",
+            }),
+          });
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      // Truly no cached data — show friendly message
       if (responseUrl) {
         await fetch(responseUrl, {
           method: "POST",
@@ -280,7 +309,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
           body: JSON.stringify({
             replace_original: false,
             response_type: "ephemeral",
-            text: "😅 Oops! It looks like your ratings weren't saved before you hit submit. Please select your ratings from the dropdowns above and try submitting again.",
+            text: "😅 Oops! It looks like your ratings weren't saved before you hit submit. Please select your ratings from the dropdowns above and try submitting again. If this keeps happening, try rating on the web app instead!",
           }),
         });
       }
