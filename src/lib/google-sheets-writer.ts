@@ -263,6 +263,22 @@ export async function initializeSheetTabs(): Promise<void> {
         "Rec: Order More", "Rec: Phase Out", "Rec: Replicate", "Rec: Improve",
       ],
     },
+    {
+      name: "Friday Catering",
+      headers: [
+        "Date", "Restaurant", "Overall Rating", "Total Votes",
+        "Top Dish", "Top Dish Rating", "Bottom Dish", "Bottom Dish Rating",
+        "Starch", "Starch Rating", "Vegan Protein", "VP Rating",
+        "Protein 1", "P1 Rating", "Protein 2", "P2 Rating",
+      ],
+    },
+    {
+      name: "Super Reviewers",
+      headers: [
+        "Rank", "Name", "Email", "Current Streak", "Longest Streak",
+        "Last Vote Date", "Badge",
+      ],
+    },
   ];
 
   for (const tab of tabConfigs) {
@@ -367,5 +383,135 @@ export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<voi
     range: `${range}!A:O`,
     valueInputOption: "RAW",
     requestBody: { values: [rowValues] },
+  });
+}
+
+// ─── Friday Catering Sync ─────────────────────────────────────────────────
+
+export interface FridayCateringRow {
+  date: string;
+  restaurant: string;
+  overallRating: number;
+  totalVotes: number;
+  topDish: string;
+  topDishRating: number;
+  bottomDish: string;
+  bottomDishRating: number;
+  starch: string | null;
+  starchRating: number | null;
+  veganProtein: string | null;
+  vpRating: number | null;
+  protein1: string | null;
+  p1Rating: number | null;
+  protein2: string | null;
+  p2Rating: number | null;
+}
+
+export async function syncFridayCatering(row: FridayCateringRow): Promise<void> {
+  const sheets = getSheetsClient();
+  const sheetId = getOutputSheetId();
+  const range = "Friday Catering";
+
+  const existing = await sheets.spreadsheets.values.get({
+    spreadsheetId: sheetId,
+    range: `'${range}'!A:A`,
+  });
+  const rows = existing.data.values || [];
+
+  const rowValues = [
+    row.date,
+    row.restaurant,
+    Math.round(row.overallRating * 100) / 100,
+    row.totalVotes,
+    row.topDish,
+    Math.round(row.topDishRating * 100) / 100,
+    row.bottomDish,
+    Math.round(row.bottomDishRating * 100) / 100,
+    row.starch ?? "",
+    row.starchRating ?? "",
+    row.veganProtein ?? "",
+    row.vpRating ?? "",
+    row.protein1 ?? "",
+    row.p1Rating ?? "",
+    row.protein2 ?? "",
+    row.p2Rating ?? "",
+  ];
+
+  // Upsert by date
+  let existingRowIndex = -1;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === row.date) {
+      existingRowIndex = i + 1;
+      break;
+    }
+  }
+
+  if (existingRowIndex > 0) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: `'${range}'!A${existingRowIndex}:P${existingRowIndex}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [rowValues] },
+    });
+  } else {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: sheetId,
+      range: `'${range}'!A:P`,
+      valueInputOption: "RAW",
+      requestBody: { values: [rowValues] },
+    });
+  }
+}
+
+// ─── Super Reviewers Sync ─────────────────────────────────────────────────
+
+export interface SuperReviewerRow {
+  rank: number;
+  userName: string;
+  userEmail: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastVoteDate: string;
+  badge: string;
+}
+
+/**
+ * Overwrites the entire Super Reviewers tab with current leaderboard data.
+ * Called periodically (e.g., after each vote or on a schedule).
+ */
+export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise<void> {
+  const sheets = getSheetsClient();
+  const sheetId = getOutputSheetId();
+  const range = "Super Reviewers";
+
+  const headers = [
+    "Rank", "Name", "Email", "Current Streak", "Longest Streak",
+    "Last Vote Date", "Badge",
+  ];
+
+  const values = [
+    headers,
+    ...reviewers.map((r) => [
+      r.rank,
+      r.userName,
+      r.userEmail,
+      r.currentStreak,
+      r.longestStreak,
+      r.lastVoteDate,
+      r.badge,
+    ]),
+  ];
+
+  // Clear and rewrite the whole tab (leaderboard changes with every vote)
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId: sheetId,
+    range: `'${range}'!A:G`,
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: sheetId,
+    range: `'${range}'!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values },
   });
 }

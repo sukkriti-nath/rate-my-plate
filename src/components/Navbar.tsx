@@ -37,10 +37,9 @@ export default function Navbar() {
         { href: "/snacks/profile", label: "Snack Profile", emoji: "👤" },
       ]
     : [
-        { href: "/", label: "Vote", emoji: "🗳️" },
-        { href: "/dashboard", label: "Dashboard", emoji: "📊" },
-        { href: "/rankings", label: "Rankings", emoji: "🏆" },
-        { href: "/reports", label: "Reports", emoji: "📋" },
+       { href: "/", label: "Vote", emoji: "🗳️" },
+    { href: "/reports", label: "Rankings", emoji: "🏆" },
+    { href: "/leaderboard", label: "Reviewers", emoji: "⭐" },
       ];
 
   async function handleLogout() {

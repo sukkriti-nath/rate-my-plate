@@ -7,7 +7,8 @@ import {
   getMenuForDate,
 } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { syncVoteToSheet } from "@/lib/google-sheets-writer";
+import { syncVoteToSheet, syncSuperReviewers } from "@/lib/google-sheets-writer";
+import { getVotingStreaks } from "@/lib/db";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -170,6 +171,27 @@ export async function POST(request: Request) {
     comment: comment || null,
     timestamp: new Date().toISOString(),
   }).catch((err) => console.error("Google Sheets sync failed:", err));
+
+  // Sync Super Reviewers leaderboard (fire-and-forget)
+  getVotingStreaks().then((streaks) => {
+    const reviewers = streaks.map((s, idx) => {
+      const engagement = s.currentStreak + s.longestStreak;
+      let badge: string;
+      if (engagement >= 20) badge = "Super Reviewer";
+      else if (engagement >= 10) badge = "Regular";
+      else badge = "New";
+      return {
+        rank: idx + 1,
+        userName: s.userName,
+        userEmail: s.userEmail,
+        currentStreak: s.currentStreak,
+        longestStreak: s.longestStreak,
+        lastVoteDate: s.lastVoteDate,
+        badge,
+      };
+    });
+    return syncSuperReviewers(reviewers);
+  }).catch((err) => console.error("Super Reviewers sync failed:", err));
 
   const stats = await getVoteStatsForDate(date);
   return NextResponse.json({ success: true, stats });
