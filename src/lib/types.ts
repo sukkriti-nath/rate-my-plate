@@ -54,4 +54,5 @@ export interface VoteStats {
 export interface UserSession {
   email: string;
   displayName: string;
+  avatarUrl?: string | null;
 }

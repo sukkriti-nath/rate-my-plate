@@ -64,9 +64,17 @@ export default function Navbar() {
         <div className="flex items-center gap-2 shrink-0">
           {user ? (
             <>
-              <div className="w-6 h-6 rounded-xl bg-kikoff flex items-center justify-center text-kikoff-dark text-[10px] font-bold border-2 border-black">
-                {user.displayName.charAt(0)}
-              </div>
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.displayName}
+                  className="w-6 h-6 rounded-xl border-2 border-black object-cover"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-xl bg-kikoff flex items-center justify-center text-kikoff-dark text-[10px] font-bold border-2 border-black">
+                  {user.displayName.charAt(0)}
+                </div>
+              )}
               <button
                 onClick={handleLogout}
                 className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
