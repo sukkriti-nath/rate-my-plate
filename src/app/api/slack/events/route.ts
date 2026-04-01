@@ -18,6 +18,35 @@ import { getVotingStreaks } from "@/lib/db";
 // Eagerly start DB connection on module load (reduces cold start latency)
 warmDb();
 
+/**
+ * Fetch Slack user info with a single retry on failure.
+ */
+async function fetchSlackUserInfo(userId: string): Promise<{
+  email: string | null;
+  realName: string | null;
+  avatarUrl: string | null;
+}> {
+  const slack = getSlackClient();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const userInfo = await slack.users.info({ user: userId });
+      return {
+        email: userInfo.user?.profile?.email || null,
+        realName: userInfo.user?.real_name || null,
+        avatarUrl: userInfo.user?.profile?.image_72 || null,
+      };
+    } catch (err) {
+      if (attempt === 0) {
+        // Wait briefly and retry once
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+      console.error("Failed to fetch Slack user info after retry:", err);
+    }
+  }
+  return { email: null, realName: null, avatarUrl: null };
+}
+
 /** Fire-and-forget sync to Google Sheets after a vote is saved */
 async function syncVoteToSheetSafe(
   date: string,
@@ -258,16 +287,15 @@ async function handleBlockAction(payload: Record<string, unknown>) {
       return NextResponse.json({ ok: true });
     }
 
-    // Get user email from Slack
+    // Get user email from Slack (with retry)
     let userEmail = `${user.username}@kikoff.com`;
     let userName = user.name || user.username;
     let avatarUrl: string | null = null;
     try {
-      const slack = getSlackClient();
-      const userInfo = await slack.users.info({ user: userId });
-      if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
-      if (userInfo.user?.real_name) userName = userInfo.user.real_name;
-      if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
+      const info = await fetchSlackUserInfo(userId);
+      if (info.email) userEmail = info.email;
+      if (info.realName) userName = info.realName;
+      if (info.avatarUrl) avatarUrl = info.avatarUrl;
     } catch (err) {
       console.error("Failed to fetch user email:", err);
     }
@@ -407,13 +435,10 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       let userEmail = `${user.username}@kikoff.com`;
       let userName = user.name || user.username;
       let avatarUrl: string | null = null;
-      try {
-        const slack = getSlackClient();
-        const userInfo = await slack.users.info({ user: userId });
-        if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
-        if (userInfo.user?.real_name) userName = userInfo.user.real_name;
-        if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
-      } catch { /* use fallback */ }
+      const commentUserInfo = await fetchSlackUserInfo(userId);
+      if (commentUserInfo.email) userEmail = commentUserInfo.email;
+      if (commentUserInfo.realName) userName = commentUserInfo.realName;
+      if (commentUserInfo.avatarUrl) avatarUrl = commentUserInfo.avatarUrl;
 
       // Get cached ratings and existing vote — merge to avoid overwriting
       const cached = await getCachedRating(userId, date);
@@ -469,13 +494,10 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       let userEmail = `${user.username}@kikoff.com`;
       let userName = user.name || user.username;
       let avatarUrl: string | null = null;
-      try {
-        const slack = getSlackClient();
-        const userInfo = await slack.users.info({ user: slackUserId });
-        if (userInfo.user?.profile?.email) userEmail = userInfo.user.profile.email;
-        if (userInfo.user?.real_name) userName = userInfo.user.real_name;
-        if (userInfo.user?.profile?.image_72) avatarUrl = userInfo.user.profile.image_72;
-      } catch { /* use fallback */ }
+      const modalUserInfo = await fetchSlackUserInfo(slackUserId);
+      if (modalUserInfo.email) userEmail = modalUserInfo.email;
+      if (modalUserInfo.realName) userName = modalUserInfo.realName;
+      if (modalUserInfo.avatarUrl) avatarUrl = modalUserInfo.avatarUrl;
 
       if (
         parsed.ratingOverall === null &&
