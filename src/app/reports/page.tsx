@@ -150,7 +150,7 @@ export default function ReportsPage() {
             const mostActive = [...report.dayByDay].filter((d) => d.totalVotes > 0).sort((a, b) => b.totalVotes - a.totalVotes)[0];
             return (
               <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
-                <div className="text-xs text-gray-400 mb-1 font-medium">Most Active Day</div>
+                <div className="text-sm text-gray-900 mb-1 font-bold">Most Active Day</div>
                 <div className="text-3xl font-bold text-gray-900">
                   {mostActive?.dayName || "—"}
                 </div>
@@ -163,13 +163,13 @@ export default function ReportsPage() {
             );
           })()}
           <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
-            <div className="text-xs text-gray-400 mb-1 font-medium">Best Day of the Week</div>
+            <div className="text-sm text-gray-900 mb-1 font-bold">Best Day of the Week</div>
             <div className="text-3xl font-bold text-green-500">
               {report.summary.bestDay?.name || "—"}
             </div>
             {report.summary.bestDay && (
               <div className="text-lg font-bold text-green-500 mt-0.5">
-                {report.summary.bestDay.avg.toFixed(1)}/5
+                {Math.round(report.summary.bestDay.avg)}/5
               </div>
             )}
           </div>
