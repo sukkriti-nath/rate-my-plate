@@ -67,10 +67,6 @@ export default function Navbar() {
           <div className="flex items-center gap-3 shrink-0">
             {user ? (
               <>
-                {/* Desktop: show name + logout */}
-                <span className="hidden sm:block text-xs text-kikoff-dark/60 font-medium">
-                  {user.displayName.split(" ")[0]}
-                </span>
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
@@ -82,12 +78,17 @@ export default function Navbar() {
                     {user.displayName.charAt(0)}
                   </div>
                 )}
-                <button
-                  onClick={handleLogout}
-                  className="hidden sm:block text-xs text-kikoff-dark/50 hover:text-kikoff-dark font-medium transition-colors"
-                >
-                  Log out
-                </button>
+                <div className="hidden sm:flex flex-col leading-tight">
+                  <span className="text-xs text-kikoff-dark/60 font-medium">
+                    Hello, {user.displayName.split(" ")[0]}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-xs text-kikoff-dark font-bold hover:text-kikoff-dark/70 transition-colors text-left"
+                  >
+                    Log out
+                  </button>
+                </div>
               </>
             ) : (
               <Link
