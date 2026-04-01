@@ -27,8 +27,11 @@ export async function GET(request: Request) {
 
   try {
     if (action === "preview") {
-      const blocks = buildWeeklySnackSurveyBlocks(weekId);
       const snackNames = await getSnackNamesForSurvey();
+      const blocks = buildWeeklySnackSurveyBlocks(weekId, {
+        totalCount: snackNames.length,
+        sampleNames: snackNames,
+      });
       return NextResponse.json({
         action: "preview",
         weekId,
@@ -36,23 +39,34 @@ export async function GET(request: Request) {
         sampleSnacks: snackNames.slice(0, 8),
         channel: getSnackTargetChannelForPost(),
         blocks,
-        hint: "Default: Kikoff inventory sheet (Brand+Flavor rows). Override SNACK_SHEET_ID / SNACK_SHEET_GID. Interactivity → /api/snacks/events",
+        hint: "Voting is in Slack (modal). Interactivity URL must be https://YOUR_HOST/api/snacks/events for the button to work.",
       });
     }
 
     if (action === "survey") {
       await warmSnackSurveyCache();
-      const blocks = buildWeeklySnackSurveyBlocks(weekId);
+      const names = await getSnackNamesForSurvey();
+      const blocks = buildWeeklySnackSurveyBlocks(weekId, {
+        totalCount: names.length,
+        sampleNames: names,
+      });
       const ts = await postSnackMessage(
         blocks,
         `Weekly snack survey — ${weekId}`
       );
+      const channel = getSnackTargetChannelForPost();
+      if (process.env.NODE_ENV === "development") {
+        console.log("[snack-test] survey posted to Slack", { weekId, channel, messageTs: ts });
+      }
       return NextResponse.json({
         success: true,
         action: "survey",
         weekId,
         messageTs: ts,
-        channel: getSnackTargetChannelForPost(),
+        channel,
+        whereToLook: `Open Slack → ${channel.startsWith("#") ? channel : `channel ID ${channel}`} and find the latest “Weekly snack survey” message.`,
+        pickMyTop5Button:
+          "Slack sends button clicks to your Interactivity URL. localhost is not reachable from Slack — use your deployed https://YOUR_HOST/api/snacks/events or an ngrok URL in the Slack app settings.",
       });
     }
 

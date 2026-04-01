@@ -409,15 +409,37 @@ export function buildOutOfStockAlert(
 
 // ============== Weekly survey (channel message + top-5 modal) ==============
 
-export function buildWeeklySnackSurveyBlocks(weekId: string): object[] {
+/** Optional preview of ballot size + sample rows for the channel message (voting still happens in the Slack modal). */
+export type WeeklyBallotPreview = {
+  totalCount: number;
+  sampleNames: string[];
+};
+
+function slackMrkdwnSafeLine(s: string, max = 100): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .slice(0, max);
+}
+
+/**
+ * Channel message for the weekly survey. Voting is *in Slack*: the button opens a modal with the full
+ * searchable list (up to 100 options per Slack). Pass `ballot` so the channel shows a preview list.
+ */
+export function buildWeeklySnackSurveyBlocks(
+  weekId: string,
+  ballot?: WeeklyBallotPreview
+): object[] {
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
-  return [
+
+  const blocks: object[] = [
     {
       type: "header",
       text: {
         type: "plain_text",
-        text: "📊 Weekly snack picks",
+        text: "📊 Weekly snack & bev picks",
         emoji: true,
       },
     },
@@ -425,9 +447,33 @@ export function buildWeeklySnackSurveyBlocks(weekId: string): object[] {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `<!here> Vote for your *top 5* snacks from this week’s list (from the snack spreadsheet). First pick scores 5 pts, then 4…1 toward the weekly tally.\n_Week ${weekId}_ • <${appUrl}/snacks|Dashboard>`,
+        text: `<!here> *Vote entirely in Slack* — pick your *top 5* snacks and/or beverages for this week. Scoring: 1st = 5 pts … 5th = 1 pt.\n_Week ${weekId}_ • <${appUrl}/snacks|Web dashboard (optional)>`,
       },
     },
+  ];
+
+  if (ballot && ballot.totalCount > 0) {
+    const maxPreview = 20;
+    const names = ballot.sampleNames.slice(0, maxPreview);
+    const lines = names.map((n) => `• ${slackMrkdwnSafeLine(n)}`);
+    const more =
+      ballot.totalCount > names.length
+        ? `\n_…and ${ballot.totalCount - names.length} more on the ballot (all in the form)._`
+        : "";
+    const previewBody = `*Ballot: ${ballot.totalCount} items* — sample below. Tap the button to open the *in-Slack* form and choose your top 5.\n\n${lines.join("\n")}${more}`;
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text:
+          previewBody.length > 2900
+            ? `${previewBody.slice(0, 2880)}…`
+            : previewBody,
+      },
+    });
+  }
+
+  blocks.push(
     { type: "divider" },
     {
       type: "actions",
@@ -435,7 +481,11 @@ export function buildWeeklySnackSurveyBlocks(weekId: string): object[] {
       elements: [
         {
           type: "button",
-          text: { type: "plain_text", text: "Pick my top 5 🍿", emoji: true },
+          text: {
+            type: "plain_text",
+            text: "Open ballot & vote in Slack",
+            emoji: true,
+          },
           style: "primary",
           action_id: "snack_survey_open_modal",
           value: weekId,
@@ -447,11 +497,13 @@ export function buildWeeklySnackSurveyBlocks(weekId: string): object[] {
       elements: [
         {
           type: "mrkdwn",
-          text: "Snack Overflow • You can update your top 5 anytime this week",
+          text: "Opens a Slack form on your screen — no website required. You can change your top 5 anytime this week.",
         },
       ],
-    },
-  ];
+    }
+  );
+
+  return blocks;
 }
 
 /** Modal: multi-select exactly 5 from sheet-driven list (max 100 options for Slack). */
@@ -461,6 +513,7 @@ export function buildSnackTop5ModalView(weekId: string, snackNames: string[]): o
   const names = snackNames.slice(0, maxOptions);
   // Slack requires unique option labels in multi_static_select; collisions break views.open.
   const seenLabels = new Set<string>();
+  const seenValues = new Set<string>();
   const options = names.map((name, i) => {
     let label = name.slice(0, 75);
     let suffix = 0;
@@ -474,9 +527,18 @@ export function buildSnackTop5ModalView(weekId: string, snackNames: string[]): o
       }
     }
     seenLabels.add(label);
+    // Value = snack identity (Slack max 2000). Submissions must not depend on a separate
+    // server-side list snapshot (cache can change between open and submit).
+    let value = name.slice(0, 2000);
+    let vs = 0;
+    while (seenValues.has(value)) {
+      vs += 1;
+      value = `${name.slice(0, 1980)} ·${vs}`.slice(0, 2000);
+    }
+    seenValues.add(value);
     return {
       text: { type: "plain_text" as const, text: label },
-      value: String(i),
+      value,
     };
   });
 
@@ -486,7 +548,7 @@ export function buildSnackTop5ModalView(weekId: string, snackNames: string[]): o
       text: {
         type: "mrkdwn",
         text:
-          "Select *exactly 5* snacks. *Selection order* = your ranking (#1 = 5 pts … #5 = 1 pt).",
+          "*You’re voting in Slack.* Type in the box below to search. Select *exactly 5* items (snacks and/or beverages). *Selection order* = your ranking (#1 = 5 pts … #5 = 1 pt).",
       },
     },
   ];
@@ -496,7 +558,7 @@ export function buildSnackTop5ModalView(weekId: string, snackNames: string[]): o
       elements: [
         {
           type: "mrkdwn",
-          text: `⚠️ Showing first *${maxOptions}* snacks (Slack limit). Shorten the sheet or split tabs if you need all items.`,
+          text: `⚠️ Showing first *${maxOptions}* items (Slack limit). Shorten the sheet or split tabs if you need all items listed.`,
         },
       ],
     });
@@ -508,18 +570,18 @@ export function buildSnackTop5ModalView(weekId: string, snackNames: string[]): o
     element: {
       type: "multi_static_select",
       action_id: "top5_select",
-      placeholder: { type: "plain_text", text: "Choose 5 snacks" },
+      placeholder: { type: "plain_text", text: "Choose 5 items" },
       options,
       max_selected_items: 5,
     },
-    label: { type: "plain_text", text: "Your top 5" },
+    label: { type: "plain_text", text: "Your top 5 picks" },
   });
 
   return {
     type: "modal",
     callback_id: "snack_survey_top5_modal",
     private_metadata: JSON.stringify({ weekId }),
-    title: { type: "plain_text", text: "Top 5 snacks" },
+    title: { type: "plain_text", text: "Top 5 (snacks & bevs)" },
     submit: { type: "plain_text", text: "Submit" },
     close: { type: "plain_text", text: "Cancel" },
     blocks,
@@ -540,6 +602,12 @@ export async function postSnackMessage(
     text,
     blocks: blocks as never[],
   });
+
+  if (!result.ok) {
+    throw new Error(
+      `Slack chat.postMessage failed: ${result.error ?? "unknown"} (channel=${channel}). Is the bot in that channel? Token matches this workspace?`
+    );
+  }
 
   return result.ts;
 }

@@ -18,7 +18,7 @@ import {
   reportOutOfStock,
   recordSnackTop5Vote,
 } from "@/lib/snack-db";
-import { getSnackNamesForSurvey } from "@/lib/snack-sheet";
+import { getSnackNamesForSurveyWithinSlackDeadline } from "@/lib/snack-sheet";
 import { ALL_INVENTORY, getItemName, TOKENS_PER_CLICK, MAX_TOKENS } from "@/lib/snack-inventory";
 
 // Verify Slack request signature (raw body must match what Slack signed — form-urlencoded or JSON)
@@ -59,6 +59,39 @@ type ProfileSession = {
 // In-memory session storage for profile flow (simple approach)
 const profileSessions = new Map<string, ProfileSession>();
 
+/** Slack block_actions / shortcuts: after views.open, respond with empty 200 — not `{ ok: true }` (invalid payload → warning icon). */
+function slackInteractionAck(): NextResponse {
+  return new NextResponse(null, { status: 200 });
+}
+
+/** Ephemeral follow-up when the HTTP ack must be empty (Slack still shows this in-channel to the user). */
+async function postEphemeralToResponseUrl(
+  responseUrl: string | undefined,
+  text: string
+): Promise<void> {
+  if (!responseUrl) return;
+  try {
+    const res = await fetch(responseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        response_type: "ephemeral",
+        replace_original: false,
+        text,
+      }),
+    });
+    if (!res.ok) {
+      console.error(
+        "[snack-survey] response_url POST failed:",
+        res.status,
+        await res.text()
+      );
+    }
+  } catch (e) {
+    console.error("[snack-survey] response_url fetch failed:", e);
+  }
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-slack-signature") || "";
@@ -69,6 +102,9 @@ export async function POST(request: NextRequest) {
     process.env.SLACK_SIGNING_SECRET?.trim();
   if (signingSecret) {
     if (!verifySlackSignature(signingSecret, signature, timestamp, rawBody)) {
+      console.warn(
+        "[snack-events] Invalid Slack signature — use Signing Secret from this Slack app (Basic Information → App Credentials). Env: SNACK_SLACK_SIGNING_SECRET or SLACK_SIGNING_SECRET."
+      );
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   }
@@ -125,7 +161,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing payload or command" }, { status: 400 });
   }
 
+  console.warn(
+    "[snack-events] Unsupported Content-Type:",
+    contentType || "(empty)",
+    "— Slack buttons send application/x-www-form-urlencoded with a payload= field"
+  );
   return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
+}
+
+/** GET: confirm this URL is deployed (browser/curl). Slack still POSTs interactivity here. */
+export async function GET() {
+  const hasSigning = !!(
+    process.env.SNACK_SLACK_SIGNING_SECRET?.trim() ||
+    process.env.SLACK_SIGNING_SECRET?.trim()
+  );
+  const hasToken = !!(
+    process.env.SNACK_SLACK_BOT_TOKEN?.trim() ||
+    process.env.SLACK_BOT_TOKEN?.trim()
+  );
+  return NextResponse.json({
+    ok: true,
+    path: "/api/snacks/events",
+    whatThisDoes:
+      "Slack POSTs button clicks here; the server calls views.open so you get a Top 5 modal.",
+    smokeTest: {
+      signingSecretConfigured: hasSigning,
+      botTokenConfigured: hasToken,
+    },
+    troubleshooting: [
+      "Interactivity: Slack app → Interactivity → Request URL = https://YOUR_HOST/api/snacks/events (must match deploy; not localhost unless using a tunnel).",
+      "Signing Secret in your host env must match Slack → Basic Information → App Credentials for the same app that owns the bot token.",
+      "Bot token (SNACK_SLACK_BOT_TOKEN or SLACK_BOT_TOKEN) must be that same app’s Bot User OAuth Token.",
+      "If the button spins then shows a warning: 401 = bad signature; check logs for [snack-events] and [snack-survey].",
+      "Modal must open within ~3s of the click (trigger_id expires); warm cache with /api/snacks/test?action=survey or a second click.",
+    ],
+  });
 }
 
 async function handleSlashCommand(body: Record<string, string>, slack: ReturnType<typeof getSnackSlackClient>) {
@@ -140,7 +210,7 @@ async function handleSlashCommand(body: Record<string, string>, slack: ReturnTyp
         trigger_id: triggerId,
         view: buildOutOfStockModal() as never,
       });
-      return NextResponse.json({ ok: true });
+      return slackInteractionAck();
     }
 
     case "/snack-profile": {
@@ -215,7 +285,7 @@ async function handleInteraction(
     const actions = payload.actions as { action_id: string; value?: string }[];
     const action = actions[0];
     if (!action) {
-      return NextResponse.json({ ok: true });
+      return slackInteractionAck();
     }
     const actionId = action.action_id;
 
@@ -246,7 +316,7 @@ async function handleInteraction(
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return slackInteractionAck();
 }
 
 async function handleOutOfStockSubmission(
@@ -526,55 +596,82 @@ async function handleSnackSurveyOpenModal(
   payload: Record<string, unknown>,
   slack: ReturnType<typeof getSnackSlackClient>
 ) {
+  const responseUrl = payload.response_url as string | undefined;
   const actions = payload.actions as { action_id: string; value?: string }[];
   const weekId = actions[0]?.value;
   const triggerId = payload.trigger_id as string | undefined;
+
+  const fail = async (msg: string, extra?: Record<string, unknown>) => {
+    console.error("[snack-survey] open_modal failed:", msg, extra ?? {});
+    await postEphemeralToResponseUrl(responseUrl, msg);
+    return slackInteractionAck();
+  };
+
   if (!weekId || !triggerId) {
-    return NextResponse.json({ ok: true });
+    return fail(
+      "Snack survey: missing data from Slack (try the button again). If it persists, check Interactivity → `/api/snacks/events`."
+    );
   }
+
+  const clickUser = (payload.user as { id?: string })?.id;
+  console.log("[snack-survey] open_modal start", { weekId, user: clickUser });
+
+  const t0 = Date.now();
   let names: string[];
   try {
-    names = await getSnackNamesForSurvey();
+    // Must stay under Slack’s ~3s budget for trigger_id + views.open (cold sheet read can exceed it).
+    names = await getSnackNamesForSurveyWithinSlackDeadline();
+    console.log("[snack-survey] names loaded", {
+      weekId,
+      count: names.length,
+      ms: Date.now() - t0,
+    });
   } catch (e) {
-    console.error("getSnackNamesForSurvey failed:", e);
-    return NextResponse.json({
-      response_type: "ephemeral",
-      replace_original: false,
-      text: "Couldn’t load the snack list. Try again in a minute.",
-    });
+    return fail(
+      "Couldn’t load the snack list (sheet or DB). Check server logs and GOOGLE_SERVICE_ACCOUNT_JSON / sheet share.",
+      { err: String(e) }
+    );
   }
+
   if (names.length < 5) {
-    return NextResponse.json({
-      response_type: "ephemeral",
-      replace_original: false,
-      text: `Need at least 5 snack options (found ${names.length}). Check the inventory sheet.`,
-    });
+    return fail(
+      `Need at least 5 snack options (found ${names.length}). Check SNACK_SHEET_ID / inventory tab.`
+    );
   }
+
   try {
+    const t1 = Date.now();
     const result = await slack.views.open({
       trigger_id: triggerId,
       view: buildSnackTop5ModalView(weekId, names) as never,
     });
     if (!result.ok) {
-      console.error("views.open not ok:", result);
-      return NextResponse.json({
-        response_type: "ephemeral",
-        replace_original: false,
-        text: `Slack refused the form: ${(result as { error?: string }).error || "unknown"}.`,
-      });
+      const err = (result as { error?: string }).error || "unknown";
+      return fail(`Slack refused the modal (\`${err}\`). Often: expired trigger — click the button again within a few seconds.`);
     }
+    console.log("[snack-survey] views.open ok", {
+      weekId,
+      optionsShown: Math.min(100, names.length),
+      namesMs: t1 - t0,
+      openMs: Date.now() - t1,
+      totalMs: Date.now() - t0,
+    });
+    // Don’t await — Slack needs empty 200 within ~3s; response_url is best-effort follow-up.
+    void postEphemeralToResponseUrl(
+      responseUrl,
+      "✅ *Ballot opened in Slack* — In the window above, search the list, pick *exactly 5* items, then *Submit*. Nothing leaves Slack."
+    );
   } catch (e: unknown) {
     const err = e as { data?: { error?: string }; message?: string };
     const detail =
       err?.data?.error || err?.message || String(e);
-    console.error("views.open threw:", detail, e);
-    return NextResponse.json({
-      response_type: "ephemeral",
-      replace_original: false,
-      text: `Couldn’t open the voting form (${detail}). If this keeps happening, confirm Interactivity URL is HTTPS and points to /api/snacks/events for this app.`,
-    });
+    console.error("[snack-survey] views.open threw:", detail, e);
+    return fail(
+      `Couldn’t open the form: ${detail}. Confirm Interactivity URL is HTTPS → \`/api/snacks/events\` for this Slack app.`
+    );
   }
-  return NextResponse.json({ ok: true });
+
+  return slackInteractionAck();
 }
 
 async function handleSnackTop5Submission(
@@ -618,21 +715,9 @@ async function handleSnackTop5Submission(
     });
   }
 
-  const names = await getSnackNamesForSurvey();
-  const picks: string[] = [];
-  for (const opt of selected) {
-    const idx = parseInt(opt.value, 10);
-    const n = names[idx];
-    if (n === undefined) {
-      return NextResponse.json({
-        response_action: "errors",
-        errors: {
-          top5_block: "Snack list changed — close the form and open it again",
-        },
-      });
-    }
-    picks.push(n);
-  }
+  // Option values are the snack strings from the modal (not list indices), so votes stay
+  // valid if the sheet cache refreshes between open and submit.
+  const picks = selected.map((o) => o.value);
   if (new Set(picks).size !== 5) {
     return NextResponse.json({
       response_action: "errors",

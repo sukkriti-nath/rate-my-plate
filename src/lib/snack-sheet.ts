@@ -1,23 +1,94 @@
 import Papa from "papaparse";
 import { SNACKS, getItemName } from "@/lib/snack-inventory";
-import { getGoogleSheetsClient } from "@/lib/google-sheets-writer";
+import {
+  getGoogleSheetsClient,
+  isGoogleServiceAccountConfigured,
+} from "@/lib/google-sheets-writer";
 
 /**
- * Kikoff Snack and Bev Inventory sheet layout (see tab “External” / gid=0):
+ * Kikoff Snack and Bev Inventory sheet layout:
  * https://docs.google.com/spreadsheets/d/1LwDGuGMNLhOx0QCJoBgRkQDRZREoQk34jBGCjw8QRm0/edit
  *
  * Row 1: Category | Brand | Flavor | Pack Size | &lt;date columns with stock levels&gt;
  * Each product row is one beverage/snack line; we use Brand + Flavor as the display name
  * (same pattern as `getItemName` in snack-inventory).
  *
+ * **Multiple tabs (snacks + bevs):** set `SNACK_SHEET_GIDS` to comma-separated gids from each tab’s URL,
+ * or rely on auto-discovery when `GOOGLE_SERVICE_ACCOUNT_JSON` is set and the workbook has tabs named
+ * **Beverages** and **Snacks** (case-insensitive). Otherwise the first tab only (`gid=0`).
+ *
  * **Private sheets:** use the same `GOOGLE_SERVICE_ACCOUNT_JSON` as vote sync / Rate My Plate
  * (`google-sheets-writer.ts`). Share the spreadsheet with that service account’s `client_email`
- * (Viewer is enough). Reads use the Sheets API v4; if that fails, we fall back to public CSV export.
+ * (Viewer is enough). Reads use the Sheets API v4; if that fails, we fall back to public CSV export
+ * (CSV is single-tab — use explicit `SNACK_SHEET_GIDS` if you need multiple tabs without the API).
  */
 
-/** Default = Kikoff inventory doc; override with SNACK_SHEET_ID / SNACK_SHEET_GID. */
+/** Default = Kikoff inventory doc; override with SNACK_SHEET_ID / SNACK_SHEET_GID(S). */
 export const DEFAULT_SNACK_SHEET_ID =
   "1LwDGuGMNLhOx0QCJoBgRkQDRZREoQk34jBGCjw8QRm0";
+
+const DEFAULT_SNACK_GIDS_FALLBACK: string[] = ["0"];
+
+/** Merge tab lists in order; duplicate Brand+Flavor across tabs appear once (first tab wins). */
+function mergeNameLists(lists: string[][]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const list of lists) {
+    for (const n of list) {
+      if (seen.has(n)) continue;
+      seen.add(n);
+      out.push(n);
+    }
+  }
+  return out;
+}
+
+/**
+ * Explicit gids: `SNACK_SHEET_GIDS=0,123456789` (comma-separated).
+ * Single tab: `SNACK_SHEET_GID=0` (still supported).
+ * If neither is set, we try to auto-detect tabs named "Beverages" and "Snacks" (see below).
+ */
+function parseEnvGids(): string[] | null {
+  const multi = process.env.SNACK_SHEET_GIDS?.trim();
+  if (multi) {
+    const parts = multi.split(",").map((s) => s.trim()).filter(Boolean);
+    return parts.length > 0 ? parts : null;
+  }
+  const single = process.env.SNACK_SHEET_GID?.trim();
+  if (single) return [single];
+  return null;
+}
+
+/** When using Sheets API: find Beverages + Snacks tabs by title (case-insensitive). */
+async function discoverBeveragesAndSnacksGids(
+  spreadsheetId: string
+): Promise<string[] | null> {
+  if (!isGoogleServiceAccountConfigured()) return null;
+  try {
+    const sheets = getGoogleSheetsClient();
+    const meta = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: "sheets.properties(sheetId,title)",
+    });
+    const byTitle = new Map<string, number>();
+    for (const s of meta.data.sheets ?? []) {
+      const t = s.properties?.title?.trim().toLowerCase();
+      const sid = s.properties?.sheetId;
+      if (t != null && sid != null) byTitle.set(t, sid);
+    }
+    const bev = byTitle.get("beverages");
+    const snk = byTitle.get("snacks");
+    if (bev !== undefined && snk !== undefined) {
+      return [String(bev), String(snk)];
+    }
+  } catch (e) {
+    console.warn(
+      "Snack sheet: could not discover Beverages/Snacks tab gids:",
+      e
+    );
+  }
+  return null;
+}
 
 function escapeSheetTitleForRange(title: string): string {
   return `'${title.replace(/'/g, "''")}'`;
@@ -122,7 +193,7 @@ function parseSheetRowsToProductNames(rows: string[][]): string[] {
 }
 
 async function fetchSheetRows(spreadsheetId: string, gid: string): Promise<string[][]> {
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) {
+  if (isGoogleServiceAccountConfigured()) {
     try {
       return await fetchSheetRowsViaGoogleApi(spreadsheetId, gid);
     } catch (apiErr) {
@@ -140,12 +211,19 @@ async function fetchSheetRows(spreadsheetId: string, gid: string): Promise<strin
   return fetchSheetCsv(spreadsheetId, gid);
 }
 
-/** Load product names (Brand + Flavor) from Google Sheet. */
+/** Load product names (Brand + Flavor) from one or more tabs; snacks + bevs merged for voting. */
 export async function fetchSnackNamesFromSheet(): Promise<string[]> {
   const sheetId = process.env.SNACK_SHEET_ID?.trim() || DEFAULT_SNACK_SHEET_ID;
-  const gid = process.env.SNACK_SHEET_GID?.trim() || "0";
-  const rows = await fetchSheetRows(sheetId, gid);
-  return parseSheetRowsToProductNames(rows);
+  let gids = parseEnvGids();
+  if (!gids) {
+    gids =
+      (await discoverBeveragesAndSnacksGids(sheetId)) ?? DEFAULT_SNACK_GIDS_FALLBACK;
+  }
+  const rowsArrays = await Promise.all(
+    gids.map((gid) => fetchSheetRows(sheetId, gid))
+  );
+  const lists = rowsArrays.map(parseSheetRowsToProductNames);
+  return mergeNameLists(lists);
 }
 
 /** In-memory cache so Slack interactivity can answer within ~3s (sheet fetch is slow). */
@@ -183,4 +261,35 @@ export async function getSnackNamesForSurvey(): Promise<string[]> {
 /** Prefetch sheet into cache (e.g. right before `postSnackMessage` with survey blocks). */
 export async function warmSnackSurveyCache(): Promise<void> {
   await getSnackNamesForSurvey();
+}
+
+/**
+ * Slack interactive buttons must call `views.open` within ~3s (same window as HTTP 200).
+ * A cold Sheets API read often exceeds that — users see a spinner + warning, no modal.
+ * Use this in `/api/snacks/events`: return cached names immediately, or timebox the sheet
+ * fetch and fall back to embedded `SNACKS` so the modal always opens; the full fetch keeps
+ * running in the background and fills the cache for the next click.
+ */
+const SLACK_INTERACTION_SHEET_BUDGET_MS = 2000;
+
+export async function getSnackNamesForSurveyWithinSlackDeadline(): Promise<string[]> {
+  if (surveyNamesCache && Date.now() - surveyNamesCache.fetchedAt < SURVEY_CACHE_MS) {
+    return surveyNamesCache.names;
+  }
+
+  const fallback = () => SNACKS.map(getItemName);
+
+  const names = await Promise.race([
+    getSnackNamesForSurvey(),
+    new Promise<string[]>((resolve) => {
+      setTimeout(() => {
+        console.warn(
+          `[snack-survey] Sheet fetch exceeded ${SLACK_INTERACTION_SHEET_BUDGET_MS}ms; opening modal with embedded inventory. Next click will use the sheet once loaded.`
+        );
+        resolve(fallback());
+      }, SLACK_INTERACTION_SHEET_BUDGET_MS);
+    }),
+  ]);
+
+  return names;
 }

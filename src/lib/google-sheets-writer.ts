@@ -1,20 +1,64 @@
+import fs from "fs";
+import path from "path";
 import { google } from "googleapis";
 
 // ─── Auth & Client ──────────────────────────────────────────────────────────
 
-function getAuthClient() {
-  const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!credentialsJson) {
-    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not configured");
+/** True when Sheets API can use a service account (inline JSON, base64, or key file path). */
+export function isGoogleServiceAccountConfigured(): boolean {
+  return !!(
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH?.trim() ||
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()
+  );
+}
+
+function parseServiceAccountCredentials(): Record<string, string> {
+  const filePath = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH?.trim();
+  if (filePath) {
+    const resolved = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(process.cwd(), filePath);
+    let raw: string;
+    try {
+      raw = fs.readFileSync(resolved, "utf8");
+    } catch (e) {
+      throw new Error(
+        `GOOGLE_SERVICE_ACCOUNT_JSON_PATH: cannot read ${resolved}: ${e instanceof Error ? e.message : e}`
+      );
+    }
+    return JSON.parse(raw) as Record<string, string>;
   }
 
-  // Support both raw JSON and base64-encoded
-  let credentials: Record<string, string>;
-  try {
-    credentials = JSON.parse(credentialsJson);
-  } catch {
-    credentials = JSON.parse(Buffer.from(credentialsJson, "base64").toString());
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim();
+  if (!raw) {
+    throw new Error(
+      "Set GOOGLE_SERVICE_ACCOUNT_JSON (single-line or base64) or GOOGLE_SERVICE_ACCOUNT_JSON_PATH to a .json key file"
+    );
   }
+
+  try {
+    return JSON.parse(raw) as Record<string, string>;
+  } catch (firstErr) {
+    try {
+      const decoded = Buffer.from(raw, "base64").toString("utf8").trim();
+      if (!decoded) {
+        throw new Error("base64 decoded to empty string");
+      }
+      return JSON.parse(decoded) as Record<string, string>;
+    } catch {
+      const hint =
+        "Multi-line JSON in .env is not supported — only the first line loads. " +
+        "Use GOOGLE_SERVICE_ACCOUNT_JSON_PATH=./google-service-account.json pointing at your downloaded key, " +
+        "or minify JSON to one line / base64.";
+      throw new Error(
+        `GOOGLE_SERVICE_ACCOUNT_JSON: invalid JSON. ${hint} (${firstErr instanceof Error ? firstErr.message : String(firstErr)})`
+      );
+    }
+  }
+}
+
+function getAuthClient() {
+  const credentials = parseServiceAccountCredentials();
 
   return new google.auth.GoogleAuth({
     credentials,
