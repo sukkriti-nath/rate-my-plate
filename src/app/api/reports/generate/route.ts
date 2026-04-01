@@ -193,9 +193,13 @@ function formatReportForSlack(report: ReportData): string {
     lines.push("*🍴 Friday Catering Spotlight*");
     for (const fri of report.fridaySpotlight) {
       const rest = fri.restaurant ? `*${fri.restaurant}*` : "Friday lunch";
-      lines.push(`• ${rest}: ${fri.avgOverall.toFixed(1)}/5 (${fri.totalVotes} votes)`);
-      for (const dish of fri.dishes) {
-        lines.push(`  · ${dish.name} (${dish.category}): ${dish.avg.toFixed(1)}/5`);
+      if (fri.totalVotes > 0) {
+        lines.push(`• ${rest}: ${fri.avgOverall.toFixed(1)}/5 (${fri.totalVotes} votes)`);
+        for (const dish of fri.dishes) {
+          lines.push(`  · ${dish.name} (${dish.category}): ${dish.avg.toFixed(1)}/5`);
+        }
+      } else {
+        lines.push(`• ${rest}: N/A`);
       }
     }
     lines.push("");
