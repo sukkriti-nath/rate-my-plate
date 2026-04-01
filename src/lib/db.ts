@@ -98,6 +98,15 @@ async function initDb() {
     await pool.query(sql);
   }
 
+  // User avatars table — stores Slack profile pics fetched at login
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_avatars (
+      email TEXT PRIMARY KEY,
+      avatar_url TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
   // Slack rating draft cache table (replaces in-memory Map)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS slack_rating_drafts (
