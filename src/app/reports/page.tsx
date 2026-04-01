@@ -138,23 +138,28 @@ export default function ReportsPage() {
               {report.summary.avgOverall.toFixed(1)}
             </div>
             <div className="text-lg">{ratingEmoji(report.summary.avgOverall)}</div>
-            <div className="text-xs text-gray-400 mt-1">Overall Avg</div>
+            <div className="text-xs text-gray-400 mt-1">This week&apos;s overall average</div>
           </div>
           <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
             <div className="text-3xl font-bold text-gray-900">{report.summary.totalVotes}</div>
             <div className="text-xs text-gray-400 mt-1">Total Votes</div>
           </div>
           <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
-            <div className="text-3xl font-bold text-gray-900">{report.summary.totalDaysWithData}</div>
-            <div className="text-xs text-gray-400 mt-1">Days Rated</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {report.summary.totalDaysWithData > 0 ? Math.round(report.summary.totalVotes / report.summary.totalDaysWithData) : 0}
+            </div>
+            <div className="text-xs text-gray-400 mt-1">Avg Votes / Day</div>
           </div>
           <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
+            <div className="text-xs text-gray-400 mb-1 font-medium">Best Day of the Week</div>
             <div className="text-3xl font-bold text-green-500">
               {report.summary.bestDay?.name || "—"}
             </div>
-            <div className="text-xs text-gray-400 mt-1">
-              Best Day {report.summary.bestDay ? `(${report.summary.bestDay.avg.toFixed(1)})` : ""}
-            </div>
+            {report.summary.bestDay && (
+              <div className="text-lg font-bold text-green-500 mt-0.5">
+                {report.summary.bestDay.avg.toFixed(1)}/5
+              </div>
+            )}
           </div>
         </div>
       </section>
