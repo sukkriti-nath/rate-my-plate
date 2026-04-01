@@ -115,9 +115,6 @@ export default function Navbar() {
           <div className="flex items-center gap-3 shrink-0">
             {user ? (
               <>
-                <span className="hidden sm:block text-xs text-kikoff-dark/60 font-medium">
-                  {user.displayName.split(" ")[0]}
-                </span>
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.displayName} className="w-8 h-8 rounded-full border-2 border-kikoff-dark/20 object-cover" />
                 ) : (
@@ -125,9 +122,17 @@ export default function Navbar() {
                     {user.displayName.charAt(0)}
                   </div>
                 )}
-                <button onClick={handleLogout} className="hidden sm:block text-xs text-kikoff-dark/50 hover:text-kikoff-dark font-medium transition-colors">
-                  Log out
-                </button>
+                <div className="hidden sm:flex flex-col leading-tight">
+                  <span className="text-xs text-kikoff-dark/60 font-medium">
+                    Hello, {user.displayName.split(" ")[0]}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-xs text-kikoff-dark font-bold hover:text-kikoff-dark/70 transition-colors text-left"
+                  >
+                    Log out
+                  </button>
+                </div>
               </>
             ) : (
               <Link href="/login" className="text-xs sm:text-sm font-bold bg-kikoff-dark text-kikoff px-4 sm:px-5 py-2 rounded-full hover:bg-kikoff-dark/90 transition-all whitespace-nowrap">
