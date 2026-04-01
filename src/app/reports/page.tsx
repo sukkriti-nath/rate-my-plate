@@ -136,7 +136,7 @@ export default function ReportsPage() {
           <div className="flex items-center justify-between p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000]">
             <div>
               <span className="text-sm mr-2">{ratingEmoji(report.summary.avgOverall)}</span>
-              <span className="font-medium text-sm">Overall Average</span>
+              <span className="font-medium text-sm">Week&apos;s Overall Average</span>
               <span className="text-xs text-gray-400 ml-1">across all dishes this week</span>
             </div>
             <span className={`font-bold ${ratingColor(report.summary.avgOverall)}`}>{report.summary.avgOverall.toFixed(1)}</span>
