@@ -49,9 +49,12 @@ function LoginContent() {
       <div className="max-w-sm w-full relative z-10">
         {/* Hero */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 bg-kikoff text-kikoff-dark px-4 py-1.5 rounded-xl border-2 border-black text-sm font-bold mb-5">
-            <span>🔥</span> New at Kikoff
-          </div>
+          {/* Auto-expires June 1, 2026 */}
+          {new Date() < new Date("2026-06-01") && (
+            <div className="inline-flex items-center gap-2 bg-kikoff text-kikoff-dark px-4 py-1.5 rounded-xl border-2 border-black text-sm font-bold mb-5">
+              <span>🔥</span> New at Kikoff
+            </div>
+          )}
           <h1 className="font-display text-5xl text-kikoff-dark mb-3 leading-tight font-extrabold">
             Rate<span className="bg-kikoff px-2 py-0.5 rounded-xl mx-1">My</span>Plate
           </h1>
