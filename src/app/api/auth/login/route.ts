@@ -4,19 +4,25 @@ import { getSlackClient } from "@/lib/slack-bot";
 import { getDb } from "@/lib/db";
 
 /**
- * Look up a user's Slack profile picture by their email address.
- * Returns the 72x72 avatar URL, or null if not found.
+ * Look up a user's Slack profile by their email address.
+ * Returns found=true with avatar/name if the user exists in Slack,
+ * or found=false if the email doesn't match any Slack user.
  */
-async function fetchSlackAvatar(email: string): Promise<{ avatarUrl: string | null; realName: string | null }> {
+async function lookupSlackUser(email: string): Promise<{ found: boolean; avatarUrl: string | null; realName: string | null }> {
   try {
     const slack = getSlackClient();
     const result = await slack.users.lookupByEmail({ email });
     const avatarUrl = result.user?.profile?.image_72 || null;
     const realName = result.user?.real_name || null;
-    return { avatarUrl, realName };
-  } catch {
-    // User might not be on Slack, or token doesn't have users:read.email scope
-    return { avatarUrl: null, realName: null };
+    return { found: true, avatarUrl, realName };
+  } catch (err: unknown) {
+    // Slack returns "users_not_found" when the email doesn't exist
+    const slackError = err as { data?: { error?: string } };
+    if (slackError?.data?.error === "users_not_found") {
+      return { found: false, avatarUrl: null, realName: null };
+    }
+    // For other errors (network, scope issues), allow login but without avatar
+    return { found: true, avatarUrl: null, realName: null };
   }
 }
 
@@ -56,12 +62,19 @@ export async function POST(request: Request) {
     );
   }
 
+  // Verify the user exists in the Kikoff Slack workspace
+  const { found, avatarUrl, realName } = await lookupSlackUser(normalizedEmail);
+
+  if (!found) {
+    return NextResponse.json(
+      { error: "User not found. Please use a valid Kikoff email address." },
+      { status: 403 }
+    );
+  }
+
   // Derive display name from email (e.g., sukkriti@kikoff.com -> Sukkriti)
   const namePart = normalizedEmail.split("@")[0];
   let displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-
-  // Look up profile picture (and real name) from Slack
-  const { avatarUrl, realName } = await fetchSlackAvatar(normalizedEmail);
 
   // Use Slack real name if available (e.g., "Sukkriti Nath" instead of "Sukkriti")
   if (realName) {
