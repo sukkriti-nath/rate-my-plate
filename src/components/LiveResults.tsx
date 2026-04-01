@@ -211,21 +211,13 @@ export default function LiveResults({
                 className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0 animate-slide-up"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                {vote.avatar_url ? (
-                  <img
-                    src={vote.avatar_url}
-                    alt={vote.user_name}
-                    className="w-8 h-8 rounded-xl border-2 border-black shrink-0 object-cover"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-xl bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold shrink-0 border-2 border-black">
-                    {vote.user_name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <div className="w-8 h-8 rounded-xl bg-gray-200 flex items-center justify-center text-gray-400 text-sm shrink-0 border-2 border-black">
+                  {ratingEmoji(vote.rating_overall) || "?"}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      {vote.user_name}
+                    <span className="text-sm font-medium text-gray-400">
+                      Anonymous
                     </span>
                     <span className="text-sm font-bold text-kikoff-dark">
                       {vote.rating_overall}/5
