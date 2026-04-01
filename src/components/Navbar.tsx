@@ -21,6 +21,7 @@ export default function Navbar() {
     { href: "/dashboard", label: "Dashboard", emoji: "📊" },
     { href: "/rankings", label: "Rankings", emoji: "🏆" },
     { href: "/reports", label: "Reports", emoji: "📋" },
+    { href: "/snacks", label: "Snacks", emoji: "🍿" },
   ];
 
   async function handleLogout() {
