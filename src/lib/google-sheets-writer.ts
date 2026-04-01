@@ -54,6 +54,8 @@ export interface VoteRow {
   timestamp: string;
 }
 
+let headersInitialized = false;
+
 /**
  * Sync a single vote to the "Raw Votes" tab in Google Sheets.
  * Upserts by (date, email) — updates existing row or appends new one.
@@ -62,6 +64,12 @@ export async function syncVoteToSheet(vote: VoteRow): Promise<void> {
   const sheets = getSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Raw Votes";
+
+  // Ensure headers exist on first call
+  if (!headersInitialized) {
+    await initializeSheetTabs();
+    headersInitialized = true;
+  }
 
   // Read existing data to find if this (date, email) row exists
   const existing = await sheets.spreadsheets.values.get({
@@ -214,17 +222,46 @@ export async function initializeSheetTabs(): Promise<void> {
 
   for (const tab of tabConfigs) {
     try {
-      // Check if headers already exist
+      // Check if row 1 already has the correct headers
       const existing = await sheets.spreadsheets.values.get({
         spreadsheetId: sheetId,
-        range: `'${tab.name}'!A1:A1`,
+        range: `'${tab.name}'!A1:${String.fromCharCode(64 + tab.headers.length)}1`,
       });
-      if (existing.data.values && existing.data.values.length > 0) continue;
+      const firstRow = existing.data.values?.[0] || [];
+      // Skip if headers already match
+      if (firstRow.length > 0 && firstRow[0] === tab.headers[0] && firstRow[1] === tab.headers[1]) continue;
     } catch {
-      // Tab might not exist — that's ok, the append will work if it does
+      // Tab might not exist yet — proceed to write headers
     }
 
     try {
+      // Insert a row at the top for headers
+      const spreadsheet = await sheets.spreadsheets.get({
+        spreadsheetId: sheetId,
+      });
+      const sheetTab = spreadsheet.data.sheets?.find(
+        (s) => s.properties?.title === tab.name
+      );
+      if (sheetTab?.properties?.sheetId != null) {
+        // Insert a blank row at position 0 to push existing data down
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: sheetId,
+          requestBody: {
+            requests: [{
+              insertDimension: {
+                range: {
+                  sheetId: sheetTab.properties.sheetId,
+                  dimension: "ROWS",
+                  startIndex: 0,
+                  endIndex: 1,
+                },
+              },
+            }],
+          },
+        });
+      }
+
+      // Write headers to row 1
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheetId,
         range: `'${tab.name}'!A1`,
