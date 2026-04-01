@@ -149,10 +149,24 @@ export default function LiveResults({
 
   return (
     <div className="space-y-6">
-      {/* Header with avatar stack */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          {voterAvatars.length > 0 ? (
+      {/* Header with avatar stack below */}
+      <div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">📊</span>
+            <h2 className="font-display text-xl text-gray-900 font-bold">
+              {isToday ? "Live Results from All Kiksters" : "Results from All Kiksters"}
+            </h2>
+          </div>
+          {isToday && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-kikoff animate-pulse-glow" />
+              live
+            </div>
+          )}
+        </div>
+        {voterAvatars.length > 0 && (
+          <div className="flex items-center gap-2 mt-2 ml-9">
             <div className="flex -space-x-2">
               {voterAvatars.map((avatar, i) => (
                 <img
@@ -163,18 +177,13 @@ export default function LiveResults({
                   style={{ zIndex: voterAvatars.length - i }}
                 />
               ))}
+              {stats.totalVotes > voterAvatars.length && (
+                <div className="w-7 h-7 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 font-bold"
+                  style={{ zIndex: 0 }}>
+                  ...
+                </div>
+              )}
             </div>
-          ) : (
-            <span className="text-xl">📊</span>
-          )}
-          <h2 className="font-display text-xl text-gray-900 font-bold">
-            {isToday ? "Live Results from All Kiksters" : "Results from All Kiksters"}
-          </h2>
-        </div>
-        {isToday && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-kikoff animate-pulse-glow" />
-            live
           </div>
         )}
       </div>
