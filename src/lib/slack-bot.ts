@@ -71,12 +71,37 @@ function formatDateHeader(date: string): string {
 // ─── Daily Rating Message ───────────────────────────────────────────────────
 // Kate's design: emoji buttons in-channel for overall rating (1🙁 - 5🤩 + N/A)
 
+const DAILY_INTROS = [
+  "Today's menu is looking *fire* 🔥",
+  "Chef cooked up something special today 👨‍🍳",
+  "Lunch is about to hit different 🤌",
+  "The kitchen went OFF today 💥",
+  "You're gonna want to see this menu 👀",
+  "Today's spread is *elite* 🏆",
+  "Smells amazing in the kitchen today 😤🔥",
+  "Another day, another fire menu 🍽️",
+  "The lunch lineup is *stacked* today 📋",
+  "Hope you brought your appetite 😋",
+  "Today's menu just dropped 🎤⬇️",
+  "Lunchtime never looked so good ✨",
+  "The kitchen is not playing around today 💪",
+  "Get ready to rate this one 📝",
+  "Big flavors incoming 🌶️",
+];
+
+function getDailyIntro(date: string): string {
+  // Use the date string to pick a consistent-but-varying intro each day
+  const hash = date.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return DAILY_INTROS[hash % DAILY_INTROS.length];
+}
+
 export async function buildDailyMenuBlocks(date: string): Promise<object[] | null> {
   const menu = await getMenuForDate(date);
   if (!menu || menu.no_service) return null;
 
   const dayName = menu.day_name as string;
   const dayEmoji = getDayEmoji(dayName);
+  const intro = getDailyIntro(date);
 
   const dishLines = DISH_CATEGORIES
     .filter((cat) => cat.key !== "sauce_sides") // show sauce separately
@@ -107,7 +132,7 @@ export async function buildDailyMenuBlocks(date: string): Promise<object[] | nul
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `<!here> Today's menu is looking *fire* 🔥${restaurantLine}\n\n${dishLines}${sauceLine}`,
+        text: `<!here> ${intro}${restaurantLine}\n\n${dishLines}${sauceLine}`,
       },
     },
     {
