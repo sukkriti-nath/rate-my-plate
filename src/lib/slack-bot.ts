@@ -103,21 +103,8 @@ export async function buildDailyMenuBlocks(date: string): Promise<object[] | nul
   const dayEmoji = getDayEmoji(dayName);
   const intro = getDailyIntro(date);
 
-  const dishLines = DISH_CATEGORIES
-    .filter((cat) => cat.key !== "sauce_sides") // show sauce separately
-    .map((cat) => {
-      const val = menu[cat.field] as string | null;
-      if (!val) return null;
-      return `${cat.emoji}  *${cat.label}:* ${val}`;
-    })
-    .filter(Boolean)
-    .join("\n");
-
-  const sauceSides = menu.sauce_sides as string | null;
-  const sauceLine = sauceSides ? `\n🫙  *Sauce/Sides:* ${sauceSides}` : "";
-
   const restaurant = menu.restaurant as string | null;
-  const restaurantLine = restaurant ? `\n🍴  *Catered by:* ${restaurant}` : "";
+  const restaurantLine = restaurant ? `  🍴 _Catered by ${restaurant}_` : "";
 
   const blocks: object[] = [
     {
@@ -132,11 +119,8 @@ export async function buildDailyMenuBlocks(date: string): Promise<object[] | nul
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `<!here> ${intro}${restaurantLine}\n\n${dishLines}${sauceLine}`,
+        text: `<!here> ${intro}${restaurantLine}`,
       },
-    },
-    {
-      type: "divider",
     },
     // Overall meal rating dropdown
     {
@@ -157,7 +141,7 @@ export async function buildDailyMenuBlocks(date: string): Promise<object[] | nul
       elements: [
         {
           type: "mrkdwn",
-          text: `📅 ${formatDateHeader(date)} • <${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}|Rate on web instead>`,
+          text: `📅 ${formatDateHeader(date)} • <https://getkikoff.com/rate-my-plate|Rate on web instead>`,
         },
       ],
     },
