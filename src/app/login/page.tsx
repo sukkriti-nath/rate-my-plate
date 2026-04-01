@@ -93,7 +93,7 @@ function LoginContent() {
               bg-kikoff text-kikoff-dark border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none
               disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {submitting ? "Signing in..." : "Let's Eat! 🍴"}
+            {submitting ? "Signing in..." : "Let's rate your plate! 🍴"}
           </button>
         </form>
 
