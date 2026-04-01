@@ -39,7 +39,8 @@ export async function GET(request: Request) {
   // Verify cron secret
   const { searchParams } = new URL(request.url);
   const secret = searchParams.get("secret");
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET || "CobY2GYySAz309EXEQG6UB8ZL8YoBVUvfRjC3VtluwM";
+  if (secret !== cronSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
