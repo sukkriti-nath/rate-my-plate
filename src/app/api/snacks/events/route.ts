@@ -9,86 +9,123 @@ import {
   buildProfileCard,
   buildOutOfStockAlert,
   postSnackMessage,
+  buildSnackTop5ModalView,
 } from "@/lib/snack-bot";
 import {
   getProfile,
   upsertProfile,
   awardPoints,
   reportOutOfStock,
+  recordSnackTop5Vote,
 } from "@/lib/snack-db";
+import { getSnackNamesForSurvey } from "@/lib/snack-sheet";
 import { ALL_INVENTORY, getItemName, TOKENS_PER_CLICK, MAX_TOKENS } from "@/lib/snack-inventory";
 
-// Verify Slack request signature
+// Verify Slack request signature (raw body must match what Slack signed — form-urlencoded or JSON)
 function verifySlackSignature(
   signingSecret: string,
   signature: string,
   timestamp: string,
   body: string
 ): boolean {
+  const now = Math.floor(Date.now() / 1000);
+  const ts = parseInt(timestamp, 10);
+  if (Number.isNaN(ts) || Math.abs(now - ts) > 300) {
+    return false;
+  }
   const baseString = `v0:${timestamp}:${body}`;
   const hmac = crypto.createHmac("sha256", signingSecret);
   hmac.update(baseString);
   const expectedSignature = `v0=${hmac.digest("hex")}`;
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  } catch {
+    return false;
+  }
 }
 
-// In-memory session storage for profile flow (simple approach)
-const profileSessions: Map<string, {
+type ProfileSession = {
   step: number;
   drinksAllocation: Record<string, number>;
   snacksAllocation: Record<string, number>;
   favoriteDrinks: string[];
   favoriteSnacks: string[];
   messageTs?: string;
-}> = new Map();
+};
+
+// In-memory session storage for profile flow (simple approach)
+const profileSessions = new Map<string, ProfileSession>();
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  const body = JSON.parse(rawBody);
+  const signature = request.headers.get("x-slack-signature") || "";
+  const timestamp = request.headers.get("x-slack-request-timestamp") || "";
 
-  // Handle URL verification challenge
-  if (body.type === "url_verification") {
-    return NextResponse.json({ challenge: body.challenge });
-  }
-
-  // Verify signature
-  const signingSecret = process.env.SNACK_SLACK_SIGNING_SECRET;
+  const signingSecret =
+    process.env.SNACK_SLACK_SIGNING_SECRET?.trim() ||
+    process.env.SLACK_SIGNING_SECRET?.trim();
   if (signingSecret) {
-    const signature = request.headers.get("x-slack-signature") || "";
-    const timestamp = request.headers.get("x-slack-request-timestamp") || "";
     if (!verifySlackSignature(signingSecret, signature, timestamp, rawBody)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   }
 
-  const slack = getSnackSlackClient();
+  const contentType = request.headers.get("content-type") || "";
 
-  try {
-    // Handle slash commands
-    if (body.command) {
-      return handleSlashCommand(body, slack);
+  // Events API (JSON): URL verification, event subscriptions
+  if (contentType.includes("application/json")) {
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(rawBody) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
-
-    // Handle interactive payloads (button clicks, modal submissions)
-    if (body.payload) {
-      const payload = JSON.parse(body.payload);
-      return handleInteraction(payload, slack);
+    if (body.type === "url_verification") {
+      return NextResponse.json({ challenge: body.challenge });
     }
-
-    // Handle event callbacks
     if (body.type === "event_callback") {
-      // Handle events if needed
       return NextResponse.json({ ok: true });
     }
-
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("Snack bot error:", error);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
+
+  // Slash commands + interactive components (buttons, modals) — always form-urlencoded
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    const params = new URLSearchParams(rawBody);
+    const slack = getSnackSlackClient();
+
+    const payloadStr = params.get("payload");
+    if (payloadStr) {
+      try {
+        const payload = JSON.parse(payloadStr) as Record<string, unknown>;
+        return await handleInteraction(payload, slack);
+      } catch (error) {
+        console.error("Snack bot error:", error);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
+      }
+    }
+
+    const command = params.get("command");
+    if (command) {
+      const body: Record<string, string> = {};
+      params.forEach((v, k) => {
+        body[k] = v;
+      });
+      try {
+        return await handleSlashCommand(body, slack);
+      } catch (error) {
+        console.error("Snack bot error:", error);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ error: "Missing payload or command" }, { status: 400 });
+  }
+
+  return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
 }
 
 async function handleSlashCommand(body: Record<string, string>, slack: ReturnType<typeof getSnackSlackClient>) {
@@ -111,7 +148,7 @@ async function handleSlashCommand(body: Record<string, string>, slack: ReturnTyp
       const existingProfile = await getProfile(userId);
 
       // Initialize or restore session
-      const session = {
+      const session: ProfileSession = {
         step: 1,
         drinksAllocation: existingProfile?.drinksAllocation || {},
         snacksAllocation: existingProfile?.snacksAllocation || {},
@@ -168,13 +205,23 @@ async function handleInteraction(
     if (callbackId === "snack_empty_modal") {
       return handleOutOfStockSubmission(payload, slack);
     }
+    if (callbackId === "snack_survey_top5_modal") {
+      return handleSnackTop5Submission(payload, slack);
+    }
   }
 
   // Handle block actions (button clicks)
   if (type === "block_actions") {
     const actions = payload.actions as { action_id: string; value?: string }[];
     const action = actions[0];
+    if (!action) {
+      return NextResponse.json({ ok: true });
+    }
     const actionId = action.action_id;
+
+    if (actionId === "snack_survey_open_modal") {
+      return handleSnackSurveyOpenModal(payload, slack);
+    }
 
     // Token allocation buttons
     if (actionId.startsWith("drink_token_") || actionId.startsWith("snack_token_")) {
@@ -473,4 +520,134 @@ async function handleProfileSave(
   profileSessions.delete(userId);
 
   return NextResponse.json({ ok: true });
+}
+
+async function handleSnackSurveyOpenModal(
+  payload: Record<string, unknown>,
+  slack: ReturnType<typeof getSnackSlackClient>
+) {
+  const actions = payload.actions as { action_id: string; value?: string }[];
+  const weekId = actions[0]?.value;
+  const triggerId = payload.trigger_id as string | undefined;
+  if (!weekId || !triggerId) {
+    return NextResponse.json({ ok: true });
+  }
+  let names: string[];
+  try {
+    names = await getSnackNamesForSurvey();
+  } catch (e) {
+    console.error("getSnackNamesForSurvey failed:", e);
+    return NextResponse.json({
+      response_type: "ephemeral",
+      replace_original: false,
+      text: "Couldn’t load the snack list. Try again in a minute.",
+    });
+  }
+  if (names.length < 5) {
+    return NextResponse.json({
+      response_type: "ephemeral",
+      replace_original: false,
+      text: `Need at least 5 snack options (found ${names.length}). Check the inventory sheet.`,
+    });
+  }
+  try {
+    const result = await slack.views.open({
+      trigger_id: triggerId,
+      view: buildSnackTop5ModalView(weekId, names) as never,
+    });
+    if (!result.ok) {
+      console.error("views.open not ok:", result);
+      return NextResponse.json({
+        response_type: "ephemeral",
+        replace_original: false,
+        text: `Slack refused the form: ${(result as { error?: string }).error || "unknown"}.`,
+      });
+    }
+  } catch (e: unknown) {
+    const err = e as { data?: { error?: string }; message?: string };
+    const detail =
+      err?.data?.error || err?.message || String(e);
+    console.error("views.open threw:", detail, e);
+    return NextResponse.json({
+      response_type: "ephemeral",
+      replace_original: false,
+      text: `Couldn’t open the voting form (${detail}). If this keeps happening, confirm Interactivity URL is HTTPS and points to /api/snacks/events for this app.`,
+    });
+  }
+  return NextResponse.json({ ok: true });
+}
+
+async function handleSnackTop5Submission(
+  payload: Record<string, unknown>,
+  slack: ReturnType<typeof getSnackSlackClient>
+) {
+  const userId = (payload.user as { id: string }).id;
+  const view = payload.view as {
+    private_metadata: string;
+    state: {
+      values: Record<
+        string,
+        Record<string, { selected_options?: { value: string }[] }>
+      >;
+    };
+  };
+  let weekId: string;
+  try {
+    weekId = JSON.parse(view.private_metadata || "{}").weekId;
+  } catch {
+    return NextResponse.json({
+      response_action: "errors",
+      errors: { top5_block: "Invalid form — try again" },
+    });
+  }
+  if (!weekId) {
+    return NextResponse.json({
+      response_action: "errors",
+      errors: { top5_block: "Missing week" },
+    });
+  }
+
+  const selected =
+    view.state.values?.top5_block?.top5_select?.selected_options;
+  if (!selected || selected.length !== 5) {
+    return NextResponse.json({
+      response_action: "errors",
+      errors: {
+        top5_block: "Select exactly 5 snacks (order = your ranking)",
+      },
+    });
+  }
+
+  const names = await getSnackNamesForSurvey();
+  const picks: string[] = [];
+  for (const opt of selected) {
+    const idx = parseInt(opt.value, 10);
+    const n = names[idx];
+    if (n === undefined) {
+      return NextResponse.json({
+        response_action: "errors",
+        errors: {
+          top5_block: "Snack list changed — close the form and open it again",
+        },
+      });
+    }
+    picks.push(n);
+  }
+  if (new Set(picks).size !== 5) {
+    return NextResponse.json({
+      response_action: "errors",
+      errors: { top5_block: "All 5 picks must be different" },
+    });
+  }
+
+  const { isNewVoter } = await recordSnackTop5Vote(weekId, userId, picks);
+  const userInfo = await slack.users.info({ user: userId });
+  const displayName = userInfo.user?.real_name || userInfo.user?.name || userId;
+  if (isNewVoter) {
+    await awardPoints(userId, "weekly_vote", displayName);
+  }
+
+  return NextResponse.json({
+    response_action: "clear",
+  });
 }

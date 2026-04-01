@@ -263,6 +263,87 @@ export async function reportOutOfStock(
   );
 }
 
+// ============== Weekly snack survey ==============
+
+/** ISO week id e.g. `2026-W14` (Monday-based week, UTC). */
+export function getCurrentSnackSurveyWeekId(now = new Date()): string {
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(
+    ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  );
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+export interface SnackTop5VoterEntry {
+  picks: string[];
+  at: string;
+}
+
+function aggregateTop5Scores(
+  voters: Record<string, SnackTop5VoterEntry | unknown>
+): Record<string, number> {
+  const scores: Record<string, number> = {};
+  const weights = [5, 4, 3, 2, 1];
+  for (const val of Object.values(voters)) {
+    if (!val || typeof val !== "object" || !("picks" in val)) continue;
+    const picks = (val as SnackTop5VoterEntry).picks;
+    if (!Array.isArray(picks) || picks.length !== 5) continue;
+    picks.forEach((name, i) => {
+      const w = weights[i] ?? 0;
+      scores[name] = (scores[name] || 0) + w;
+    });
+  }
+  return scores;
+}
+
+/** Save ranked top-5 picks (5 pts … 1 pt). `isNewVoter` = first top-5 submission this week. */
+export async function recordSnackTop5Vote(
+  weekId: string,
+  userId: string,
+  picks: string[]
+): Promise<{ isNewVoter: boolean }> {
+  if (picks.length !== 5 || new Set(picks).size !== 5) {
+    throw new Error("Exactly 5 distinct snacks required");
+  }
+  const db = await getSnackDb();
+  const existing = await db.query(
+    "SELECT voters FROM snack_surveys WHERE week_id = $1",
+    [weekId]
+  );
+  const raw = (existing.rows[0]?.voters as Record<string, unknown>) || {};
+  const voters: Record<string, SnackTop5VoterEntry> = {};
+  for (const [uid, val] of Object.entries(raw)) {
+    if (
+      val &&
+      typeof val === "object" &&
+      "picks" in val &&
+      Array.isArray((val as SnackTop5VoterEntry).picks)
+    ) {
+      voters[uid] = val as SnackTop5VoterEntry;
+    }
+  }
+  const hadTop5Before = Boolean(voters[userId]);
+  voters[userId] = {
+    picks,
+    at: new Date().toISOString(),
+  };
+  const top5_scores = aggregateTop5Scores(voters);
+
+  await db.query(
+    `INSERT INTO snack_surveys (week_id, votes, voters, suggestions)
+     VALUES ($1, $2::jsonb, $3::jsonb, '[]'::jsonb)
+     ON CONFLICT (week_id) DO UPDATE SET
+       votes = EXCLUDED.votes,
+       voters = EXCLUDED.voters`,
+    [weekId, JSON.stringify({ top5_scores }), JSON.stringify(voters)]
+  );
+
+  return { isNewVoter: !hadTop5Before };
+}
+
 export async function getOutOfStockReports(): Promise<OutOfStockReport[]> {
   const db = await getSnackDb();
   const result = await db.query(

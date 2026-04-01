@@ -8,6 +8,15 @@ export function getSlackClient(): WebClient {
   return new WebClient(token);
 }
 
+/** `chat.postMessage` accepts a channel ID or `#channel-name`. Prefer `SLACK_CHANNEL_ID`; otherwise `SLACK_CHANNEL`. */
+function getSlackTargetChannelForPost(): string {
+  const id = process.env.SLACK_CHANNEL_ID?.trim();
+  if (id) return id;
+  const name = process.env.SLACK_CHANNEL?.trim();
+  if (name) return name.startsWith("#") ? name : `#${name}`;
+  throw new Error("SLACK_CHANNEL_ID or SLACK_CHANNEL is not configured");
+}
+
 const DISH_CATEGORIES = [
   { key: "starch", field: "starch", emoji: "🍚", label: "Starch" },
   { key: "vegan_protein", field: "vegan_protein", emoji: "🌱", label: "Vegan Protein" },
@@ -627,11 +636,10 @@ export function buildBiWeeklyTrendsBlocks(data: BiWeeklyTrendsData): object[] {
 
 export async function postToChannel(blocks: object[], text: string): Promise<string | undefined> {
   const slack = getSlackClient();
-  const channelId = process.env.SLACK_CHANNEL_ID;
-  if (!channelId) throw new Error("SLACK_CHANNEL_ID is not configured");
+  const channel = getSlackTargetChannelForPost();
 
   const result = await slack.chat.postMessage({
-    channel: channelId,
+    channel,
     text,
     blocks: blocks as never[],
   });
@@ -731,8 +739,12 @@ export function buildMonthlyRecapBlocks(data: MonthlyRecapData): object[] {
 
 export async function uploadFileToChannel(buffer: Buffer, filename: string, title: string): Promise<void> {
   const slack = getSlackClient();
-  const channelId = process.env.SLACK_CHANNEL_ID;
-  if (!channelId) throw new Error("SLACK_CHANNEL_ID is not configured");
+  const channelId = process.env.SLACK_CHANNEL_ID?.trim();
+  if (!channelId) {
+    throw new Error(
+      "SLACK_CHANNEL_ID is not configured (required for file uploads; set the channel ID, not only the name)",
+    );
+  }
 
   await slack.filesUploadV2({
     channel_id: channelId,

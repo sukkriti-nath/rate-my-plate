@@ -59,22 +59,59 @@ export default function SnacksPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/snacks/stats");
-      const json = await res.json();
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/api/snacks/stats`
+        : "/api/snacks/stats";
+
+    const attempt = async (): Promise<void> => {
+      const res = await fetch(url, {
+        signal,
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          `snack stats ${res.status}${text ? `: ${text.slice(0, 120)}` : ""}`
+        );
+      }
+      const json = (await res.json()) as DashboardData;
       setData(json);
-    } catch (err) {
-      console.error("Failed to fetch snack stats:", err);
+    };
+
+    try {
+      await attempt();
+    } catch (first) {
+      if (signal?.aborted) return;
+      if (first instanceof DOMException && first.name === "AbortError") return;
+      await new Promise((r) => setTimeout(r, 400));
+      if (signal?.aborted) return;
+      try {
+        await attempt();
+      } catch (err) {
+        if (signal?.aborted) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("Failed to fetch snack stats:", err);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000); // Refresh every 10s
-    return () => clearInterval(interval);
+    const ac = new AbortController();
+    void fetchData(ac.signal);
+    const interval = setInterval(() => {
+      void fetchData(ac.signal);
+    }, 10000);
+    return () => {
+      ac.abort();
+      clearInterval(interval);
+    };
   }, [fetchData]);
 
   if (loading) {

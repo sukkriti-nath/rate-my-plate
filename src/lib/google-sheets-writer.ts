@@ -22,7 +22,8 @@ function getAuthClient() {
   });
 }
 
-function getSheetsClient() {
+/** Same client as vote sync — use for reading private spreadsheets too. */
+export function getGoogleSheetsClient() {
   return google.sheets({ version: "v4", auth: getAuthClient() });
 }
 
@@ -59,7 +60,7 @@ export interface VoteRow {
  * Upserts by (date, email) — updates existing row or appends new one.
  */
 export async function syncVoteToSheet(vote: VoteRow): Promise<void> {
-  const sheets = getSheetsClient();
+  const sheets = getGoogleSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Raw Votes";
 
@@ -132,7 +133,7 @@ export interface DailySummaryRow {
 }
 
 export async function syncDailySummary(summary: DailySummaryRow): Promise<void> {
-  const sheets = getSheetsClient();
+  const sheets = getGoogleSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Daily Summary";
 
@@ -181,7 +182,7 @@ export async function syncDailySummary(summary: DailySummaryRow): Promise<void> 
 // ─── Initialize Sheet Tabs with Headers ─────────────────────────────────────
 
 export async function initializeSheetTabs(): Promise<void> {
-  const sheets = getSheetsClient();
+  const sheets = getGoogleSheetsClient();
   const sheetId = getOutputSheetId();
 
   const tabConfigs = [
@@ -258,7 +259,7 @@ export interface BiWeeklyTrendsRow {
 }
 
 export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<void> {
-  const sheets = getSheetsClient();
+  const sheets = getGoogleSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Bi-Weekly Trends";
 
