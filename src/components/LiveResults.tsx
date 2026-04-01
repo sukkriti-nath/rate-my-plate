@@ -254,7 +254,7 @@ export default function LiveResults({
 
       {/* Distribution */}
       <div className="space-y-1.5">
-        <h4 className="text-sm font-bold text-gray-500">Distribution</h4>
+        <h4 className="text-sm font-bold text-gray-500">Overall Rating Distribution</h4>
         {[5, 4, 3, 2, 1].map((star) => {
           const count = stats.distribution[star] || 0;
           const pct = stats.totalVotes > 0 ? (count / stats.totalVotes) * 100 : 0;
