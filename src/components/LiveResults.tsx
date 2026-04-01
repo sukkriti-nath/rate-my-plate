@@ -22,6 +22,7 @@ interface Stats {
 
 interface Vote {
   user_name: string;
+  avatar_url: string | null;
   rating_overall: number;
   comment: string | null;
   created_at: string;
