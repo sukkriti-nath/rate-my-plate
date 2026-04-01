@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { appendSnackVoteToGoogleSheet } from "@/lib/snack-votes-sheet";
 
 // Use the same pool from the main db, but with snack-specific tables
 const pool = new Pool({
@@ -303,7 +304,8 @@ function aggregateTop5Scores(
 export async function recordSnackTop5Vote(
   weekId: string,
   userId: string,
-  picks: string[]
+  picks: string[],
+  options?: { displayName?: string }
 ): Promise<{ isNewVoter: boolean }> {
   if (picks.length !== 5 || new Set(picks).size !== 5) {
     throw new Error("Exactly 5 distinct snacks required");
@@ -326,9 +328,10 @@ export async function recordSnackTop5Vote(
     }
   }
   const hadTop5Before = Boolean(voters[userId]);
+  const at = new Date().toISOString();
   voters[userId] = {
     picks,
-    at: new Date().toISOString(),
+    at,
   };
   const top5_scores = aggregateTop5Scores(voters);
 
@@ -341,7 +344,52 @@ export async function recordSnackTop5Vote(
     [weekId, JSON.stringify({ top5_scores }), JSON.stringify(voters)]
   );
 
+  const displayName = options?.displayName?.trim() || "";
+  void appendSnackVoteToGoogleSheet({
+    at,
+    weekId,
+    userId,
+    displayName,
+    picks,
+  }).catch((e) => console.error("[snack-votes-sheet] append failed:", e));
+
   return { isNewVoter: !hadTop5Before };
+}
+
+/** Aggregated scores for the weekly top-5 survey (from Postgres). */
+export async function getSnackSurveyWeeklyScores(weekId?: string): Promise<{
+  weekId: string;
+  items: { item: string; score: number }[];
+  voterCount: number;
+} | null> {
+  const db = await getSnackDb();
+  const wid = weekId ?? getCurrentSnackSurveyWeekId();
+  const result = await db.query(
+    "SELECT votes, voters FROM snack_surveys WHERE week_id = $1",
+    [wid]
+  );
+  if (result.rows.length === 0) return null;
+  const votes = result.rows[0].votes as { top5_scores?: Record<string, number> } | null;
+  const votersRaw = result.rows[0].voters as Record<string, unknown> | null;
+  const top5_scores = votes?.top5_scores || {};
+  const items = Object.entries(top5_scores)
+    .map(([item, score]) => ({ item, score: Number(score) || 0 }))
+    .sort((a, b) => b.score - a.score);
+  let voterCount = 0;
+  if (votersRaw) {
+    for (const val of Object.values(votersRaw)) {
+      if (
+        val &&
+        typeof val === "object" &&
+        "picks" in val &&
+        Array.isArray((val as SnackTop5VoterEntry).picks) &&
+        (val as SnackTop5VoterEntry).picks.length === 5
+      ) {
+        voterCount += 1;
+      }
+    }
+  }
+  return { weekId: wid, items, voterCount };
 }
 
 export async function getOutOfStockReports(): Promise<OutOfStockReport[]> {

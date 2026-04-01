@@ -18,7 +18,10 @@ import {
   reportOutOfStock,
   recordSnackTop5Vote,
 } from "@/lib/snack-db";
-import { getSnackNamesForSurveyWithinSlackDeadline } from "@/lib/snack-sheet";
+import {
+  getSnackNamesForSurveyWithinSlackDeadline,
+  warmInventoryCache,
+} from "@/lib/snack-sheet";
 import { ALL_INVENTORY, getItemName, TOKENS_PER_CLICK, MAX_TOKENS } from "@/lib/snack-inventory";
 
 // Verify Slack request signature (raw body must match what Slack signed — form-urlencoded or JSON)
@@ -214,6 +217,7 @@ async function handleSlashCommand(body: Record<string, string>, slack: ReturnTyp
     }
 
     case "/snack-profile": {
+      void warmInventoryCache().catch(() => {});
       // Start profile flow - send DM with interactive message
       const existingProfile = await getProfile(userId);
 
@@ -489,7 +493,7 @@ async function handleProfileNextFavorites(
   session.step = 3;
   profileSessions.set(userId, session);
 
-  const message = buildProfileStep3Message(
+  const message = await buildProfileStep3Message(
     session.drinksAllocation,
     session.snacksAllocation,
     session.favoriteDrinks,
@@ -506,7 +510,7 @@ async function handleProfileNextFavorites(
     });
   }
 
-  return NextResponse.json({ ok: true });
+  return slackInteractionAck();
 }
 
 async function handleProfileBackSnacks(
@@ -725,9 +729,12 @@ async function handleSnackTop5Submission(
     });
   }
 
-  const { isNewVoter } = await recordSnackTop5Vote(weekId, userId, picks);
   const userInfo = await slack.users.info({ user: userId });
-  const displayName = userInfo.user?.real_name || userInfo.user?.name || userId;
+  const displayName =
+    userInfo.user?.real_name || userInfo.user?.name || userId;
+  const { isNewVoter } = await recordSnackTop5Vote(weekId, userId, picks, {
+    displayName,
+  });
   if (isNewVoter) {
     await awardPoints(userId, "weekly_vote", displayName);
   }

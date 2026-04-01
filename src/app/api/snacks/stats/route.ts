@@ -6,21 +6,30 @@ import {
   getMostWantedItems,
   getOutOfStockReports,
   getPublicProfiles,
+  getSnackSurveyWeeklyScores,
 } from "@/lib/snack-db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const [stats, leaderboard, categoryDemand, mostWanted, outOfStock, profiles] =
-      await Promise.all([
-        getSnackStats(),
-        getLeaderboard(10),
-        getCategoryDemand(),
-        getMostWantedItems(10),
-        getOutOfStockReports(),
-        getPublicProfiles(),
-      ]);
+    const [
+      stats,
+      leaderboard,
+      categoryDemand,
+      mostWanted,
+      outOfStock,
+      profiles,
+      weeklySurvey,
+    ] = await Promise.all([
+      getSnackStats(),
+      getLeaderboard(10),
+      getCategoryDemand(),
+      getMostWantedItems(10),
+      getOutOfStockReports(),
+      getPublicProfiles(),
+      getSnackSurveyWeeklyScores(),
+    ]);
 
     return NextResponse.json({
       stats,
@@ -29,6 +38,7 @@ export async function GET() {
       mostWanted,
       outOfStock,
       profileCount: profiles.length,
+      weeklySurvey,
     });
   } catch (error) {
     console.error("Error fetching snack stats:", error);

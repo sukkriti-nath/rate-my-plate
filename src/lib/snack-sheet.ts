@@ -10,7 +10,8 @@ import {
  * https://docs.google.com/spreadsheets/d/1LwDGuGMNLhOx0QCJoBgRkQDRZREoQk34jBGCjw8QRm0/edit
  *
  * Row 1: Category | Brand | Flavor | Pack Size | &lt;date columns with stock levels&gt;
- * Each product row is one beverage/snack line; we use Brand + Flavor as the display name
+ * Each product row is one SKU; display name is Brand + Flavor, plus Pack Size when present.
+ * The last non-empty cell after Pack Size is treated as the latest stock snapshot.
  * (same pattern as `getItemName` in snack-inventory).
  *
  * **Multiple tabs (snacks + bevs):** set `SNACK_SHEET_GIDS` to comma-separated gids from each tab’s URL,
@@ -292,4 +293,272 @@ export async function getSnackNamesForSurveyWithinSlackDeadline(): Promise<strin
   ]);
 
   return names;
+}
+
+// ─── Google Sheet inventory: structured rows (Beverages / Snacks tabs) ───
+
+export type SnackSheetProductRow = {
+  category: string;
+  brand: string;
+  flavor: string;
+  /** e.g. `12/12 oz` — empty if the sheet has no Pack Size column. */
+  packSize: string;
+  displayName: string;
+  /** Last non-empty value in the date / stock columns (most recent count in the row). */
+  latestStock: string | null;
+  tab: "beverages" | "snacks";
+};
+
+async function getSheetTitleForGid(
+  spreadsheetId: string,
+  gid: string
+): Promise<string> {
+  const sheets = getGoogleSheetsClient();
+  const gidNum = parseInt(gid, 10);
+  if (Number.isNaN(gidNum)) return "Sheet";
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: "sheets.properties(sheetId,title)",
+  });
+  const sheet = meta.data.sheets?.find(
+    (s) => s.properties?.sheetId === gidNum
+  );
+  return sheet?.properties?.title?.trim() || "Sheet";
+}
+
+/** Infer whether rows belong to beverages, snacks, or both pickers (single “External” tab → both). */
+function tabFromSheetTitle(title: string): "beverages" | "snacks" | "both" {
+  const t = title.toLowerCase();
+  if (/\bsnacks\b/.test(t) && !t.includes("beverage")) return "snacks";
+  if (t.includes("beverage") || t.includes("bev")) return "beverages";
+  return "both";
+}
+
+function findPackSizeColumnIndex(header: string[]): number {
+  const exact = header.indexOf("pack size");
+  if (exact >= 0) return exact;
+  const idx = header.findIndex(
+    (h) => h.includes("pack") && h.includes("size")
+  );
+  return idx;
+}
+
+/** Last non-empty cell in `row[startIdx..]` (rightmost stock / date column with a value). */
+function latestStockFromRow(row: string[], startIdx: number): string | null {
+  if (startIdx < 0 || startIdx >= row.length) return null;
+  for (let i = row.length - 1; i >= startIdx; i--) {
+    const v = normCell(row[i]);
+    if (v !== "") return v;
+  }
+  return null;
+}
+
+function parseKikoffRowsToStructured(
+  rows: string[][],
+  tabKind: "beverages" | "snacks" | "both"
+): SnackSheetProductRow[] {
+  if (rows.length < 2) return [];
+  const header = rows[0].map((c) => normCell(c).toLowerCase());
+  const catIdx = header.indexOf("category");
+  const brandIdx = header.indexOf("brand");
+  const flavorIdx = header.indexOf("flavor");
+  if (brandIdx < 0 || flavorIdx < 0) return [];
+  const packIdx = findPackSizeColumnIndex(header);
+
+  const res: SnackSheetProductRow[] = [];
+  const tabs: ("beverages" | "snacks")[] =
+    tabKind === "both" ? ["beverages", "snacks"] : [tabKind];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row?.length) continue;
+    const brand = normCell(row[brandIdx]);
+    const flavor = normCell(row[flavorIdx]);
+    const category = catIdx >= 0 ? normCell(row[catIdx]) : "Other";
+    const packSize = packIdx >= 0 ? normCell(row[packIdx]) : "";
+    if (!brand && !flavor) continue;
+    const firstCol = normCell(row[0]);
+    if (
+      /quotes are not sourced|disclaimer|browser error/i.test(firstCol) ||
+      firstCol.length > 120
+    ) {
+      continue;
+    }
+    const baseName = `${brand} ${flavor}`.trim();
+    const displayName = packSize
+      ? `${baseName} · ${packSize}`.trim()
+      : baseName;
+    if (!displayName || displayName.length > 220) continue;
+
+    const stockStartCol =
+      packIdx >= 0 ? packIdx + 1 : flavorIdx + 1;
+    const latestStock = latestStockFromRow(row, stockStartCol);
+
+    for (const tab of tabs) {
+      res.push({
+        category,
+        brand,
+        flavor,
+        packSize,
+        displayName,
+        latestStock,
+        tab,
+      });
+    }
+  }
+  return res;
+}
+
+function dedupeProductRows(rows: SnackSheetProductRow[]): SnackSheetProductRow[] {
+  const seen = new Set<string>();
+  const out: SnackSheetProductRow[] = [];
+  for (const r of rows) {
+    const k = `${r.tab}|${r.displayName}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
+  }
+  return out;
+}
+
+async function fetchInventoryStructuredProducts(): Promise<SnackSheetProductRow[]> {
+  const sheetId = process.env.SNACK_SHEET_ID?.trim() || DEFAULT_SNACK_SHEET_ID;
+  let gids = parseEnvGids();
+  if (!gids) {
+    gids =
+      (await discoverBeveragesAndSnacksGids(sheetId)) ?? DEFAULT_SNACK_GIDS_FALLBACK;
+  }
+  const out: SnackSheetProductRow[] = [];
+  for (const gid of gids) {
+    const rows = await fetchSheetRows(sheetId, gid);
+    const title = await getSheetTitleForGid(sheetId, gid);
+    const tabKind = tabFromSheetTitle(title);
+    out.push(...parseKikoffRowsToStructured(rows, tabKind));
+  }
+  return dedupeProductRows(out);
+}
+
+let inventoryStructuredCache: {
+  rows: SnackSheetProductRow[];
+  fetchedAt: number;
+} | null = null;
+
+/** Cached rows from the Kikoff Snack & Bev inventory sheet (not tied to Slack profile). */
+export async function getInventoryStructuredRows(): Promise<
+  SnackSheetProductRow[]
+> {
+  if (
+    inventoryStructuredCache &&
+    Date.now() - inventoryStructuredCache.fetchedAt < SURVEY_CACHE_MS
+  ) {
+    return inventoryStructuredCache.rows;
+  }
+  try {
+    const rows = await fetchInventoryStructuredProducts();
+    inventoryStructuredCache = { rows, fetchedAt: Date.now() };
+    return rows;
+  } catch (e) {
+    console.error("fetchInventoryStructuredProducts failed:", e);
+    inventoryStructuredCache = { rows: [], fetchedAt: Date.now() };
+    return [];
+  }
+}
+
+export async function warmInventoryCache(): Promise<void> {
+  await getInventoryStructuredRows();
+}
+
+/** @deprecated Use `getInventoryStructuredRows` — same data, kept for Slack profile step 3. */
+export async function getProfileInventoryStructuredRows(): Promise<
+  SnackSheetProductRow[]
+> {
+  return getInventoryStructuredRows();
+}
+
+/** @deprecated Use `warmInventoryCache`. */
+export async function warmProfileInventoryCache(): Promise<void> {
+  await warmInventoryCache();
+}
+
+export type SlackProfileOptionGroup = {
+  label: string;
+  options: { text: string; value: string }[];
+};
+
+/**
+ * Group by Category · Brand for Slack option_groups. Caps at 100 options total (Slack limit).
+ */
+export function buildSlackProfileOptionGroups(
+  rows: SnackSheetProductRow[],
+  tab: "beverages" | "snacks",
+  maxOptions = 100
+): SlackProfileOptionGroup[] {
+  const filtered = rows.filter((r) => r.tab === tab);
+  const byKey = new Map<string, SnackSheetProductRow[]>();
+  for (const r of filtered) {
+    const key = `${r.category}\u0000${r.brand}`;
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key)!.push(r);
+  }
+
+  const sortedKeys = Array.from(byKey.keys()).sort((a, b) => a.localeCompare(b));
+  const groups: SlackProfileOptionGroup[] = [];
+
+  for (const key of sortedKeys) {
+    const list = byKey.get(key)!;
+    const [cat, brand] = key.split("\u0000");
+    const label = `${cat} · ${brand}`.slice(0, 75);
+    const optMap = new Map<string, { text: string; value: string }>();
+    for (const r of list) {
+      const text = (
+        r.packSize
+          ? [r.flavor, r.packSize].filter(Boolean).join(" · ")
+          : r.flavor || r.displayName
+      ).slice(0, 75);
+      const value = r.displayName.slice(0, 2000);
+      if (!optMap.has(value)) optMap.set(value, { text, value });
+    }
+    const options = Array.from(optMap.values()).sort((a, b) =>
+      a.text.localeCompare(b.text)
+    );
+    if (options.length) groups.push({ label, options });
+  }
+
+  const out: SlackProfileOptionGroup[] = [];
+  let total = 0;
+  for (const g of groups) {
+    if (out.length >= 100) break;
+    const chunk: { text: string; value: string }[] = [];
+    for (const o of g.options) {
+      if (total >= maxOptions) break;
+      chunk.push(o);
+      total++;
+    }
+    if (chunk.length) {
+      let label = g.label;
+      let n = 2;
+      while (out.some((x) => x.label === label)) {
+        const suffix = ` ${n}`;
+        label = `${g.label.slice(0, 75 - suffix.length)}${suffix}`;
+        n += 1;
+      }
+      out.push({ label, options: chunk });
+    }
+    if (total >= maxOptions) break;
+  }
+  return out;
+}
+
+export async function getProfileFavoriteSlackOptionGroups(): Promise<{
+  drinkGroups: SlackProfileOptionGroup[];
+  snackGroups: SlackProfileOptionGroup[];
+}> {
+  const rows = await getInventoryStructuredRows();
+  if (rows.length === 0) {
+    return { drinkGroups: [], snackGroups: [] };
+  }
+  return {
+    drinkGroups: buildSlackProfileOptionGroups(rows, "beverages", 100),
+    snackGroups: buildSlackProfileOptionGroups(rows, "snacks", 100),
+  };
 }

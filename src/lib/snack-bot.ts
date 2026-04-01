@@ -1,4 +1,5 @@
 import { WebClient } from "@slack/web-api";
+import { getProfileFavoriteSlackOptionGroups } from "@/lib/snack-sheet";
 import { DRINK_CATEGORIES, SNACK_CATEGORIES, getItemOptionsForSlack } from "./snack-inventory";
 
 // Get Slack client for Snack Overflow (separate from Rate My Plate)
@@ -229,23 +230,58 @@ export function buildProfileStep2Message(
   };
 }
 
-export function buildProfileStep3Message(
+const EMBEDDED_DRINK_CATEGORY_LABELS = new Set([
+  "Juice",
+  "Energy Drink",
+  "Yerba Mate",
+  "Protein Shake",
+  "Cold Brew Tea",
+  "Sparkling Tea",
+  "Probiotic Soda",
+  "Tepache",
+  "Water Vitamin",
+  "Sparkling Water",
+  "Protein Smoothie",
+  "Cold Brew Latte Alternative",
+]);
+
+function embeddedFallbackOptionGroups() {
+  const itemOptions = getItemOptionsForSlack();
+  const drinkGroups = itemOptions
+    .filter((g) => EMBEDDED_DRINK_CATEGORY_LABELS.has(g.label))
+    .map((g) => ({
+      label: g.label.slice(0, 75),
+      options: g.options.map((o) => ({
+        text: o.text.slice(0, 75),
+        value: o.value.slice(0, 2000),
+      })),
+    }));
+  const snackGroups = itemOptions
+    .filter((g) => !EMBEDDED_DRINK_CATEGORY_LABELS.has(g.label))
+    .map((g) => ({
+      label: g.label.slice(0, 75),
+      options: g.options.map((o) => ({
+        text: o.text.slice(0, 75),
+        value: o.value.slice(0, 2000),
+      })),
+    }));
+  return { drinkGroups, snackGroups };
+}
+
+export async function buildProfileStep3Message(
   drinksAllocation: Record<string, number>,
   snacksAllocation: Record<string, number>,
   favoriteDrinks: string[] = [],
   favoriteSnacks: string[] = []
-): { text: string; blocks: object[] } {
-  const itemOptions = getItemOptionsForSlack();
-
-  // Filter to drink-related categories
-  const drinkOptions = itemOptions.filter((g) =>
-    ["Juice", "Energy Drink", "Yerba Mate", "Protein Shake", "Cold Brew Tea", "Sparkling Tea", "Probiotic Soda", "Tepache", "Water Vitamin", "Sparkling Water", "Protein Smoothie", "Cold Brew Latte Alternative"].includes(g.label)
-  );
-
-  // Filter to snack-related categories
-  const snackOptions = itemOptions.filter((g) =>
-    !["Juice", "Energy Drink", "Yerba Mate", "Protein Shake", "Cold Brew Tea", "Sparkling Tea", "Probiotic Soda", "Tepache", "Water Vitamin", "Sparkling Water", "Protein Smoothie", "Cold Brew Latte Alternative"].includes(g.label)
-  );
+): Promise<{ text: string; blocks: object[] }> {
+  let { drinkGroups, snackGroups } = await getProfileFavoriteSlackOptionGroups();
+  const drinkOptCount = drinkGroups.reduce((n, g) => n + g.options.length, 0);
+  const snackOptCount = snackGroups.reduce((n, g) => n + g.options.length, 0);
+  if (drinkOptCount === 0 || snackOptCount === 0) {
+    const fb = embeddedFallbackOptionGroups();
+    if (drinkOptCount === 0) drinkGroups = fb.drinkGroups;
+    if (snackOptCount === 0) snackGroups = fb.snackGroups;
+  }
 
   const blocks: object[] = [
     {
@@ -256,7 +292,7 @@ export function buildProfileStep3Message(
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "Pick your top favorite drinks and snacks! These help us know what to always keep stocked.",
+        text: "Pick favorites from the *Kikoff snack & bev inventory* ([sheet](https://docs.google.com/spreadsheets/d/1LwDGuGMNLhOx0QCJoBgRkQDRZREoQk34jBGCjw8QRm0/edit)). Dropdowns are grouped by *category · brand* (flavors in each group). Up to 100 items per list (Slack limit).",
       },
     },
     { type: "divider" },
@@ -269,11 +305,11 @@ export function buildProfileStep3Message(
         action_id: "select_favorite_drinks",
         placeholder: { type: "plain_text", text: "Select favorite drinks..." },
         max_selected_items: 5,
-        option_groups: drinkOptions.map((g) => ({
+        option_groups: drinkGroups.map((g) => ({
           label: { type: "plain_text" as const, text: g.label.slice(0, 75) },
-          options: g.options.slice(0, 100).map((o) => ({
+          options: g.options.map((o) => ({
             text: { type: "plain_text" as const, text: o.text.slice(0, 75) },
-            value: o.value.slice(0, 75),
+            value: o.value.slice(0, 2000),
           })),
         })),
       },
@@ -288,11 +324,11 @@ export function buildProfileStep3Message(
         action_id: "select_favorite_snacks",
         placeholder: { type: "plain_text", text: "Select favorite snacks..." },
         max_selected_items: 5,
-        option_groups: snackOptions.map((g) => ({
+        option_groups: snackGroups.map((g) => ({
           label: { type: "plain_text" as const, text: g.label.slice(0, 75) },
-          options: g.options.slice(0, 100).map((o) => ({
+          options: g.options.map((o) => ({
             text: { type: "plain_text" as const, text: o.text.slice(0, 75) },
-            value: o.value.slice(0, 75),
+            value: o.value.slice(0, 2000),
           })),
         })),
       },

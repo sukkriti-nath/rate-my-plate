@@ -4,13 +4,21 @@ import {
   getSnackTargetChannelForPost,
   postSnackMessage,
 } from "@/lib/snack-bot";
-import { getCurrentSnackSurveyWeekId } from "@/lib/snack-db";
+import {
+  getCurrentSnackSurveyWeekId,
+  getSnackSurveyWeeklyScores,
+} from "@/lib/snack-db";
 import { getSnackNamesForSurvey, warmSnackSurveyCache } from "@/lib/snack-sheet";
+import {
+  appendSnackVoteToGoogleSheet,
+  getSnackVotesSheetDebugInfo,
+} from "@/lib/snack-votes-sheet";
 
 // GET /api/snacks/test
 //   ?action=ping (default) — smoke test
 //   ?action=survey — post weekly snack survey to the channel
 //   ?action=preview — JSON only, no Slack post
+//   ?action=votes-sheet — append a test row to SNACK_VOTES Google Sheet + return weeklySurvey from DB
 //   ?week=2026-W14 — override week id for survey preview/post
 
 export async function GET(request: Request) {
@@ -40,6 +48,45 @@ export async function GET(request: Request) {
         channel: getSnackTargetChannelForPost(),
         blocks,
         hint: "Voting is in Slack (modal). Interactivity URL must be https://YOUR_HOST/api/snacks/events for the button to work.",
+      });
+    }
+
+    if (action === "votes-sheet") {
+      const info = getSnackVotesSheetDebugInfo();
+      if (!info.hasCredentials) {
+        return NextResponse.json(
+          {
+            success: false,
+            action: "votes-sheet",
+            ...info,
+            error:
+              "Set GOOGLE_SERVICE_ACCOUNT_JSON_PATH or GOOGLE_SERVICE_ACCOUNT_JSON",
+          },
+          { status: 400 }
+        );
+      }
+      await appendSnackVoteToGoogleSheet({
+        at: new Date().toISOString(),
+        weekId,
+        userId: "TEST_USER",
+        displayName: "[API test] votes-sheet",
+        picks: [
+          "Test pick 1 (5pts)",
+          "Test pick 2 (4pts)",
+          "Test pick 3 (3pts)",
+          "Test pick 4 (2pts)",
+          "Test pick 5 (1pt)",
+        ],
+      });
+      const weeklySurvey = await getSnackSurveyWeeklyScores(weekId);
+      return NextResponse.json({
+        success: true,
+        action: "votes-sheet",
+        weekId,
+        ...info,
+        message:
+          "Appended one test row. Open your Google Sheet (Sheet1 / SNACK_VOTES_SHEET_TAB) and confirm the new line.",
+        weeklySurveyFromDb: weeklySurvey,
       });
     }
 
@@ -86,7 +133,7 @@ export async function GET(request: Request) {
       action: "ping",
       messageTs: ts,
       channel: getSnackTargetChannelForPost(),
-      hint: "Try ?action=survey for the weekly survey, ?action=preview to inspect blocks",
+      hint: "Try ?action=survey, ?action=preview, ?action=votes-sheet",
     });
   } catch (error) {
     console.error("Snack test error:", error);

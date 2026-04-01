@@ -41,21 +41,40 @@ export default function Navbar() {
     window.location.href = "/login";
   }
 
+  const isSnacksApp = pathname.startsWith("/snacks");
+
   return (
     <nav className="bg-kikoff-dark sticky top-0 z-50 border-b-2 border-black">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
         {/* Logo + App Switcher */}
         <div className="flex items-center gap-2 shrink-0" ref={menuRef}>
-          <Link href="/" className="flex items-center gap-2">
-            <Image
-              src="/logo.png"
-              alt="RateMyPlate"
-              width={32}
-              height={32}
-              className="rounded-lg"
-            />
+          <Link
+            href={isSnacksApp ? "/snacks" : "/"}
+            className="flex items-center gap-2"
+          >
+            {isSnacksApp ? (
+              <span className="text-2xl leading-none" aria-hidden>
+                🍿
+              </span>
+            ) : (
+              <Image
+                src="/logo.png"
+                alt="RateMyPlate"
+                width={32}
+                height={32}
+                className="rounded-lg"
+              />
+            )}
             <span className="font-display text-base text-white tracking-tight font-extrabold uppercase">
-              Rate<span className="text-kikoff">My</span>Plate
+              {isSnacksApp ? (
+                <>
+                  Snack<span className="text-amber-500">Overflow</span>
+                </>
+              ) : (
+                <>
+                  Rate<span className="text-kikoff">My</span>Plate
+                </>
+              )}
             </span>
           </Link>
 
