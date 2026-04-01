@@ -199,34 +199,48 @@ export default function ReportsPage() {
       <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
         <h2 className="font-display text-xl text-gray-900 mb-4">📅 Day-by-Day Breakdown</h2>
         <div className="space-y-3">
-          {report.dayByDay.map((day) => (
-            <div key={day.date} className="p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-gray-900">{day.dayName}</span>
-                    <span className="text-xs text-gray-400">{formatDate(day.date)}</span>
+          {report.dayByDay.map((day) => {
+            const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })).toISOString().split("T")[0];
+            const isFuture = day.date > today;
+            const isToday = day.date === today;
+
+            return (
+              <div key={day.date} className={`p-4 rounded-xl border-2 border-black ${isFuture ? "bg-gray-50 opacity-60" : "bg-kikoff-lavender"}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-900">{day.dayName}</span>
+                      <span className="text-xs text-gray-400">{formatDate(day.date)}</span>
+                    </div>
+                    {day.restaurant && !isFuture && (
+                      <span className="text-xs bg-kikoff/20 text-kikoff-dark px-2 py-0.5 rounded-full inline-block mt-1">
+                        🍴 {day.restaurant}
+                      </span>
+                    )}
                   </div>
-                  {day.restaurant && (
-                    <span className="text-xs bg-kikoff/20 text-kikoff-dark px-2 py-0.5 rounded-full inline-block mt-1">
-                      🍴 {day.restaurant}
-                    </span>
+                  {!isFuture && (
+                    <div className="text-right shrink-0 ml-3">
+                      <span className={`text-2xl font-bold ${ratingColor(day.avgOverall)}`}>
+                        {day.avgOverall.toFixed(1)}
+                      </span>
+                      <span className="text-sm text-gray-400">/5</span>
+                    </div>
                   )}
                 </div>
-                <div className="text-right shrink-0 ml-3">
-                  <span className={`text-2xl font-bold ${ratingColor(day.avgOverall)}`}>
-                    {day.avgOverall.toFixed(1)}
-                  </span>
-                  <span className="text-sm text-gray-400">/5</span>
-                </div>
+                {isFuture ? (
+                  <p className="text-xs text-gray-400 mt-2">⏳ Check back on {day.dayName}!</p>
+                ) : isToday && day.totalVotes === 0 ? (
+                  <p className="text-xs text-gray-400 mt-2">🗳️ No votes yet — voting is open!</p>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:gap-4 gap-0.5 mt-2 text-xs text-gray-400">
+                    <span>{day.totalVotes} votes</span>
+                    {day.topDish && <span>Top: {day.topDish.name} ({day.topDish.avg.toFixed(1)})</span>}
+                    {day.worstDish && <span>Low: {day.worstDish.name} ({day.worstDish.avg.toFixed(1)})</span>}
+                  </div>
+                )}
               </div>
-              <div className="flex flex-col sm:flex-row sm:gap-4 gap-0.5 mt-2 text-xs text-gray-400">
-                <span>{day.totalVotes} votes</span>
-                {day.topDish && <span>Top: {day.topDish.name} ({day.topDish.avg.toFixed(1)})</span>}
-                {day.worstDish && <span>Low: {day.worstDish.name} ({day.worstDish.avg.toFixed(1)})</span>}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
