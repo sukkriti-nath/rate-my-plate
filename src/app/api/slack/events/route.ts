@@ -234,18 +234,24 @@ async function handleBlockAction(payload: Record<string, unknown>) {
   // ─── Submit inline ratings ─────────────────────────────────────────────
   if (action.action_id === "submit_inline_ratings") {
     const date = action.value || "";
-    const cached = await getCachedRating(userId, date);
+
+    // Try to get cached rating, retry once after a short delay if not found
+    let cached = await getCachedRating(userId, date);
+    if (!cached) {
+      await new Promise((r) => setTimeout(r, 1000));
+      cached = await getCachedRating(userId, date);
+    }
 
     if (!cached) {
-      // No cached data — tell user
+      // No cached data — show friendly message
       if (responseUrl) {
         await fetch(responseUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            replace_original: true,
-            text: "⚠️ No ratings found. Try rating again!",
-            blocks: [{ type: "section", text: { type: "mrkdwn", text: "⚠️ No ratings found — please try again from the channel message." } }],
+            replace_original: false,
+            response_type: "ephemeral",
+            text: "😅 Oops! It looks like your ratings weren't saved before you hit submit. Please select your ratings from the dropdowns above and try submitting again.",
           }),
         });
       }
