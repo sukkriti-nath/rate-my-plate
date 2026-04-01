@@ -141,15 +141,27 @@ export default function ReportsPage() {
             <div className="text-xs text-gray-400 mt-1">This week&apos;s overall average</div>
           </div>
           <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
-            <div className="text-3xl font-bold text-gray-900">{report.summary.totalVotes}</div>
-            <div className="text-xs text-gray-400 mt-1">Total Votes</div>
-          </div>
-          <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
             <div className="text-3xl font-bold text-gray-900">
               {report.summary.totalDaysWithData > 0 ? Math.round(report.summary.totalVotes / report.summary.totalDaysWithData) : 0}
             </div>
             <div className="text-xs text-gray-400 mt-1">Avg Votes / Day</div>
           </div>
+          {(() => {
+            const mostActive = [...report.dayByDay].filter((d) => d.totalVotes > 0).sort((a, b) => b.totalVotes - a.totalVotes)[0];
+            return (
+              <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
+                <div className="text-xs text-gray-400 mb-1 font-medium">Most Active Day</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {mostActive?.dayName || "—"}
+                </div>
+                {mostActive && (
+                  <div className="text-sm font-bold text-gray-500 mt-0.5">
+                    {mostActive.totalVotes} votes
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <div className="text-center p-4 bg-kikoff-lavender rounded-xl border-2 border-black">
             <div className="text-xs text-gray-400 mb-1 font-medium">Best Day of the Week</div>
             <div className="text-3xl font-bold text-green-500">
