@@ -189,20 +189,18 @@ export default function LiveResults({
       </div>
 
       {/* Overall Summary */}
-      <div className="flex items-center justify-center gap-8">
-        <div className="text-center">
-          <div className="text-5xl font-bold text-kikoff-dark">
+      <div className="flex items-center justify-center gap-4">
+        <div className="bg-kikoff/40 rounded-2xl px-6 py-4 text-center">
+          <div className="text-4xl font-bold text-kikoff-dark">
             {stats.averageOverall.toFixed(1)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">average overall score</div>
+          <div className="text-xs text-kikoff-dark/60 mt-1 font-medium">average overall score</div>
         </div>
-        <div className="text-center">
-          <div className="text-5xl font-bold text-kikoff-dark">
+        <div className="bg-kikoff/40 rounded-2xl px-6 py-4 text-center">
+          <div className="text-4xl font-bold text-kikoff-dark">
             {stats.totalVotes}
           </div>
-          <div className="text-sm text-gray-500">
-            total votes
-          </div>
+          <div className="text-xs text-kikoff-dark/60 mt-1 font-medium">total votes</div>
         </div>
       </div>
 
