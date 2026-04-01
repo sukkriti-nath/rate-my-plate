@@ -176,7 +176,7 @@ export default async function Home({ searchParams }: PageProps) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-xl">📊</span>
-              <h2 className="font-display text-xl text-gray-900 font-bold">{isToday ? "Live Results" : "Results"}</h2>
+              <h2 className="font-display text-xl text-gray-900 font-bold">{isToday ? "Live Results from All Kiksters" : "Results from All Kiksters"}</h2>
             </div>
             {isToday && (
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
