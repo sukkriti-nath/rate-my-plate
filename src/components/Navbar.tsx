@@ -39,7 +39,7 @@ export default function Navbar() {
               alt="RateMyPlate"
               width={30}
               height={30}
-              className="rounded-lg"
+              className="rounded-full border-2 border-kikoff-dark/20"
             />
             <span className="font-display text-[15px] sm:text-base text-kikoff-dark tracking-tight font-extrabold uppercase">
               Rate<span className="bg-kikoff-dark text-kikoff px-1.5 py-0.5 rounded-md mx-0.5">My</span>Plate
