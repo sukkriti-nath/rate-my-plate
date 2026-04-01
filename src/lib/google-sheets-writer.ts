@@ -18,7 +18,10 @@ function getAuthClient() {
 
   return new google.auth.GoogleAuth({
     credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive.file",
+    ],
   });
 }
 
@@ -487,4 +490,67 @@ export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise
     valueInputOption: "RAW",
     requestBody: { values },
   });
+}
+
+// ─── PDF Export & Google Drive Upload ──────────────────────────────────────
+
+const DRIVE_FOLDER_ID = "1AEA_wG2ySh4Q9NOgaiygrO_F3QL28qYy";
+
+/**
+ * Export the "Bi-Weekly Trends" tab as a PDF and upload to Google Drive.
+ * Returns the file ID and web link.
+ */
+export async function exportBiWeeklyTrendsPdf(
+  dateRange: string
+): Promise<{ fileId: string; webViewLink: string }> {
+  const auth = getAuthClient();
+  const sheetId = getOutputSheetId();
+
+  // Get the sheet GID for the Bi-Weekly Trends tab
+  const sheets = getSheetsClient();
+  const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+  const trendsTab = spreadsheet.data.sheets?.find(
+    (s) => s.properties?.title === "Bi-Weekly Trends"
+  );
+  const gid = trendsTab?.properties?.sheetId ?? 0;
+
+  // Export as PDF using the Google Sheets export URL
+  const authClient = await auth.getClient();
+  const token = await authClient.getAccessToken();
+  const exportUrl =
+    `https://docs.google.com/spreadsheets/d/${sheetId}/export?` +
+    `format=pdf&gid=${gid}&portrait=false&fitw=true&gridlines=false`;
+
+  const pdfResponse = await fetch(exportUrl, {
+    headers: { Authorization: `Bearer ${token.token}` },
+  });
+
+  if (!pdfResponse.ok) {
+    throw new Error(`PDF export failed: ${pdfResponse.status} ${pdfResponse.statusText}`);
+  }
+
+  const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
+
+  // Upload to Google Drive
+  const drive = google.drive({ version: "v3", auth });
+  const sanitizedRange = dateRange.replace(/\//g, "-");
+  const fileName = `Bi-Weekly Trends Report ${sanitizedRange}.pdf`;
+
+  const driveResponse = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      mimeType: "application/pdf",
+      parents: [DRIVE_FOLDER_ID],
+    },
+    media: {
+      mimeType: "application/pdf",
+      body: require("stream").Readable.from(pdfBuffer),
+    },
+    fields: "id,webViewLink",
+  });
+
+  return {
+    fileId: driveResponse.data.id!,
+    webViewLink: driveResponse.data.webViewLink!,
+  };
 }
