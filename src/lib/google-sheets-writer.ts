@@ -32,6 +32,16 @@ function getOutputSheetId(): string {
   return id;
 }
 
+// ─── Write Queue (prevents race conditions on concurrent votes) ─────────────
+
+let writeQueue: Promise<void> = Promise.resolve();
+
+function enqueue<T>(fn: () => Promise<T>): Promise<T> {
+  const task = writeQueue.then(fn, fn); // run even if prior task failed
+  writeQueue = task.then(() => {}, () => {}); // swallow to keep chain alive
+  return task;
+}
+
 // ─── Raw Votes Sync (called on every vote) ──────────────────────────────────
 
 export interface VoteRow {
@@ -60,7 +70,11 @@ let headersInitialized = false;
  * Sync a single vote to the "Raw Votes" tab in Google Sheets.
  * Upserts by (date, email) — updates existing row or appends new one.
  */
-export async function syncVoteToSheet(vote: VoteRow): Promise<void> {
+export function syncVoteToSheet(vote: VoteRow): Promise<void> {
+  return enqueue(() => _syncVoteToSheet(vote));
+}
+
+async function _syncVoteToSheet(vote: VoteRow): Promise<void> {
   const sheets = getSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Raw Votes";
@@ -139,7 +153,11 @@ export interface DailySummaryRow {
   bottomDishRating: number;
 }
 
-export async function syncDailySummary(summary: DailySummaryRow): Promise<void> {
+export function syncDailySummary(summary: DailySummaryRow): Promise<void> {
+  return enqueue(() => _syncDailySummary(summary));
+}
+
+async function _syncDailySummary(summary: DailySummaryRow): Promise<void> {
   const sheets = getSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Daily Summary";
