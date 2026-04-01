@@ -78,11 +78,19 @@ export default function LiveResults({
   }
 
   if (stats.totalVotes === 0) {
+    const ptHour = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })).getHours();
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })).toISOString().split("T")[0];
+    const isBeforeNoon = date === today && ptHour < 12;
+
     return (
       <div className="text-center py-8">
-        <div className="text-4xl mb-3">🍽️</div>
-        <p className="text-gray-400 text-lg">No votes yet</p>
-        <p className="text-gray-300 text-sm mt-1">Be the first to rate today&apos;s lunch!</p>
+        <div className="text-4xl mb-3">{isBeforeNoon ? "⏰" : "🍽️"}</div>
+        <p className="text-gray-400 text-lg">{isBeforeNoon ? "Voting hasn\u2019t opened yet" : "No votes yet"}</p>
+        <p className="text-gray-300 text-sm mt-1">
+          {isBeforeNoon
+            ? "Come back after lunch to cast your vote!"
+            : "Be the first to rate today\u2019s lunch!"}
+        </p>
       </div>
     );
   }
