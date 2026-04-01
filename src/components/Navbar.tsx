@@ -34,12 +34,12 @@ export default function Navbar() {
   const links = isSnacksApp
     ? [
         { href: "/snacks", label: "Dashboard", emoji: "📊" },
-        { href: "/snacks/profile", label: "Snack Profile", emoji: "👤" },
+        { href: "/snacks/profile", label: "Profile", emoji: "👤" },
       ]
     : [
-       { href: "/", label: "Vote", emoji: "🗳️" },
-    { href: "/reports", label: "Rankings", emoji: "🏆" },
-    { href: "/leaderboard", label: "Reviewers", emoji: "⭐" },
+        { href: "/", label: "Vote", emoji: "🗳️" },
+        { href: "/reports", label: "Rankings", emoji: "🏆" },
+        { href: "/leaderboard", label: "Reviewers", emoji: "⭐" },
       ];
 
   async function handleLogout() {
@@ -49,34 +49,38 @@ export default function Navbar() {
 
   return (
     <nav className="bg-kikoff-dark sticky top-0 z-50 border-b-2 border-black">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Logo + App Switcher */}
-        <div className="flex items-center gap-2 shrink-0" ref={menuRef}>
+        <div className="flex items-center gap-1 shrink-0" ref={menuRef}>
           <Link
             href={isSnacksApp ? "/snacks" : "/"}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1.5 sm:gap-2"
           >
             {isSnacksApp ? (
-              <span className="text-2xl leading-none" aria-hidden>
+              <span className="text-xl sm:text-2xl leading-none" aria-hidden>
                 🍿
               </span>
             ) : (
               <Image
                 src="/logo.png"
                 alt="RateMyPlate"
-                width={32}
-                height={32}
-                className="rounded-lg"
+                width={28}
+                height={28}
+                className="rounded-lg sm:w-8 sm:h-8"
               />
             )}
-            <span className="font-display text-base text-white tracking-tight font-extrabold uppercase">
+            <span className="font-display text-sm sm:text-base text-white tracking-tight font-extrabold uppercase hidden xs:inline">
               {isSnacksApp ? (
                 <>
-                  Snack<span className="text-amber-500">Overflow</span>
+                  <span className="sm:hidden">Snack</span>
+                  <span className="hidden sm:inline">Snack</span>
+                  <span className="text-amber-500">O</span>
+                  <span className="hidden sm:inline">verflow</span>
                 </>
               ) : (
                 <>
-                  Rate<span className="text-kikoff">My</span>Plate
+                  Rate<span className="text-kikoff">My</span>
+                  <span className="hidden sm:inline">Plate</span>
                 </>
               )}
             </span>
@@ -86,11 +90,11 @@ export default function Navbar() {
           <div className="relative">
             <button
               onClick={() => setAppMenuOpen(!appMenuOpen)}
-              className="ml-1 p-1 rounded-lg hover:bg-white/10 transition-colors"
+              className="p-1 rounded-lg hover:bg-white/10 transition-colors"
               aria-label="Switch app"
             >
               <svg
-                className={`w-4 h-4 text-gray-400 transition-transform ${appMenuOpen ? "rotate-180" : ""}`}
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 transition-transform ${appMenuOpen ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -100,28 +104,28 @@ export default function Navbar() {
             </button>
 
             {appMenuOpen && (
-              <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] overflow-hidden z-50">
+              <div className="absolute top-full left-0 mt-2 w-44 sm:w-48 bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] overflow-hidden z-50">
                 <Link
                   href="/"
                   onClick={() => setAppMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 transition-colors ${!isSnacksApp ? "bg-kikoff/20" : ""}`}
                 >
-                  <Image src="/logo.png" alt="RateMyPlate" width={24} height={24} className="rounded" />
+                  <Image src="/logo.png" alt="RateMyPlate" width={24} height={24} className="rounded w-5 h-5 sm:w-6 sm:h-6" />
                   <div>
-                    <div className="font-bold text-sm text-gray-900">RateMyPlate</div>
-                    <div className="text-xs text-gray-500">Lunch ratings</div>
+                    <div className="font-bold text-xs sm:text-sm text-gray-900">RateMyPlate</div>
+                    <div className="text-[10px] sm:text-xs text-gray-500">Lunch ratings</div>
                   </div>
                 </Link>
                 <div className="border-t border-gray-200" />
                 <Link
                   href="/snacks"
                   onClick={() => setAppMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 transition-colors ${isSnacksApp ? "bg-amber-50" : ""}`}
                 >
-                  <span className="text-2xl">🍿</span>
+                  <span className="text-xl sm:text-2xl">🍿</span>
                   <div>
-                    <div className="font-bold text-sm text-gray-900">SnackOverflow</div>
-                    <div className="text-xs text-gray-500">Snack preferences</div>
+                    <div className="font-bold text-xs sm:text-sm text-gray-900">SnackOverflow</div>
+                    <div className="text-[10px] sm:text-xs text-gray-500">Snack preferences</div>
                   </div>
                 </Link>
               </div>
@@ -129,7 +133,8 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 p-0.5">
+        {/* Nav links — compact on mobile */}
+        <div className="flex items-center gap-0.5 sm:gap-1 p-0.5">
           {links.map((link) => {
             const active =
               isSnacksApp && link.href === "/snacks"
@@ -138,22 +143,26 @@ export default function Navbar() {
                   ? pathname.startsWith("/snacks/profile")
                   : pathname === link.href;
             return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                active
-                  ? "bg-kikoff text-black border-2 border-black shadow-[2px_2px_0px_0px_#000]"
-                  : "text-gray-400 hover:text-white border-2 border-transparent"
-              }`}
-            >
-              <span className="mr-0.5">{link.emoji}</span>
-              {link.label}
-            </Link>
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-2 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
+                  active
+                    ? "bg-kikoff text-black border-2 border-black shadow-[2px_2px_0px_0px_#000]"
+                    : "text-gray-400 hover:text-white border-2 border-transparent"
+                }`}
+              >
+                <span className="sm:hidden">{link.emoji}</span>
+                <span className="hidden sm:inline">
+                  <span className="mr-0.5">{link.emoji}</span>
+                  {link.label}
+                </span>
+              </Link>
             );
           })}
         </div>
 
+        {/* User section */}
         <div className="flex items-center gap-2 shrink-0">
           {user ? (
             <>
@@ -170,7 +179,7 @@ export default function Navbar() {
               )}
               <button
                 onClick={handleLogout}
-                className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors hidden sm:block"
               >
                 Logout
               </button>
@@ -178,7 +187,7 @@ export default function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="text-xs font-bold bg-black text-white px-4 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
+              className="text-[11px] sm:text-xs font-bold bg-black text-white px-3 sm:px-4 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all whitespace-nowrap"
             >
               Start Rating
             </Link>
