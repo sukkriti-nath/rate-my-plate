@@ -132,43 +132,42 @@ export default function ReportsPage() {
       {/* Executive Summary */}
       <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
         <h2 className="font-display text-xl text-gray-900 mb-4">📊 Executive Summary</h2>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000]">
-            <div>
-              <span className="text-sm mr-2">{ratingEmoji(report.summary.avgOverall)}</span>
-              <span className="font-medium text-sm">Week&apos;s Overall Average</span>
-              <span className="text-xs text-gray-400 ml-1">across all dishes this week</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000] flex flex-col">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-sm">{ratingEmoji(report.summary.avgOverall)}</span>
+              <span className="font-medium text-xs">Week&apos;s Overall Avg</span>
             </div>
-            <span className={`font-bold ${ratingColor(report.summary.avgOverall)}`}>{report.summary.avgOverall.toFixed(1)}</span>
+            <span className={`text-2xl font-bold mt-auto ${ratingColor(report.summary.avgOverall)}`}>{report.summary.avgOverall.toFixed(1)}</span>
           </div>
-          <div className="flex items-center justify-between p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000]">
-            <div>
-              <span className="text-sm mr-2">🗳️</span>
-              <span className="font-medium text-sm">Avg Votes / Day</span>
-              <span className="text-xs text-gray-400 ml-1">({report.summary.totalVotes} total)</span>
+          <div className="p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000] flex flex-col">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-sm">🗳️</span>
+              <span className="font-medium text-xs">Avg Votes / Day</span>
             </div>
-            <span className="font-bold text-gray-900">{report.summary.totalDaysWithData > 0 ? Math.round(report.summary.totalVotes / report.summary.totalDaysWithData) : 0}</span>
+            <span className="text-2xl font-bold text-gray-900 mt-auto">{report.summary.totalDaysWithData > 0 ? Math.round(report.summary.totalVotes / report.summary.totalDaysWithData) : 0}</span>
+            <span className="text-xs text-gray-400">{report.summary.totalVotes} total</span>
           </div>
           {(() => {
             const mostActive = [...report.dayByDay].filter((d) => d.totalVotes > 0).sort((a, b) => b.totalVotes - a.totalVotes)[0];
             return (
-              <div className="flex items-center justify-between p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000]">
-                <div>
-                  <span className="text-sm mr-2">🔥</span>
-                  <span className="font-medium text-sm">Most Active Day</span>
-                  {mostActive && <span className="text-xs text-gray-400 ml-1">({mostActive.totalVotes} votes)</span>}
+              <div className="p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000] flex flex-col">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-sm">🔥</span>
+                  <span className="font-medium text-xs">Most Active Day</span>
                 </div>
-                <span className="font-bold text-gray-900">{mostActive?.dayName || "—"}</span>
+                <span className="text-2xl font-bold text-gray-900 mt-auto">{mostActive?.dayName || "—"}</span>
+                {mostActive && <span className="text-xs text-gray-400">{mostActive.totalVotes} votes</span>}
               </div>
             );
           })()}
-          <div className="flex items-center justify-between p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000]">
-            <div>
-              <span className="text-sm mr-2">⭐</span>
-              <span className="font-medium text-sm">Best Day of the Week</span>
-              {report.summary.bestDay && <span className="text-xs text-gray-400 ml-1">({Math.round(report.summary.bestDay.avg)}/5)</span>}
+          <div className="p-3 bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000] flex flex-col">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-sm">⭐</span>
+              <span className="font-medium text-xs">Best Day</span>
             </div>
-            <span className="font-bold text-green-600">{report.summary.bestDay?.name || "—"}</span>
+            <span className="text-2xl font-bold text-green-600 mt-auto">{report.summary.bestDay?.name || "—"}</span>
+            {report.summary.bestDay && <span className="text-xs text-gray-400">{Math.round(report.summary.bestDay.avg)}/5</span>}
           </div>
         </div>
       </section>
