@@ -19,7 +19,8 @@ export async function GET(request: Request) {
   // Only allow in development or with cron secret
   const secret = searchParams.get("secret");
   const isDev = process.env.NODE_ENV === "development";
-  if (!isDev && process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET || "CobY2GYySAz309EXEQG6UB8ZL8YoBVUvfRjC3VtluwM";
+  if (!isDev && secret !== cronSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
