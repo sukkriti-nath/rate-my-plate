@@ -58,7 +58,7 @@ export default function Navbar() {
               {isSnacksApp ? (
                 <span className="text-2xl">🍿</span>
               ) : (
-                <Image src="/logo.png" alt="RateMyPlate" width={30} height={30} className="rounded-lg" />
+                <Image src="/logo.png" alt="RateMyPlate" width={30} height={30} className="rounded-full border-2 border-kikoff-dark/20" />
               )}
               <span className="font-display text-[15px] sm:text-base text-kikoff-dark tracking-tight font-extrabold uppercase">
                 {isSnacksApp ? (
