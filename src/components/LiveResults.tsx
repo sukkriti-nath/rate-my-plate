@@ -275,11 +275,6 @@ export default function LiveResults({
                     </span>
                     <span>{ratingEmoji(vote.rating_overall)}</span>
                   </div>
-                  {vote.comment && (
-                    <p className="text-sm text-gray-500 mt-0.5 truncate">
-                      &ldquo;{vote.comment}&rdquo;
-                    </p>
-                  )}
                 </div>
               </div>
             ))}
