@@ -63,21 +63,21 @@ function formatDateHeader(date: string): string {
 // Kate's design: emoji buttons in-channel for overall rating (1🙁 - 5🤩 + N/A)
 
 const DAILY_INTROS = [
-  "Today's menu is looking *fire* 🔥",
-  "Chef cooked up something special today 👨‍🍳",
-  "Lunch is about to hit different 🤌",
-  "The kitchen went OFF today 💥",
-  "You're gonna want to see this menu 👀",
-  "Today's spread is *elite* 🏆",
-  "Smells amazing in the kitchen today 😤🔥",
-  "Another day, another fire menu 🍽️",
-  "The lunch lineup is *stacked* today 📋",
-  "Hope you brought your appetite 😋",
-  "Today's menu just dropped 🎤⬇️",
-  "Lunchtime never looked so good ✨",
-  "The kitchen is not playing around today 💪",
-  "Get ready to rate this one 📝",
-  "Big flavors incoming 🌶️",
+  "Today's menu just dropped 🎤",
+  "Here's what's cooking today 🍳",
+  "Lunch is served — check it out 👇",
+  "The menu for today is in 📋",
+  "Take a look at today's lineup 👀",
+  "Fresh menu, fresh opinions — let's go 🍽️",
+  "Today's lunch menu is ready for you 📝",
+  "See what's on the menu today ☕",
+  "Another day, another menu to rate 🗳️",
+  "Lunchtime — here's what we've got 🧑‍🍳",
+  "The kitchen has spoken — here's today's menu 🔔",
+  "Your daily lunch menu has arrived 📬",
+  "Time to see what's for lunch 🍴",
+  "Here's today's spread — rate away 📊",
+  "Lunch lineup is up — take a look 👇",
 ];
 
 function getDailyIntro(date: string): string {
