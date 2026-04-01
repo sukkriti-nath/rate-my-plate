@@ -8,21 +8,27 @@ import { getDb } from "@/lib/db";
  * Returns found=true with avatar/name if the user exists in Slack,
  * or found=false if the email doesn't match any Slack user.
  */
-async function lookupSlackUser(email: string): Promise<{ found: boolean; avatarUrl: string | null; realName: string | null }> {
+async function lookupSlackUser(email: string): Promise<{ found: boolean; active: boolean; avatarUrl: string | null; realName: string | null }> {
   try {
     const slack = getSlackClient();
     const result = await slack.users.lookupByEmail({ email });
+
+    // Check if the account has been deactivated (former employee)
+    if (result.user?.deleted) {
+      return { found: true, active: false, avatarUrl: null, realName: null };
+    }
+
     const avatarUrl = result.user?.profile?.image_72 || null;
     const realName = result.user?.real_name || null;
-    return { found: true, avatarUrl, realName };
+    return { found: true, active: true, avatarUrl, realName };
   } catch (err: unknown) {
     // Slack returns "users_not_found" when the email doesn't exist
     const slackError = err as { data?: { error?: string } };
     if (slackError?.data?.error === "users_not_found") {
-      return { found: false, avatarUrl: null, realName: null };
+      return { found: false, active: false, avatarUrl: null, realName: null };
     }
     // For other errors (network, scope issues), allow login but without avatar
-    return { found: true, avatarUrl: null, realName: null };
+    return { found: true, active: true, avatarUrl: null, realName: null };
   }
 }
 
@@ -62,12 +68,19 @@ export async function POST(request: Request) {
     );
   }
 
-  // Verify the user exists in the Kikoff Slack workspace
-  const { found, avatarUrl, realName } = await lookupSlackUser(normalizedEmail);
+  // Verify the user exists and is active in the Kikoff Slack workspace
+  const { found, active, avatarUrl, realName } = await lookupSlackUser(normalizedEmail);
 
   if (!found) {
     return NextResponse.json(
       { error: "User not found. Please use a valid Kikoff email address." },
+      { status: 403 }
+    );
+  }
+
+  if (!active) {
+    return NextResponse.json(
+      { error: "This account has been deactivated. Only current employees can log in." },
       { status: 403 }
     );
   }
