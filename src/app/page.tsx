@@ -92,7 +92,8 @@ export default async function Home({ searchParams }: PageProps) {
 
   const dayName = menu.day_name as string;
   const restaurant = menu.restaurant as string | null;
-  const greeting = getTimeGreeting();
+  const firstName = session?.displayName?.split(" ")[0] || undefined;
+  const greeting = getTimeGreeting(firstName);
   const ptHour = getPTHour();
   const votingClosed = isToday && ptHour < 12;
   const dateLabel = new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
@@ -191,9 +192,10 @@ export default async function Home({ searchParams }: PageProps) {
   );
 }
 
-function getTimeGreeting(): string {
+function getTimeGreeting(firstName?: string): string {
   const hour = getPTHour();
-  if (hour < 12) return "Good morning! ☀️";
-  if (hour < 17) return "Good afternoon! 🌤️";
-  return "Good evening! 🌙";
+  const name = firstName ? `, ${firstName}` : "";
+  if (hour < 12) return `Good morning${name}! ☀️`;
+  if (hour < 17) return `Good afternoon${name}! 🌤️`;
+  return `Good evening${name}! 🌙`;
 }
