@@ -754,6 +754,28 @@ export function buildMonthlyRecapBlocks(data: MonthlyRecapData): object[] {
   return blocks;
 }
 
+/**
+ * Send a DM to a specific Slack user by their user ID.
+ */
+export async function sendDirectMessage(
+  userId: string,
+  text: string,
+  blocks?: object[]
+): Promise<void> {
+  const slack = getSlackClient();
+
+  // Open a DM channel with the user
+  const dm = await slack.conversations.open({ users: userId });
+  const channelId = dm.channel?.id;
+  if (!channelId) throw new Error(`Could not open DM with user ${userId}`);
+
+  await slack.chat.postMessage({
+    channel: channelId,
+    text,
+    ...(blocks ? { blocks: blocks as never[] } : {}),
+  });
+}
+
 export async function uploadFileToChannel(buffer: Buffer, filename: string, title: string): Promise<void> {
   const slack = getSlackClient();
   const channelId = process.env.SLACK_CHANNEL_ID;

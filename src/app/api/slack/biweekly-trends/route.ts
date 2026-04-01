@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import {
   buildBiWeeklyTrendsBlocks,
   postToChannel,
+  sendDirectMessage,
 } from "@/lib/slack-bot";
 import { getBiWeeklyTrendsData } from "@/lib/db";
-import { syncBiWeeklyTrends } from "@/lib/google-sheets-writer";
+import { syncBiWeeklyTrends, exportBiWeeklyTrendsPdf } from "@/lib/google-sheets-writer";
+
+// Workplace Experience team — receive bi-weekly report DMs
+const REPORT_RECIPIENTS = [
+  { name: "Shivani", userId: "U0AAEM0FA10" },  // shivani@kikoff.com
+  { name: "Trevor", userId: "U094LAQU59U" },    // trevor.araujo@kikoff.com
+];
 
 function getBiWeeklyDateRange(): { startDate: string; endDate: string } {
   // Get the previous 2 weeks of Mon-Thu
@@ -60,7 +67,7 @@ export async function GET(request: Request) {
       const topFav = trendsData.categoryFavorites.sort((a, b) => b.avgRating - a.avgRating)[0];
       const topWorst = trendsData.categoryWorst.sort((a, b) => a.avgRating - b.avgRating)[0];
 
-      syncBiWeeklyTrends({
+      await syncBiWeeklyTrends({
         period: `${startDate} to ${endDate}`,
         dateRange: `${startDate} - ${endDate}`,
         avgOverall: trendsData.avgOverall,
@@ -76,7 +83,53 @@ export async function GET(request: Request) {
         recPhaseOut: topWorst ? `${topWorst.dishName} — ${topWorst.avgRating.toFixed(1)}/5` : "",
         recReplicate: `${bestDay.dayName} ${bestDay.date} menu (${bestDay.avgOverall.toFixed(1)}/5)`,
         recImprove: `${worstDay.dayName} ${worstDay.date} menu (${worstDay.avgOverall.toFixed(1)}/5)`,
-      }).catch((err) => console.error("Failed to sync bi-weekly trends to sheet:", err));
+      });
+    }
+
+    // Generate PDF and upload to Google Drive
+    const dateRangeStr = `${startDate} to ${endDate}`;
+    let pdfLink = "";
+    try {
+      const pdf = await exportBiWeeklyTrendsPdf(dateRangeStr);
+      pdfLink = pdf.webViewLink;
+      console.log(`Bi-weekly PDF uploaded to Drive: ${pdfLink}`);
+    } catch (err) {
+      console.error("Failed to export/upload bi-weekly PDF:", err);
+    }
+
+    // DM the Workplace Experience team
+    const dmBlocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: "📊 Bi-Weekly Catering Trends Report", emoji: true },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Hey! Here's your bi-weekly catering trends report for *${startDate}* to *${endDate}*.\n\n` +
+            `• *Overall avg:* ${trendsData.avgOverall.toFixed(1)}/5\n` +
+            `• *Days rated:* ${trendsData.totalDays}\n` +
+            `• *Total votes:* ${trendsData.totalVotes}\n\n` +
+            (pdfLink
+              ? `📄 <${pdfLink}|View full PDF report>\n`
+              : "") +
+            `📊 <https://docs.google.com/spreadsheets/d/${process.env.VOTES_GOOGLE_SHEET_ID}/edit|View live data>`,
+        },
+      },
+    ];
+
+    for (const recipient of REPORT_RECIPIENTS) {
+      try {
+        await sendDirectMessage(
+          recipient.userId,
+          `Bi-Weekly Catering Trends Report: ${dateRangeStr}`,
+          dmBlocks
+        );
+        console.log(`Sent bi-weekly report DM to ${recipient.name}`);
+      } catch (err) {
+        console.error(`Failed to DM ${recipient.name}:`, err);
+      }
     }
 
     return NextResponse.json({
@@ -86,6 +139,8 @@ export async function GET(request: Request) {
       daysRated: trendsData.totalDays,
       totalVotes: trendsData.totalVotes,
       avgOverall: trendsData.avgOverall,
+      pdfLink: pdfLink || null,
+      dmsSent: REPORT_RECIPIENTS.map((r) => r.name),
     });
   } catch (error) {
     console.error("Failed to post bi-weekly trends:", error);
