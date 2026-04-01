@@ -59,7 +59,7 @@ function LoginContent() {
             Rate<span className="bg-kikoff px-2 py-0.5 rounded-xl mx-1">My</span>Plate
           </h1>
           <p className="text-gray-500 text-lg">
-            Your voice shapes tomorrow&apos;s menu
+            We all already have opinions about lunch.<br />Now, let&apos;s make them matter.
           </p>
         </div>
 
