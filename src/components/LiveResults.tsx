@@ -136,54 +136,20 @@ export default function LiveResults({
     .filter((d) => stats.dishRatings[d.key] && stats.dishRatings[d.key].votes > 0)
     .sort((a, b) => (stats.dishRatings[b.key]?.avg || 0) - (stats.dishRatings[a.key]?.avg || 0));
 
-  // Get unique avatars from voters for the header stack
-  const voterAvatars = votes
-    .filter((v) => v.avatar_url)
-    .reduce((acc, v) => {
-      if (!acc.find((a) => a.url === v.avatar_url)) {
-        acc.push({ url: v.avatar_url!, name: v.user_name });
-      }
-      return acc;
-    }, [] as { url: string; name: string }[])
-    .slice(0, 4);
-
   return (
     <div className="space-y-6">
-      {/* Header with avatar stack below */}
-      <div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xl">📊</span>
-            <h2 className="font-display text-xl text-gray-900 font-bold">
-              {isToday ? "Live Results from All Kiksters" : "Results from All Kiksters"}
-            </h2>
-          </div>
-          {isToday && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-kikoff animate-pulse-glow" />
-              live
-            </div>
-          )}
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">📊</span>
+          <h2 className="font-display text-xl text-gray-900 font-bold">
+            {isToday ? "Live Results from All Kiksters" : "Results from All Kiksters"}
+          </h2>
         </div>
-        {voterAvatars.length > 0 && (
-          <div className="flex items-center gap-2 mt-2 ml-9">
-            <div className="flex -space-x-2">
-              {voterAvatars.map((avatar, i) => (
-                <img
-                  key={i}
-                  src={avatar.url}
-                  alt={avatar.name}
-                  className="w-7 h-7 rounded-full border-2 border-white object-cover"
-                  style={{ zIndex: voterAvatars.length - i }}
-                />
-              ))}
-              {stats.totalVotes > voterAvatars.length && (
-                <div className="w-7 h-7 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 font-bold"
-                  style={{ zIndex: 0 }}>
-                  ...
-                </div>
-              )}
-            </div>
+        {isToday && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-kikoff animate-pulse-glow" />
+            live
           </div>
         )}
       </div>
