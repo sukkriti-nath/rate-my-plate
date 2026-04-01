@@ -134,8 +134,8 @@ export default async function Home({ searchParams }: PageProps) {
       <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
         <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <div className="flex items-center gap-2 mb-5">
-            <span className="text-xl">✍️</span>
-            <h2 className="font-display text-xl text-gray-900 font-bold">Rate It</h2>
+            <span className="text-xl">{existingVote ? "📋" : "✍️"}</span>
+            <h2 className="font-display text-xl text-gray-900 font-bold">{existingVote ? "Your Rating" : "Rate It"}</h2>
           </div>
           {votingClosed ? (
             <div className="text-center py-6">
