@@ -19,6 +19,7 @@ export default function Navbar() {
   const links = [
     { href: "/", label: "Vote", emoji: "🗳️" },
     { href: "/reports", label: "Rankings", emoji: "🏆" },
+    { href: "/leaderboard", label: "Reviewers", emoji: "⭐" },
   ];
 
   async function handleLogout() {
