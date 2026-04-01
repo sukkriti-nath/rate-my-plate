@@ -272,10 +272,10 @@ export default function ReportsPage() {
         <section className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
           <h2 className="font-display text-xl text-gray-900 mb-4">💬 Feedback Highlights</h2>
           <div className="space-y-2">
-            {report.comments.slice(0, 15).map((c, i) => (
+            {report.comments.slice(0, 5).map((c, i) => (
               <div key={i} className="p-3 bg-white rounded-xl border-2 border-black">
                 <p className="text-sm text-gray-700">&ldquo;{c.comment}&rdquo;</p>
-                <p className="text-xs text-gray-400 mt-1">— {c.userName} • {formatDate(c.date)}</p>
+                <p className="text-xs text-gray-400 mt-1">— {formatDate(c.date)}</p>
               </div>
             ))}
           </div>
