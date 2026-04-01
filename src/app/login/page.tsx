@@ -106,7 +106,7 @@ function LoginContent() {
         </form>
 
         <p className="text-xs text-gray-400 mt-6 text-center">
-          Just your @kikoff.com email. No password needed. <span className="text-gray-300">Easy peasy.</span>
+          Just your @kikoff.com email. No password needed.
         </p>
 
         {/* Fun stats teaser */}
