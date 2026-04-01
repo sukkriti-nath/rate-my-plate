@@ -9,8 +9,9 @@ import type { UserSession } from "@/lib/types";
 export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<UserSession | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const appMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -18,10 +19,10 @@ export default function Navbar() {
       .then((data) => setUser(data.user));
   }, []);
 
-  // Close menu when clicking outside
+  // Close app menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (appMenuRef.current && !appMenuRef.current.contains(event.target as Node)) {
         setAppMenuOpen(false);
       }
     }
@@ -33,13 +34,13 @@ export default function Navbar() {
 
   const links = isSnacksApp
     ? [
-        { href: "/snacks", label: "Dashboard", emoji: "📊" },
-        { href: "/snacks/profile", label: "Profile", emoji: "👤" },
+        { href: "/snacks", label: "Dashboard" },
+        { href: "/snacks/profile", label: "Profile" },
       ]
     : [
-        { href: "/", label: "Vote", emoji: "🗳️" },
-        { href: "/reports", label: "Rankings", emoji: "🏆" },
-        { href: "/leaderboard", label: "Reviewers", emoji: "⭐" },
+        { href: "/", label: "Vote" },
+        { href: "/reports", label: "Rankings" },
+        { href: "/leaderboard", label: "Reviewers" },
       ];
 
   async function handleLogout() {
@@ -48,152 +49,128 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-kikoff-dark sticky top-0 z-50 border-b-2 border-black">
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
-        {/* Logo + App Switcher */}
-        <div className="flex items-center gap-1 shrink-0" ref={menuRef}>
-          <Link
-            href={isSnacksApp ? "/snacks" : "/"}
-            className="flex items-center gap-1.5 sm:gap-2"
-          >
-            {isSnacksApp ? (
-              <span className="text-xl sm:text-2xl leading-none" aria-hidden>
-                🍿
-              </span>
-            ) : (
-              <Image
-                src="/logo.png"
-                alt="RateMyPlate"
-                width={28}
-                height={28}
-                className="rounded-lg sm:w-8 sm:h-8"
-              />
-            )}
-            <span className="font-display text-sm sm:text-base text-white tracking-tight font-extrabold uppercase hidden xs:inline">
+    <nav className="bg-kikoff sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex items-center justify-between h-14 sm:h-16">
+          {/* Logo + App Switcher */}
+          <div className="flex items-center gap-1 shrink-0" ref={appMenuRef}>
+            <Link href={isSnacksApp ? "/snacks" : "/"} className="flex items-center gap-2.5">
               {isSnacksApp ? (
-                <>
-                  <span className="sm:hidden">Snack</span>
-                  <span className="hidden sm:inline">Snack</span>
-                  <span className="text-amber-500">O</span>
-                  <span className="hidden sm:inline">verflow</span>
-                </>
+                <span className="text-2xl">🍿</span>
               ) : (
-                <>
-                  Rate<span className="text-kikoff">My</span>
-                  <span className="hidden sm:inline">Plate</span>
-                </>
+                <Image src="/logo.png" alt="RateMyPlate" width={30} height={30} className="rounded-lg" />
               )}
-            </span>
-          </Link>
+              <span className="font-display text-[15px] sm:text-base text-kikoff-dark tracking-tight font-extrabold uppercase">
+                {isSnacksApp ? (
+                  <>Snack<span className="bg-amber-500 text-white px-1.5 py-0.5 rounded-md mx-0.5">Over</span>flow</>
+                ) : (
+                  <>Rate<span className="bg-kikoff-dark text-kikoff px-1.5 py-0.5 rounded-md mx-0.5">My</span>Plate</>
+                )}
+              </span>
+            </Link>
 
-          {/* App Switcher Dropdown */}
-          <div className="relative">
+            {/* App Switcher Dropdown */}
             <button
               onClick={() => setAppMenuOpen(!appMenuOpen)}
-              className="p-1 rounded-lg hover:bg-white/10 transition-colors"
+              className="p-1 rounded-lg hover:bg-kikoff-dark/10 transition-colors"
               aria-label="Switch app"
             >
-              <svg
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 transition-transform ${appMenuOpen ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className={`w-4 h-4 text-kikoff-dark/50 transition-transform ${appMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
             {appMenuOpen && (
-              <div className="absolute top-full left-0 mt-2 w-44 sm:w-48 bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] overflow-hidden z-50">
-                <Link
-                  href="/"
-                  onClick={() => setAppMenuOpen(false)}
-                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 transition-colors ${!isSnacksApp ? "bg-kikoff/20" : ""}`}
-                >
-                  <Image src="/logo.png" alt="RateMyPlate" width={24} height={24} className="rounded w-5 h-5 sm:w-6 sm:h-6" />
-                  <div>
-                    <div className="font-bold text-xs sm:text-sm text-gray-900">RateMyPlate</div>
-                    <div className="text-[10px] sm:text-xs text-gray-500">Lunch ratings</div>
-                  </div>
+              <div className="absolute top-12 left-4 w-48 bg-white rounded-xl border-2 border-kikoff-dark/10 shadow-lg overflow-hidden z-50">
+                <Link href="/" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${!isSnacksApp ? "bg-kikoff/30" : ""}`}>
+                  <Image src="/logo.png" alt="" width={24} height={24} className="rounded" />
+                  <div className="text-sm font-semibold text-kikoff-dark">RateMyPlate</div>
                 </Link>
-                <div className="border-t border-gray-200" />
-                <Link
-                  href="/snacks"
-                  onClick={() => setAppMenuOpen(false)}
-                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 transition-colors ${isSnacksApp ? "bg-amber-50" : ""}`}
-                >
-                  <span className="text-xl sm:text-2xl">🍿</span>
-                  <div>
-                    <div className="font-bold text-xs sm:text-sm text-gray-900">SnackOverflow</div>
-                    <div className="text-[10px] sm:text-xs text-gray-500">Snack preferences</div>
-                  </div>
+                <Link href="/snacks" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${isSnacksApp ? "bg-amber-50" : ""}`}>
+                  <span className="text-xl">🍿</span>
+                  <div className="text-sm font-semibold text-kikoff-dark">SnackOverflow</div>
                 </Link>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Nav links — compact on mobile */}
-        <div className="flex items-center gap-0.5 sm:gap-1 p-0.5">
-          {links.map((link) => {
-            const active =
-              isSnacksApp && link.href === "/snacks"
-                ? pathname === "/snacks" || pathname === "/snacks/"
-                : isSnacksApp && link.href === "/snacks/profile"
-                  ? pathname.startsWith("/snacks/profile")
-                  : pathname === link.href;
-            return (
+          {/* Desktop nav links */}
+          <div className="hidden md:flex items-center gap-1">
+            {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-2 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
-                  active
-                    ? "bg-kikoff text-black border-2 border-black shadow-[2px_2px_0px_0px_#000]"
-                    : "text-gray-400 hover:text-white border-2 border-transparent"
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                  pathname === link.href
+                    ? "bg-kikoff-dark text-kikoff"
+                    : "text-kikoff-dark/70 hover:text-kikoff-dark hover:bg-kikoff-dark/5"
                 }`}
               >
-                <span className="sm:hidden">{link.emoji}</span>
-                <span className="hidden sm:inline">
-                  <span className="mr-0.5">{link.emoji}</span>
-                  {link.label}
-                </span>
+                {link.label}
               </Link>
-            );
-          })}
-        </div>
+            ))}
+          </div>
 
-        {/* User section */}
-        <div className="flex items-center gap-2 shrink-0">
-          {user ? (
-            <>
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.displayName}
-                  className="w-6 h-6 rounded-xl border-2 border-black object-cover"
-                />
-              ) : (
-                <div className="w-6 h-6 rounded-xl bg-kikoff flex items-center justify-center text-kikoff-dark text-[10px] font-bold border-2 border-black">
-                  {user.displayName.charAt(0)}
-                </div>
-              )}
-              <button
-                onClick={handleLogout}
-                className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors hidden sm:block"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              className="text-[11px] sm:text-xs font-bold bg-black text-white px-3 sm:px-4 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all whitespace-nowrap"
-            >
-              Start Rating
-            </Link>
-          )}
+          {/* Right section */}
+          <div className="flex items-center gap-3 shrink-0">
+            {user ? (
+              <>
+                <span className="hidden sm:block text-xs text-kikoff-dark/60 font-medium">
+                  {user.displayName.split(" ")[0]}
+                </span>
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.displayName} className="w-8 h-8 rounded-full border-2 border-kikoff-dark/20 object-cover" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-kikoff-dark flex items-center justify-center text-kikoff text-xs font-bold">
+                    {user.displayName.charAt(0)}
+                  </div>
+                )}
+                <button onClick={handleLogout} className="hidden sm:block text-xs text-kikoff-dark/50 hover:text-kikoff-dark font-medium transition-colors">
+                  Log out
+                </button>
+              </>
+            ) : (
+              <Link href="/login" className="text-xs sm:text-sm font-bold bg-kikoff-dark text-kikoff px-4 sm:px-5 py-2 rounded-full hover:bg-kikoff-dark/90 transition-all whitespace-nowrap">
+                Start Rating
+              </Link>
+            )}
+
+            {/* Mobile hamburger */}
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden flex flex-col gap-1 p-1.5" aria-label="Toggle menu">
+              <span className={`block w-5 h-0.5 bg-kikoff-dark transition-all ${mobileMenuOpen ? "rotate-45 translate-y-1.5" : ""}`} />
+              <span className={`block w-5 h-0.5 bg-kikoff-dark transition-all ${mobileMenuOpen ? "opacity-0" : ""}`} />
+              <span className={`block w-5 h-0.5 bg-kikoff-dark transition-all ${mobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""}`} />
+            </button>
+          </div>
         </div>
       </div>
+
+      <div className="h-[2px] bg-kikoff-dark/10" />
+
+      {/* Mobile dropdown menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-kikoff border-t border-kikoff-dark/10">
+          <div className="max-w-6xl mx-auto px-4 py-3 space-y-1">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  pathname === link.href ? "bg-kikoff-dark text-kikoff" : "text-kikoff-dark/70 hover:bg-kikoff-dark/5"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            {user && (
+              <button onClick={handleLogout} className="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-kikoff-dark/50 hover:bg-kikoff-dark/5 transition-all">
+                Log out
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
