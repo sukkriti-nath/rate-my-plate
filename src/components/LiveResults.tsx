@@ -57,7 +57,9 @@ export default function LiveResults({
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/votes?date=${date}`);
+      const res = await fetch(`/api/votes?date=${date}&_t=${Date.now()}`, {
+        cache: "no-store",
+      });
       const data = await res.json();
       setStats(data.stats);
       setVotes(data.votes);
