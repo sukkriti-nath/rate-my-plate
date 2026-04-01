@@ -30,7 +30,9 @@ export async function GET(request: Request) {
       userVote = await getUserVoteForDate(session.email, date);
     }
 
-    return NextResponse.json({ menu, stats, votes, userVote });
+    const response = NextResponse.json({ menu, stats, votes, userVote });
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    return response;
   } catch (error) {
     console.error("GET /api/votes error:", error);
     return NextResponse.json(

@@ -223,7 +223,9 @@ export async function GET(request: Request) {
   const { startDate, endDate, label } = getWeeklyRange(weeksAgo);
   const report = await generateReport(startDate, endDate, label);
 
-  return NextResponse.json({ report });
+  const response = NextResponse.json({ report });
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  return response;
 }
 
 export async function POST(request: Request) {
