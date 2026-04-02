@@ -15,6 +15,10 @@
     {
       "path": "/api/slack/monthly-recap?secret=${CRON_SECRET}",
       "schedule": "0 18 1 * *"
+    },
+    {
+      "path": "/api/slack/remind-snacks?secret=${CRON_SECRET}",
+      "schedule": "0 17 * * 3"
     }
   ]
 }
