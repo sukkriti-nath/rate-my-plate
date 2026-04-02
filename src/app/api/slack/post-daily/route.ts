@@ -61,7 +61,7 @@ export async function GET(request: Request) {
 
     const ts = await postToChannel(
       blocks,
-      `Today's lunch is ready! Rate it now 🍽️`
+      `Lunch just dropped. Rate it now 🍽️`
     );
 
     return NextResponse.json({

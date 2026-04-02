@@ -3,13 +3,16 @@ import { WebClient } from "@slack/web-api";
 import { getMenuForDate, getVoterEmailsForDate, getVoteStatsForDate } from "@/lib/db";
 
 const NUDGE_MESSAGES = [
-  "Psst... you haven't rated today's lunch yet 👀",
-  "The kitchen wants YOUR opinion 🍽️",
-  "Don't let your taste buds go unheard! 🗣️",
-  "Your food hot take is needed 🌶️",
-  "Rate before you forget what it tasted like 😋",
-  "Be the change you want to see in the cafeteria 🦸",
-  "Your vote = better lunches. Science. 🔬",
+  // Hype / excitement
+  "Still hungry for justice? Rate today's lunch before it's gone 🏃",
+  "Your opinion is the secret ingredient — don't hold out on us 🧂",
+  "The kitchen has spoken. Have you? 🍽️",
+  // Outcome-focused
+  "Quick reminder: your rating shapes next week's menu 🗳️",
+  "The catering team is still listening — rate today's lunch 📣",
+  "Your vote = better lunches next week. Takes 30 seconds ⏱️",
+  // Hype / excitement
+  "5 stars or 1 star, we want to know 🌟",
 ];
 
 function getRandomNudge(): string {

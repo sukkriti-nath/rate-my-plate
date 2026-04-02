@@ -471,10 +471,11 @@ export async function getUserBadgeData(): Promise<UserBadgeData[]> {
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const monthEnd = nextMonth.toISOString().split("T")[0];
 
-  // All-time vote counts per user
+  // All-time vote counts per user — group by email only so votes under
+  // slightly different name strings (Slack vs web) are counted together
   const allTimeResult = await db.query(
-    `SELECT user_email, user_name, COUNT(*) as total
-     FROM votes GROUP BY user_email, user_name`
+    `SELECT user_email, MAX(user_name) as user_name, COUNT(*) as total
+     FROM votes GROUP BY user_email`
   );
   const allTimeMap = new Map<string, { userName: string; total: number }>();
   for (const row of allTimeResult.rows as { user_email: string; user_name: string; total: string }[]) {

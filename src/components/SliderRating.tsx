@@ -8,6 +8,7 @@ export default function SliderRating({
   showNA = false,
   isNA = false,
   onNAChange,
+  hasValue = false,
 }: {
   value: number;
   onChange: (rating: number) => void;
@@ -16,35 +17,45 @@ export default function SliderRating({
   showNA?: boolean;
   isNA?: boolean;
   onNAChange?: (na: boolean) => void;
+  hasValue?: boolean;
 }) {
-  const pct = (value / 5) * 100;
+  // 1–5 range: map value 1→0% ... 5→100%
+  const pct = ((value - 1) / 4) * 100;
+  const unselected = !isNA && !hasValue;
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-3">
         <input
           type="range"
-          min={0}
+          min={1}
           max={5}
           step={1}
-          value={isNA ? 0 : value}
+          value={isNA ? 1 : value}
           disabled={isNA}
           onChange={(e) => onChange(Number(e.target.value))}
           className={`flex-1 rounded-full cursor-pointer slider-rating transition-opacity ${
             isNA ? "opacity-30 cursor-not-allowed" : ""
-          }`}
+          } ${unselected ? "slider-rating-empty" : ""}`}
           style={{
-            background: isNA
-              ? "#e5e7eb"
-              : `linear-gradient(to right, #B5FC4F ${pct}%, #e5e7eb ${pct}%)`,
-            border: isNA ? undefined : "2px solid black",
+            background:
+              isNA || unselected
+                ? "#f3f4f6"
+                : `linear-gradient(to right, #B5FC4F ${pct}%, #e5e7eb ${pct}%)`,
+            border: isNA
+              ? undefined
+              : unselected
+              ? "2px dashed #9ca3af"
+              : "2px solid black",
             borderRadius: "9999px",
           }}
         />
-        <span className={`w-8 text-center text-lg font-bold tabular-nums transition-colors ${
-          isNA ? "text-gray-300" : "text-kikoff-dark"
-        }`}>
-          {isNA ? "—" : value}
+        <span
+          className={`w-8 text-center text-lg font-bold tabular-nums transition-colors ${
+            isNA || unselected ? "text-gray-300" : "text-kikoff-dark"
+          }`}
+        >
+          {isNA || unselected ? "—" : value}
         </span>
         {showNA && (
           <button
@@ -60,10 +71,16 @@ export default function SliderRating({
           </button>
         )}
       </div>
-      <div className="flex justify-between text-[11px] text-gray-400 px-0.5">
-        <span>0 — {lowLabel}</span>
-        <span>{highLabel} — 5</span>
-      </div>
+      {unselected ? (
+        <div className="text-center text-[11px] text-gray-400 animate-pulse">
+          ← drag to rate →
+        </div>
+      ) : (
+        <div className="flex justify-between text-[11px] text-gray-400 px-0.5">
+          <span>1 — {lowLabel}</span>
+          <span>{highLabel} — 5</span>
+        </div>
+      )}
     </div>
   );
 }
