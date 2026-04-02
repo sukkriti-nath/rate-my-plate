@@ -303,15 +303,16 @@ async function handleBlockAction(payload: Record<string, unknown>) {
 
       const existingVote = await getUserVoteForDate(userEmail, date);
       if (existingVote) {
-        // They already voted — the cache was cleared after their previous submission
+        // They have a previous vote (possibly from web or a prior Slack submission).
+        // Show a friendly message guiding them to re-select ratings to update.
         if (responseUrl) {
           await fetch(responseUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              replace_original: true,
+              replace_original: false,
               response_type: "ephemeral",
-              text: "✅ Your ratings for this day have already been submitted! To update them, select new ratings from the overall dropdown above.",
+              text: "👍 Your previous ratings are saved! To update them, select new ratings from the dropdowns above and hit submit again.",
             }),
           });
         }
