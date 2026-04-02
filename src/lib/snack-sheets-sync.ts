@@ -74,6 +74,8 @@ export interface SnackSuggestion {
   createdAt: string;
   /** Display names of users who upvoted (for tooltips). */
   upvoterNames: string[];
+  /** Image URL scraped from DuckDuckGo */
+  imageUrl: string | null;
 }
 
 function buildVoterDisplayNameResolver(
@@ -124,10 +126,10 @@ export async function getSuggestions(
 
     const sheets = getSheetsClient();
 
-    // Get suggestions
+    // Get suggestions (A:H includes imageUrl in column H)
     const suggestionsRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-      range: `${escapeSheetTitle(TABS.SUGGESTIONS)}!A:G`,
+      range: `${escapeSheetTitle(TABS.SUGGESTIONS)}!A:H`,
     });
     const suggestionRows = suggestionsRes.data.values || [];
 
@@ -185,6 +187,7 @@ export async function getSuggestions(
           createdAt: row[6] || "",
           userVote: userVotes.get(id) || null,
           upvoterNames,
+          imageUrl: row[7] || null,
         };
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -201,7 +204,8 @@ export async function getSuggestions(
 export async function addSuggestion(
   snackName: string,
   submittedBy: string,
-  submittedByName: string
+  submittedByName: string,
+  imageUrl: string | null = null
 ): Promise<SnackSuggestion> {
   const id = generateSuggestionId();
   const createdAt = new Date().toISOString();
@@ -214,14 +218,14 @@ export async function addSuggestion(
 
       const sheets = getSheetsClient();
 
-      // Add suggestion with 1 upvote (auto-upvote by submitter)
+      // Add suggestion with 1 upvote (auto-upvote by submitter), imageUrl in column H
       await sheets.spreadsheets.values.append({
         spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-        range: `${escapeSheetTitle(TABS.SUGGESTIONS)}!A:G`,
+        range: `${escapeSheetTitle(TABS.SUGGESTIONS)}!A:H`,
         valueInputOption: "USER_ENTERED",
         insertDataOption: "INSERT_ROWS",
         requestBody: {
-          values: [[id, snackName, submittedBy, submittedByName, 1, 0, createdAt]],
+          values: [[id, snackName, submittedBy, submittedByName, 1, 0, createdAt, imageUrl || ""]],
         },
       });
 
@@ -251,6 +255,7 @@ export async function addSuggestion(
     userVote: "up",
     createdAt,
     upvoterNames: [submittedByName],
+    imageUrl,
   };
 }
 
@@ -439,10 +444,12 @@ export async function deleteSuggestion(
 
   let suggestionRowIndex = -1;
   let submitterId = "";
+  let upvotes = 0;
   for (let i = dataStart; i < rows.length; i++) {
     if (rows[i][0] === suggestionId) {
       suggestionRowIndex = i;
       submitterId = String(rows[i][2] ?? "");
+      upvotes = parseInt(rows[i][4]) || 0;
       break;
     }
   }
@@ -452,6 +459,9 @@ export async function deleteSuggestion(
   }
   if (submitterId !== userId) {
     throw new Error("Forbidden");
+  }
+  if (upvotes >= 2) {
+    throw new Error("TooManyUpvotes");
   }
 
   const votesTab = escapeSheetTitle(TABS.SUGGESTION_VOTES);

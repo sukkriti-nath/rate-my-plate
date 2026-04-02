@@ -1,16 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { MAX_UPVOTES_ON_OTHERS_SUGGESTIONS } from "@/lib/snack-suggestion-limits";
-
-interface SearchProduct {
-  id: string;
-  name: string;
-  brand: string;
-  category: string;
-  imageUrl: string | null;
-}
 
 interface UserSession {
   displayName: string;
@@ -70,6 +62,7 @@ interface Suggestion {
   userVote: "up" | "down" | null;
   createdAt: string;
   upvoterNames?: string[];
+  imageUrl?: string | null;
 }
 
 function upvoteHoverText(names: string[] | undefined): string {
@@ -147,11 +140,6 @@ export default function SnacksPage() {
   const [suggestionText, setSuggestionText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -208,54 +196,6 @@ export default function SnacksPage() {
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Debounced search
-  const handleSuggestionInputChange = (value: string) => {
-    setSuggestionText(value);
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (value.trim().length < 2) {
-      setSearchResults([]);
-      setShowDropdown(false);
-      return;
-    }
-
-    setSearching(true);
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/snacks/search?q=${encodeURIComponent(value)}&category=all`);
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(data.products || []);
-          setShowDropdown(true);
-        }
-      } catch (err) {
-        console.error("Search failed:", err);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
-  };
-
-  const handleSelectProduct = (product: SearchProduct) => {
-    setSuggestionText(product.name);
-    setShowDropdown(false);
-    setSearchResults([]);
-  };
 
   const handleSubmitSuggestion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -766,7 +706,7 @@ export default function SnacksPage() {
 
           {/* Suggestions: add at top, leaderboard below */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] overflow-visible">
+            <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] overflow-hidden">
               <div className="p-5 border-b-2 border-black bg-gradient-to-r from-cyan-50 via-amber-50 to-orange-50">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 flex-wrap">
                   <span>🏆</span> Snack suggestions
@@ -786,65 +726,32 @@ export default function SnacksPage() {
                 ) : (
                   <form onSubmit={handleSubmitSuggestion}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
-                      <div className="relative min-w-0 flex-1" ref={dropdownRef}>
+                      <div className="min-w-0 flex-1">
                         <input
                           type="text"
                           value={suggestionText}
-                          onChange={(e) => handleSuggestionInputChange(e.target.value)}
-                          onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
-                          placeholder="Search snacks & drinks..."
+                          onChange={(e) => setSuggestionText(e.target.value)}
+                          placeholder="Enter any snack or drink name..."
                           className="w-full px-4 py-2.5 rounded-lg border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                         />
-                        {searching && (
-                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                            <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                          </div>
-                        )}
-                        {showDropdown && searchResults.length > 0 && (
-                          <div className="absolute z-50 left-0 right-0 mt-1 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_#000] max-h-60 overflow-y-auto">
-                            {searchResults.map((product) => (
-                              <button
-                                key={product.id}
-                                type="button"
-                                onClick={() => handleSelectProduct(product)}
-                                className="w-full px-3 py-2 text-left hover:bg-amber-50 flex items-center gap-3 border-b border-black/10 last:border-b-0"
-                              >
-                                {product.imageUrl ? (
-                                  <img
-                                    src={product.imageUrl}
-                                    alt=""
-                                    className="w-10 h-10 object-contain rounded border border-black/10"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 bg-gray-100 rounded border border-black/10 flex items-center justify-center text-lg">
-                                    🍿
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-medium text-gray-900 truncate">
-                                    {product.name}
-                                  </div>
-                                  {product.category && (
-                                    <div className="text-xs text-gray-500 truncate">
-                                      {product.category.replace(/-/g, " ")}
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
                       </div>
                       <button
                         type="submit"
                         disabled={!suggestionText.trim() || submitting}
-                        className="w-full shrink-0 whitespace-nowrap bg-cyan-400 text-black font-bold py-2.5 px-4 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:min-h-[42px]"
+                        className="w-full shrink-0 whitespace-nowrap bg-cyan-400 text-black font-bold py-2.5 px-4 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:min-h-[42px] flex items-center justify-center gap-2"
                       >
-                        {submitting ? "Submitting..." : "Add to leaderboard"}
+                        {submitting ? (
+                          <>
+                            <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                            Adding...
+                          </>
+                        ) : (
+                          "Add to leaderboard"
+                        )}
                       </button>
                     </div>
                     <p className="text-xs text-gray-400 mt-1.5">
-                      Type to search or enter any snack name
+                      We'll find an image for your suggestion automatically
                     </p>
                   </form>
                 )}
@@ -889,8 +796,24 @@ export default function SnacksPage() {
                           key={suggestion.id}
                           className="flex items-center gap-3 sm:gap-4 p-4 rounded-xl border-2 border-black/10 bg-white hover:bg-amber-50/50 transition-colors"
                         >
-                          <div className="text-xl w-8 text-center shrink-0">
-                            {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                          {/* Image with rank badge */}
+                          <div className="relative shrink-0">
+                            {suggestion.imageUrl ? (
+                              <img
+                                src={suggestion.imageUrl}
+                                alt=""
+                                className="w-14 h-14 object-contain rounded-lg border border-black/10"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 bg-gray-100 rounded-lg border border-black/10 flex items-center justify-center text-2xl">
+                                🍿
+                              </div>
+                            )}
+                            <div className={`absolute -top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm ${
+                              i === 0 ? "bg-yellow-400" : i === 1 ? "bg-gray-300" : i === 2 ? "bg-amber-600 text-white" : "bg-gray-100"
+                            }`}>
+                              {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
+                            </div>
                           </div>
 
                           <div className="flex-1 min-w-0">
@@ -900,7 +823,7 @@ export default function SnacksPage() {
                             <div className="text-xs text-gray-500">by {suggestion.submittedByName}</div>
                           </div>
 
-                          {isMine ? (
+                          {isMine && suggestion.upvotes < 2 ? (
                             <button
                               type="button"
                               onClick={() => void handleDeleteSuggestion(suggestion.id)}
