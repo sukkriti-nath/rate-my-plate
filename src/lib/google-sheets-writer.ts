@@ -329,7 +329,7 @@ export interface BiWeeklyTrendsRow {
   recPhaseOut: string;
   recReplicate: string;
   recImprove: string;
-  dishRatings?: { category: string; dishName: string; avgRating: number; totalRatings: number }[];
+  dishRatings?: { category: string; dishName: string; avgRating: number; totalRatings: number; datesServed?: string[] }[];
 }
 
 export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<void> {
@@ -372,13 +372,14 @@ export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<voi
     const nextRow = (existing.data.values?.length ?? 1) + 2; // leave a gap
 
     const dishSection = [
-      ["ALL DISHES SERVED (Mon-Thu)", "", "", ""],
-      ["Category", "Dish", "Avg Rating", "# Ratings"],
+      ["ALL DISHES SERVED (Mon-Thu)", "", "", "", ""],
+      ["Category", "Dish", "Avg Rating", "# Ratings", "Date(s) Served"],
       ...trends.dishRatings.map((d) => [
         d.category,
         d.dishName,
         Math.round(d.avgRating * 100) / 100,
         d.totalRatings,
+        (d.datesServed ?? []).join(", "),
       ]),
     ];
 
