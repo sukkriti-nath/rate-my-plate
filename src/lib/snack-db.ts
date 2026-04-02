@@ -76,6 +76,11 @@ async function initSnackDb() {
 
 // ============== Profile Functions ==============
 
+/** Stable id for web app users (Slack profiles use Slack `U…` ids). */
+export function getWebSnackProfileUserId(email: string): string {
+  return `web:${email.trim().toLowerCase()}`;
+}
+
 export interface SnackProfile {
   userId: string;
   displayName: string;

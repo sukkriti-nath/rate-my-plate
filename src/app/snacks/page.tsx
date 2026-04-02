@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useEffect,
   useState,
@@ -76,197 +77,6 @@ interface DashboardData {
   mostWanted: MostWantedItem[];
   outOfStock: OutOfStockReport[];
   weeklySurvey: WeeklySurveyData | null;
-}
-
-/** Row from Kikoff Snack & Bev inventory sheet (same shape as `/api/snacks/inventory`). */
-interface InventoryRow {
-  category: string;
-  brand: string;
-  flavor: string;
-  packSize: string;
-  displayName: string;
-  /** Rightmost non-empty cell in the date / stock columns from the sheet. */
-  latestStock: string | null;
-  tab: "beverages" | "snacks";
-}
-
-/** One brand’s lines under a category (tab → category → brand → SKUs). */
-type InventoryBrandGroup = {
-  brand: string;
-  items: InventoryRow[];
-};
-
-/** Sheet category (Juice, Cold Brew, Chips, …) with brands inside. */
-type InventoryCategorySection = {
-  category: string;
-  itemCount: number;
-  brandGroups: InventoryBrandGroup[];
-};
-
-function groupInventoryForDisplay(rows: InventoryRow[]) {
-  const byTab = (tab: "beverages" | "snacks") =>
-    rows.filter((r) => r.tab === tab);
-
-  const toCategorySections = (list: InventoryRow[]): InventoryCategorySection[] => {
-    const byCat = new Map<string, InventoryRow[]>();
-    for (const r of list) {
-      const c = (r.category || "").trim() || "Other";
-      if (!byCat.has(c)) byCat.set(c, []);
-      byCat.get(c)!.push(r);
-    }
-    const catKeys = [...byCat.keys()].sort((a, b) => a.localeCompare(b));
-    return catKeys.map((category) => {
-      const catRows = byCat.get(category)!;
-      const byBrand = new Map<string, InventoryRow[]>();
-      for (const r of catRows) {
-        const b = (r.brand || "").trim() || "Other";
-        if (!byBrand.has(b)) byBrand.set(b, []);
-        byBrand.get(b)!.push(r);
-      }
-      const brandKeys = [...byBrand.keys()].sort((a, b) => a.localeCompare(b));
-      const brandGroups: InventoryBrandGroup[] = brandKeys.map((brand) => ({
-        brand,
-        items: [...(byBrand.get(brand) ?? [])].sort((a, b) =>
-          a.displayName.localeCompare(b.displayName)
-        ),
-      }));
-      return {
-        category,
-        itemCount: catRows.length,
-        brandGroups,
-      };
-    });
-  };
-
-  return {
-    beverages: toCategorySections(byTab("beverages")),
-    snacks: toCategorySections(byTab("snacks")),
-  };
-}
-
-function InventoryCatalog({ rows }: { rows: InventoryRow[] }) {
-  if (rows.length === 0) {
-    return (
-      <p className="text-gray-500 text-center py-6">
-        No rows loaded from the inventory sheet. Confirm{" "}
-        <code className="bg-gray-100 px-2 py-1 rounded">SNACK_SHEET_ID</code> and Google
-        access are configured on the server.
-      </p>
-    );
-  }
-
-  const g = groupInventoryForDisplay(rows);
-
-  return (
-    <div className="space-y-4">
-      {(["beverages", "snacks"] as const).map((tab) => {
-        const label = tab === "beverages" ? "Beverages" : "Snacks";
-        const sections = tab === "beverages" ? g.beverages : g.snacks;
-        const tabTotal = sections.reduce((n, s) => n + s.itemCount, 0);
-        return (
-          <SnacksDetails
-            key={tab}
-            className="group/tab rounded-xl border-2 border-black/20 bg-white overflow-hidden open:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.08)]"
-            defaultOpen
-          >
-            <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4 text-left font-semibold text-gray-800 bg-amber-50/60 hover:bg-amber-50 border-b-2 border-black/10 [&::-webkit-details-marker]:hidden">
-              <span className="text-sm uppercase tracking-wider text-gray-600">
-                {tab === "beverages" ? "🥤" : "🍿"} {label}
-                <span className="ml-2 font-normal normal-case text-gray-500">
-                  ({tabTotal} items · {sections.length}{" "}
-                  {sections.length === 1 ? "category" : "categories"})
-                </span>
-              </span>
-              <span
-                className="shrink-0 text-gray-600 text-lg leading-none transition-transform duration-200 group-open/tab:rotate-180"
-                aria-hidden
-              >
-                ▼
-              </span>
-            </summary>
-            <div className="p-3 md:p-4 space-y-2 bg-white">
-              {sections.map((catSec) => (
-                <SnacksDetails
-                  key={`${tab}-${catSec.category}`}
-                  className="group/category rounded-lg border-2 border-black/12 overflow-hidden bg-gray-50/40"
-                  defaultOpen={false}
-                >
-                  <summary className="cursor-pointer list-none flex items-center justify-between gap-2 px-3 py-2.5 md:px-4 text-left text-sm font-semibold text-gray-800 bg-white hover:bg-amber-50/50 border-b border-black/10 [&::-webkit-details-marker]:hidden">
-                    <span className="min-w-0">
-                      <span className="text-gray-900">{catSec.category}</span>
-                      <span className="ml-2 font-normal text-gray-500 text-xs">
-                        ({catSec.itemCount} items · {catSec.brandGroups.length}{" "}
-                        {catSec.brandGroups.length === 1 ? "brand" : "brands"})
-                      </span>
-                    </span>
-                    <span
-                      className="shrink-0 text-gray-500 text-sm transition-transform duration-200 group-open/category:rotate-180"
-                      aria-hidden
-                    >
-                      ▼
-                    </span>
-                  </summary>
-                  <div className="p-2 space-y-2 bg-white border-t border-black/5">
-                    {catSec.brandGroups.map((grp) => (
-                      <details
-                        key={`${tab}-${catSec.category}-${grp.brand}`}
-                        className="group/brand rounded-lg border border-black/15 overflow-hidden"
-                      >
-                        <summary className="cursor-pointer list-none flex items-center justify-between gap-2 px-3 py-2.5 text-left text-sm font-semibold text-gray-800 bg-gray-50 hover:bg-amber-50/40 border-b border-black/10 [&::-webkit-details-marker]:hidden">
-                          <span className="min-w-0">{grp.brand}</span>
-                          <span
-                            className="shrink-0 text-gray-500 text-xs transition-transform duration-200 group-open/brand:rotate-180"
-                            aria-hidden
-                          >
-                            ▼
-                          </span>
-                        </summary>
-                        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 pt-2">
-                          {grp.items.map((it) => {
-                            const title = [it.brand, it.flavor]
-                              .filter(Boolean)
-                              .join(" ")
-                              .trim();
-                            return (
-                              <li
-                                key={`${catSec.category}-${grp.brand}-${it.displayName}`}
-                                className="text-sm bg-amber-50/50 rounded-lg px-3 py-2 border border-black/10"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0 text-gray-900">
-                                    <div className="font-medium leading-snug">
-                                      {title || it.displayName}
-                                    </div>
-                                    {it.packSize ? (
-                                      <div className="text-xs text-gray-500 mt-0.5">
-                                        {it.packSize}
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                  {it.latestStock != null && it.latestStock !== "" ? (
-                                    <span
-                                      className="shrink-0 text-xs font-semibold tabular-nums text-right bg-white/90 text-gray-800 px-2 py-0.5 rounded border border-black/15"
-                                      title="Latest stock (rightmost value in the sheet row)"
-                                    >
-                                      {it.latestStock}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </details>
-                    ))}
-                  </div>
-                </SnacksDetails>
-              ))}
-            </div>
-          </SnacksDetails>
-        );
-      })}
-    </div>
-  );
 }
 
 function RatingBar({ value, max = 100 }: { value: number; max?: number }) {
@@ -364,30 +174,19 @@ function jumpToSection(sectionId: string) {
 
 export default function SnacksPage() {
   const [data, setData] = useState<DashboardData | null>(null);
-  const [inventory, setInventory] = useState<InventoryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async (signal?: AbortSignal) => {
     const origin =
       typeof window !== "undefined" ? window.location.origin : "";
     const statsUrl = origin ? `${origin}/api/snacks/stats` : "/api/snacks/stats";
-    const inventoryUrl = origin
-      ? `${origin}/api/snacks/inventory`
-      : "/api/snacks/inventory";
 
     const attempt = async (): Promise<void> => {
-      const [statsRes, invRes] = await Promise.all([
-        fetch(statsUrl, {
-          signal,
-          cache: "no-store",
-          credentials: "same-origin",
-        }),
-        fetch(inventoryUrl, {
-          signal,
-          cache: "no-store",
-          credentials: "same-origin",
-        }).catch(() => null as Response | null),
-      ]);
+      const statsRes = await fetch(statsUrl, {
+        signal,
+        cache: "no-store",
+        credentials: "same-origin",
+      });
 
       if (!statsRes.ok) {
         const text = await statsRes.text().catch(() => "");
@@ -397,13 +196,6 @@ export default function SnacksPage() {
       }
       const json = (await statsRes.json()) as DashboardData;
       setData(json);
-
-      if (invRes?.ok) {
-        const invJson = (await invRes.json()) as { items?: InventoryRow[] };
-        setInventory(invJson.items ?? []);
-      } else {
-        setInventory([]);
-      }
     };
 
     try {
@@ -528,7 +320,6 @@ export default function SnacksPage() {
                 Choose a section…
               </option>
               <option value="snacks-top">Top</option>
-              <option value="section-inventory">Snack &amp; Bev inventory</option>
               {data.weeklySurvey && data.weeklySurvey.items.length > 0 ? (
                 <option value="section-weekly">Weekly ballot</option>
               ) : null}
@@ -541,20 +332,23 @@ export default function SnacksPage() {
           </div>
         </div>
 
-        {/* Full sheet catalog — loaded on this page, not via Slack profile */}
-        <CollapsibleSection
-          id="section-inventory"
-          emoji="📋"
-          title="Snack & Bev inventory"
-          subtitle={
-            inventory.length > 0
-              ? `${inventory.filter((r) => r.tab === "beverages").length} beverages · ${inventory.filter((r) => r.tab === "snacks").length} snacks — from the Google Sheet`
-              : "All stocked lines from the Kikoff inventory sheet"
-          }
-          defaultOpen
+        <Link
+          href="/snacks/profile"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8 p-5 rounded-xl border-2 border-black bg-amber-50 shadow-[6px_6px_0px_0px_#000] hover:bg-amber-100/80 transition-colors group"
         >
-          <InventoryCatalog rows={inventory} />
-        </CollapsibleSection>
+          <div>
+            <div className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
+              <span aria-hidden>👤</span> Snack Profile
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Allocate <strong>100 points</strong> across all beverage and snack categories (steps of{" "}
+              <strong>10</strong>), then unlimited favorites per funded category.
+            </p>
+          </div>
+          <span className="text-sm font-bold text-amber-900 shrink-0 group-hover:translate-x-0.5 transition-transform">
+            Open →
+          </span>
+        </Link>
 
         {/* Weekly top-5 survey (Slack votes + Google Sheet log) */}
         {data.weeklySurvey && data.weeklySurvey.items.length > 0 && (
@@ -642,8 +436,12 @@ export default function SnacksPage() {
             </div>
           ) : (
             <p className="text-gray-500 text-center py-6">
-              No activity yet. Use{" "}
-              <code className="bg-gray-100 px-2 py-1 rounded">/snack-profile</code> to earn points!
+              No activity yet. Set up your{" "}
+              <Link href="/snacks/profile" className="font-semibold text-amber-800 underline">
+                Snack Profile
+              </Link>{" "}
+              or use{" "}
+              <code className="bg-gray-100 px-2 py-1 rounded">/snack-profile</code> in Slack.
             </p>
           )}
         </CollapsibleSection>

@@ -29,19 +29,24 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const links = [
-    { href: "/", label: "Vote", emoji: "🗳️" },
-    { href: "/dashboard", label: "Dashboard", emoji: "📊" },
-    { href: "/rankings", label: "Rankings", emoji: "🏆" },
-    { href: "/reports", label: "Reports", emoji: "📋" },
-  ];
+  const isSnacksApp = pathname.startsWith("/snacks");
+
+  const links = isSnacksApp
+    ? [
+        { href: "/snacks", label: "Dashboard", emoji: "📊" },
+        { href: "/snacks/profile", label: "Snack Profile", emoji: "👤" },
+      ]
+    : [
+        { href: "/", label: "Vote", emoji: "🗳️" },
+        { href: "/dashboard", label: "Dashboard", emoji: "📊" },
+        { href: "/rankings", label: "Rankings", emoji: "🏆" },
+        { href: "/reports", label: "Reports", emoji: "📋" },
+      ];
 
   async function handleLogout() {
     await fetch("/api/auth/me", { method: "DELETE" });
     window.location.href = "/login";
   }
-
-  const isSnacksApp = pathname.startsWith("/snacks");
 
   return (
     <nav className="bg-kikoff-dark sticky top-0 z-50 border-b-2 border-black">
@@ -126,12 +131,19 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-1 p-0.5">
-          {links.map((link) => (
+          {links.map((link) => {
+            const active =
+              isSnacksApp && link.href === "/snacks"
+                ? pathname === "/snacks" || pathname === "/snacks/"
+                : isSnacksApp && link.href === "/snacks/profile"
+                  ? pathname.startsWith("/snacks/profile")
+                  : pathname === link.href;
+            return (
             <Link
               key={link.href}
               href={link.href}
               className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                pathname === link.href
+                active
                   ? "bg-kikoff text-black border-2 border-black shadow-[2px_2px_0px_0px_#000]"
                   : "text-gray-400 hover:text-white border-2 border-transparent"
               }`}
@@ -139,7 +151,8 @@ export default function Navbar() {
               <span className="mr-0.5">{link.emoji}</span>
               {link.label}
             </Link>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">

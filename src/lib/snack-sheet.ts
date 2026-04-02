@@ -343,6 +343,82 @@ function findPackSizeColumnIndex(header: string[]): number {
   return idx;
 }
 
+/**
+ * Merge near-duplicate Category column values from the sheet so UI/Slack group together.
+ */
+export function normalizeInventoryCategory(raw: string): string {
+  const s = raw.trim();
+  if (!s) return "Other";
+  const compact = s.toLowerCase().replace(/\s+/g, " ");
+
+  if (
+    compact === "cold brew latte" ||
+    compact === "cold brew latte alternative" ||
+    compact === "cold brew latte protein"
+  ) {
+    return "Cold Brew Latte";
+  }
+
+  if (compact === "milk tea" || compact === "milk tea alternative") {
+    return "Milk Tea";
+  }
+
+  if (
+    compact === "energy drink" ||
+    compact === "energy focus drink" ||
+    compact === "energy focused drink"
+  ) {
+    return "Energy Drink";
+  }
+
+  /** Sparkling, vitamin, and protein waters — one bucket in profile / inventory. */
+  if (
+    compact === "water protein" ||
+    compact === "water sparkling" ||
+    compact === "water vitamin"
+  ) {
+    return "Enhanced Water";
+  }
+
+  if (
+    compact === "snack bar" ||
+    compact === "snack bars" ||
+    compact === "oatmeal"
+  ) {
+    return "Snack Bars";
+  }
+
+  if (compact === "gummies" || compact === "gummies energy") {
+    return "Gummies";
+  }
+
+  if (
+    compact === "fruit gummies" ||
+    compact === "fruit jerky" ||
+    compact === "fruit leather" ||
+    compact === "fruit leathers"
+  ) {
+    return "Fruit Snacks";
+  }
+
+  if (
+    compact === "chips apple" ||
+    compact === "chips pita" ||
+    compact === "chips plantain" ||
+    compact === "chips potato" ||
+    compact === "chips tortilla" ||
+    compact === "chips vegetable"
+  ) {
+    return "Chips";
+  }
+
+  if (compact === "meat jerky" || compact === "meat sticks") {
+    return "Meat Jerky & Sticks";
+  }
+
+  return s;
+}
+
 /** Last non-empty cell in `row[startIdx..]` (rightmost stock / date column with a value). */
 function latestStockFromRow(row: string[], startIdx: number): string | null {
   if (startIdx < 0 || startIdx >= row.length) return null;
@@ -374,7 +450,9 @@ function parseKikoffRowsToStructured(
     if (!row?.length) continue;
     const brand = normCell(row[brandIdx]);
     const flavor = normCell(row[flavorIdx]);
-    const category = catIdx >= 0 ? normCell(row[catIdx]) : "Other";
+    const category = normalizeInventoryCategory(
+      catIdx >= 0 ? normCell(row[catIdx]) : "Other"
+    );
     const packSize = packIdx >= 0 ? normCell(row[packIdx]) : "";
     if (!brand && !flavor) continue;
     const firstCol = normCell(row[0]);
