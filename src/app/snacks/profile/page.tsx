@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const STEP = 10;
 /** One shared pool across every beverage + snack category. */
@@ -26,6 +27,13 @@ type ProfilePayload = {
 
 function sumAlloc(m: Record<string, number>): number {
   return Object.values(m).reduce((a, b) => a + (Number(b) || 0), 0);
+}
+
+/** Strip serving size info after middle dot (e.g., "Taste Nirvana · 12/16.2 oz" -> "Taste Nirvana") */
+function stripServingSize(name: string): string {
+  const dotIndex = name.indexOf("·");
+  if (dotIndex === -1) return name;
+  return name.slice(0, dotIndex).trim();
 }
 
 function groupRowsByCategory(rows: InventoryRow[], tab: "beverages" | "snacks") {
@@ -65,6 +73,7 @@ function mergeAlloc(
 }
 
 export default function SnackProfilePage() {
+  const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
 
@@ -82,6 +91,8 @@ export default function SnackProfilePage() {
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<Record<string, string | null>>({});
+  const fetchedImagesRef = useRef<Set<string>>(new Set());
 
   const bevCategories = useMemo(
     () => groupRowsByCategory(inventory, "beverages"),
@@ -178,6 +189,59 @@ export default function SnackProfilePage() {
     snkCatNames,
   ]);
 
+  // Fetch images for items in categories with allocated points
+  useEffect(() => {
+    const itemsToFetch: string[] = [];
+
+    // Get items from beverage categories with points
+    for (const { category, items } of bevCategories) {
+      if ((drinksAllocation[category] ?? 0) > 0) {
+        for (const item of items) {
+          const name = stripServingSize(item.displayName);
+          if (!fetchedImagesRef.current.has(name)) {
+            itemsToFetch.push(name);
+            fetchedImagesRef.current.add(name);
+          }
+        }
+      }
+    }
+
+    // Get items from snack categories with points
+    for (const { category, items } of snkCategories) {
+      if ((snacksAllocation[category] ?? 0) > 0) {
+        for (const item of items) {
+          const name = stripServingSize(item.displayName);
+          if (!fetchedImagesRef.current.has(name)) {
+            itemsToFetch.push(name);
+            fetchedImagesRef.current.add(name);
+          }
+        }
+      }
+    }
+
+    if (itemsToFetch.length === 0) return;
+
+    // Fetch in batches
+    const fetchBatch = async (names: string[]) => {
+      try {
+        const res = await fetch("/api/snacks/images", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setProductImages((prev) => ({ ...prev, ...data.images }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch images:", err);
+      }
+    };
+
+    // Fetch first 20 items
+    void fetchBatch(itemsToFetch.slice(0, 20));
+  }, [bevCategories, snkCategories, drinksAllocation, snacksAllocation]);
+
   const adjust = useCallback(
     (which: "drinks" | "snacks", category: string, delta: number) => {
       const set =
@@ -236,12 +300,13 @@ export default function SnackProfilePage() {
         setSaveMsg(
           typeof json.error === "string" ? json.error : "Could not save."
         );
+        setSaving(false);
         return;
       }
-      setSaveMsg("Saved! Your profile is stored and leaderboard points updated.");
+      // Redirect to dashboard on success
+      router.push("/snacks");
     } catch {
       setSaveMsg("Network error — try again.");
-    } finally {
       setSaving(false);
     }
   };
@@ -364,7 +429,7 @@ export default function SnackProfilePage() {
           <>
             <details
               className="group/bev mb-6 rounded-xl border-2 border-black bg-white overflow-hidden shadow-[4px_4px_0px_0px_#000]"
-              {...({ defaultOpen: true } as Record<string, unknown>)}
+              open
             >
               <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-3 p-4 md:p-5 bg-cyan-50/80 hover:bg-cyan-50 border-b-2 border-black [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0">
@@ -398,6 +463,7 @@ export default function SnackProfilePage() {
                     items={items}
                     favorites={favoriteDrinks}
                     onToggleFav={(name) => toggleFavorite("drinks", name)}
+                    productImages={productImages}
                   />
                 ))}
               </div>
@@ -405,7 +471,7 @@ export default function SnackProfilePage() {
 
             <details
               className="group/snk mb-10 rounded-xl border-2 border-black bg-white overflow-hidden shadow-[4px_4px_0px_0px_#000]"
-              {...({ defaultOpen: true } as Record<string, unknown>)}
+              open
             >
               <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-3 p-4 md:p-5 bg-amber-50/80 hover:bg-amber-50 border-b-2 border-black [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0">
@@ -439,6 +505,7 @@ export default function SnackProfilePage() {
                     items={items}
                     favorites={favoriteSnacks}
                     onToggleFav={(name) => toggleFavorite("snacks", name)}
+                    productImages={productImages}
                   />
                 ))}
               </div>
@@ -472,6 +539,7 @@ function CategoryBlock({
   items,
   favorites,
   onToggleFav,
+  productImages,
 }: {
   title: string;
   points: number;
@@ -480,6 +548,7 @@ function CategoryBlock({
   items: InventoryRow[];
   favorites: string[];
   onToggleFav: (displayName: string) => void;
+  productImages: Record<string, string | null>;
 }) {
   const favSet = useMemo(() => new Set(favorites), [favorites]);
   const canAdd =
@@ -520,26 +589,44 @@ function CategoryBlock({
             Favorite SKUs (unlimited) — {items.length} options · scroll if needed
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5 max-h-[min(75vh,1400px)] overflow-y-auto overflow-x-hidden pr-1">
-            {items.map((row) => (
-              <li key={row.displayName} className="min-w-0">
-                <label className="flex items-start gap-2 cursor-pointer rounded-md border border-black/10 bg-amber-50/40 px-2 py-1.5 hover:bg-amber-50/80 h-full">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 shrink-0 rounded border-black"
-                    checked={favSet.has(row.displayName)}
-                    onChange={() => onToggleFav(row.displayName)}
-                  />
-                  <span className="text-xs sm:text-sm min-w-0 leading-snug">
-                    <span className="text-gray-900 break-words">{row.displayName}</span>
-                    {row.latestStock != null && row.latestStock !== "" ? (
-                      <span className="block text-[10px] sm:text-xs text-gray-500 tabular-nums mt-0.5">
-                        stock {row.latestStock}
-                      </span>
-                    ) : null}
-                  </span>
-                </label>
-              </li>
-            ))}
+            {items.map((row) => {
+              const isSelected = favSet.has(row.displayName);
+              const cleanName = stripServingSize(row.displayName);
+              const imageUrl = productImages[cleanName];
+              return (
+                <li key={row.displayName} className="min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => onToggleFav(row.displayName)}
+                    className={`w-full text-left cursor-pointer rounded-md px-2 py-1.5 h-full transition-all flex items-center gap-2 ${
+                      isSelected
+                        ? "border-2 border-black bg-amber-100 shadow-[2px_2px_0px_0px_#000]"
+                        : "border border-black/10 bg-amber-50/40 hover:bg-amber-50/80"
+                    }`}
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt=""
+                        className="w-8 h-8 object-contain rounded shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-gray-100 rounded shrink-0 flex items-center justify-center text-sm">
+                        {title.toLowerCase().includes("beverage") || title.toLowerCase().includes("drink") || title.toLowerCase().includes("water") || title.toLowerCase().includes("tea") || title.toLowerCase().includes("coffee") || title.toLowerCase().includes("soda") || title.toLowerCase().includes("juice") ? "🥤" : "🍿"}
+                      </div>
+                    )}
+                    <span className="text-xs sm:text-sm min-w-0 leading-snug">
+                      <span className="text-gray-900 break-words">{cleanName}</span>
+                      {row.latestStock != null && row.latestStock !== "" ? (
+                        <span className="block text-[10px] sm:text-xs text-gray-500 tabular-nums mt-0.5">
+                          stock {row.latestStock}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : (

@@ -70,28 +70,30 @@ export default function Navbar() {
             </Link>
 
             {/* App Switcher Dropdown */}
-            <button
-              onClick={() => setAppMenuOpen(!appMenuOpen)}
-              className="p-1 rounded-lg hover:bg-kikoff-dark/10 transition-colors"
-              aria-label="Switch app"
-            >
-              <svg className={`w-4 h-4 text-kikoff-dark/50 transition-transform ${appMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setAppMenuOpen(!appMenuOpen)}
+                className="p-1 rounded-lg hover:bg-kikoff-dark/10 transition-colors"
+                aria-label="Switch app"
+              >
+                <svg className={`w-4 h-4 text-kikoff-dark/50 transition-transform ${appMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
 
-            {appMenuOpen && (
-              <div className="absolute top-12 left-4 w-48 bg-white rounded-xl border-2 border-kikoff-dark/10 shadow-lg overflow-hidden z-50">
-                <Link href="/" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${!isSnacksApp ? "bg-kikoff/30" : ""}`}>
-                  <Image src="/logo.png" alt="" width={24} height={24} className="rounded" />
-                  <div className="text-sm font-semibold text-kikoff-dark">RateMyPlate</div>
-                </Link>
-                <Link href="/snacks" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${isSnacksApp ? "bg-amber-50" : ""}`}>
-                  <span className="text-xl">🍿</span>
-                  <div className="text-sm font-semibold text-kikoff-dark">SnackOverflow</div>
-                </Link>
-              </div>
-            )}
+              {appMenuOpen && (
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl border-2 border-kikoff-dark/10 shadow-lg overflow-hidden z-50">
+                  <Link href="/" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${!isSnacksApp ? "bg-kikoff/30" : ""}`}>
+                    <Image src="/logo.png" alt="" width={24} height={24} className="rounded" />
+                    <div className="text-sm font-semibold text-kikoff-dark">RateMyPlate</div>
+                  </Link>
+                  <Link href="/snacks" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${isSnacksApp ? "bg-amber-50" : ""}`}>
+                    <span className="text-xl">🍿</span>
+                    <div className="text-sm font-semibold text-kikoff-dark">SnackOverflow</div>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Desktop nav links */}

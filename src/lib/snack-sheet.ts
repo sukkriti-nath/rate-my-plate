@@ -1,7 +1,7 @@
 import Papa from "papaparse";
 import { SNACKS, getItemName } from "@/lib/snack-inventory";
 import {
-  getGoogleSheetsClient,
+  getSheetsClient,
   isGoogleServiceAccountConfigured,
 } from "@/lib/google-sheets-writer";
 
@@ -66,7 +66,7 @@ async function discoverBeveragesAndSnacksGids(
 ): Promise<string[] | null> {
   if (!isGoogleServiceAccountConfigured()) return null;
   try {
-    const sheets = getGoogleSheetsClient();
+    const sheets = getSheetsClient();
     const meta = await sheets.spreadsheets.get({
       spreadsheetId,
       fields: "sheets.properties(sheetId,title)",
@@ -100,7 +100,7 @@ async function fetchSheetRowsViaGoogleApi(
   spreadsheetId: string,
   gid: string
 ): Promise<string[][]> {
-  const sheets = getGoogleSheetsClient();
+  const sheets = getSheetsClient();
   const gidNum = parseInt(gid, 10);
   if (Number.isNaN(gidNum)) {
     throw new Error(`Invalid SNACK_SHEET_GID: ${gid}`);
@@ -313,7 +313,7 @@ async function getSheetTitleForGid(
   spreadsheetId: string,
   gid: string
 ): Promise<string> {
-  const sheets = getGoogleSheetsClient();
+  const sheets = getSheetsClient();
   const gidNum = parseInt(gid, 10);
   if (Number.isNaN(gidNum)) return "Sheet";
   const meta = await sheets.spreadsheets.get({

@@ -12,12 +12,12 @@ import {
   buildSnackTop5ModalView,
 } from "@/lib/snack-bot";
 import {
-  getProfile,
-  upsertProfile,
+  getProfileBySlackId,
+  upsertSlackProfile,
   awardPoints,
   reportOutOfStock,
   recordSnackTop5Vote,
-} from "@/lib/snack-db";
+} from "@/lib/snack-sheets-sync";
 import {
   getSnackNamesForSurveyWithinSlackDeadline,
   warmInventoryCache,
@@ -219,7 +219,7 @@ async function handleSlashCommand(body: Record<string, string>, slack: ReturnTyp
     case "/snack-profile": {
       void warmInventoryCache().catch(() => {});
       // Start profile flow - send DM with interactive message
-      const existingProfile = await getProfile(userId);
+      const existingProfile = await getProfileBySlackId(userId);
 
       // Initialize or restore session
       const session: ProfileSession = {
@@ -552,12 +552,12 @@ async function handleProfileSave(
   const displayName = userInfo.user?.real_name || userInfo.user?.name || userId;
 
   // Check if this is a new profile or update
-  const existingProfile = await getProfile(userId);
+  const existingProfile = await getProfileBySlackId(userId);
   const isNew = !existingProfile;
 
   // Save profile
-  await upsertProfile({
-    userId,
+  await upsertSlackProfile({
+    slackUserId: userId,
     displayName,
     drinksAllocation: session.drinksAllocation,
     snacksAllocation: session.snacksAllocation,

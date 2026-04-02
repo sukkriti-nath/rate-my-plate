@@ -1,7 +1,7 @@
-import { getGoogleSheetsClient, isGoogleServiceAccountConfigured } from "@/lib/google-sheets-writer";
+import { getSheetsClient, isGoogleServiceAccountConfigured } from "@/lib/google-sheets-writer";
 
 /**
- * Append-only log of Slack “top 5” votes to a dedicated spreadsheet (separate from inventory SNACK_SHEET_*).
+ * Append-only log of Slack "top 5" votes to a dedicated spreadsheet (separate from inventory SNACK_SHEET_*).
  * Share the doc with the same service account as GOOGLE_SERVICE_ACCOUNT_JSON / *_PATH (Editor).
  */
 
@@ -31,9 +31,9 @@ export function getVotesSpreadsheetId(): string {
   );
 }
 
-/** First tab is usually “Sheet1” on a new doc; override with SNACK_VOTES_SHEET_TAB. */
+/** Tab for weekly votes; override with SNACK_VOTES_SHEET_TAB. */
 export function getVotesTabName(): string {
-  return process.env.SNACK_VOTES_SHEET_TAB?.trim() || "Sheet1";
+  return process.env.SNACK_VOTES_SHEET_TAB?.trim() || "Weekly Votes";
 }
 
 /** For health checks / `/api/snacks/test?action=votes-sheet`. */
@@ -55,7 +55,7 @@ async function ensureHeaderRow(spreadsheetId: string, tab: string): Promise<void
   const key = `${spreadsheetId}:${tab}`;
   if (headerEnsuredFor === key) return;
 
-  const sheets = getGoogleSheetsClient();
+  const sheets = getSheetsClient();
   const range = `${escapeSheetTitleForRange(tab)}!A1:I1`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
   const row = res.data.values?.[0];
@@ -99,7 +99,7 @@ export async function appendSnackVoteToGoogleSheet(
 
   await ensureHeaderRow(spreadsheetId, tab);
 
-  const sheets = getGoogleSheetsClient();
+  const sheets = getSheetsClient();
   const range = `${escapeSheetTitleForRange(tab)}!A:I`;
   await sheets.spreadsheets.values.append({
     spreadsheetId,

@@ -5,7 +5,7 @@ import {
   getProfile,
   getWebSnackProfileUserId,
   upsertProfile,
-} from "@/lib/snack-db";
+} from "@/lib/snack-sheets-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -40,12 +40,11 @@ export async function GET() {
     if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    const userId = getWebSnackProfileUserId(session.email);
-    const profile = await getProfile(userId);
+    const profile = await getProfile(session.email);
     return NextResponse.json({
       profile: profile
         ? {
-            userId: profile.userId,
+            email: profile.email,
             displayName: profile.displayName,
             drinksAllocation: profile.drinksAllocation,
             snacksAllocation: profile.snacksAllocation,
@@ -91,20 +90,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: err }, { status: 400 });
     }
 
-    const userId = getWebSnackProfileUserId(session.email);
-    const existing = await getProfile(userId);
+    const existing = await getProfile(session.email);
     const isNew = !existing;
+    const now = new Date().toISOString();
 
     await upsertProfile({
-      userId,
+      email: session.email,
       displayName: session.displayName,
       drinksAllocation,
       snacksAllocation,
       favoriteDrinks,
       favoriteSnacks,
       isPublic: true,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
     });
 
+    const userId = getWebSnackProfileUserId(session.email);
     await awardPoints(
       userId,
       isNew ? "profile_create" : "profile_update",
