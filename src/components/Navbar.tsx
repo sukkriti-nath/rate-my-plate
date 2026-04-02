@@ -3,13 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { UserSession } from "@/lib/types";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<UserSession | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [appMenuOpen, setAppMenuOpen] = useState(false);
+  const appMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -17,11 +19,29 @@ export default function Navbar() {
       .then((data) => setUser(data.user));
   }, []);
 
-  const links = [
-    { href: "/", label: "Vote" },
-    { href: "/reports", label: "Rankings" },
-    { href: "/leaderboard", label: "Leaderboard" },
-  ];
+  // Close app menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (appMenuRef.current && !appMenuRef.current.contains(event.target as Node)) {
+        setAppMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const isSnacksApp = pathname.startsWith("/snacks");
+
+  const links = isSnacksApp
+    ? [
+        { href: "/snacks", label: "Dashboard" },
+        { href: "/snacks/profile", label: "Profile" },
+      ]
+    : [
+        { href: "/", label: "Vote" },
+        { href: "/reports", label: "Rankings" },
+        { href: "/leaderboard", label: "Reviewers" },
+      ];
 
   async function handleLogout() {
     await fetch("/api/auth/me", { method: "DELETE" });
@@ -32,19 +52,55 @@ export default function Navbar() {
     <nav className="bg-kikoff sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-14 sm:h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <Image
-              src="/logo.png"
-              alt="RateMyPlate"
-              width={30}
-              height={30}
-              className="rounded-full border-2 border-kikoff-dark/20"
-            />
-            <span className="font-display text-lg sm:text-xl text-kikoff-dark font-extrabold">
-              Rate<span className="bg-kikoff-dark text-kikoff px-1.5 py-0.5 rounded-xl mx-0.5">My</span>Plate
-            </span>
-          </Link>
+          {/* Logo + App Switcher */}
+          <div className="flex items-center gap-1 shrink-0" ref={appMenuRef}>
+            <Link href={isSnacksApp ? "/snacks" : "/"} className="flex items-center gap-2.5">
+              {isSnacksApp ? (
+                <span className="text-2xl">🍿</span>
+              ) : (
+                <Image
+                  src="/logo.png"
+                  alt="RateMyPlate"
+                  width={30}
+                  height={30}
+                  className="rounded-full border-2 border-kikoff-dark/20"
+                />
+              )}
+              <span className="font-display text-lg sm:text-xl text-kikoff-dark font-extrabold">
+                {isSnacksApp ? (
+                  <>Snack<span className="bg-amber-500 text-white px-1.5 py-0.5 rounded-xl mx-0.5">Over</span>flow</>
+                ) : (
+                  <>Rate<span className="bg-kikoff-dark text-kikoff px-1.5 py-0.5 rounded-xl mx-0.5">My</span>Plate</>
+                )}
+              </span>
+            </Link>
+
+            {/* App Switcher Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setAppMenuOpen(!appMenuOpen)}
+                className="p-1 rounded-lg hover:bg-kikoff-dark/10 transition-colors"
+                aria-label="Switch app"
+              >
+                <svg className={`w-4 h-4 text-kikoff-dark/50 transition-transform ${appMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {appMenuOpen && (
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl border-2 border-kikoff-dark/10 shadow-lg overflow-hidden z-50">
+                  <Link href="/" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${!isSnacksApp ? "bg-kikoff/30" : ""}`}>
+                    <Image src="/logo.png" alt="" width={24} height={24} className="rounded" />
+                    <div className="text-sm font-semibold text-kikoff-dark">RateMyPlate</div>
+                  </Link>
+                  <Link href="/snacks" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${isSnacksApp ? "bg-amber-50" : ""}`}>
+                    <span className="text-xl">🍿</span>
+                    <div className="text-sm font-semibold text-kikoff-dark">SnackOverflow</div>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Desktop nav links — centered */}
           <div className="hidden md:flex items-center gap-1">

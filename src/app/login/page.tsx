@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const nextPath = searchParams.get("next");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -28,7 +29,11 @@ function LoginContent() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        window.location.href = "/";
+        const safe =
+          nextPath?.startsWith("/") && !nextPath.startsWith("//")
+            ? nextPath
+            : "/";
+        window.location.href = safe;
       } else {
         setLoginError(data.error || "Login failed");
       }
