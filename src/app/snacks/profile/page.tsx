@@ -577,7 +577,7 @@ function CategoryBlock({
           <p className="text-xs text-gray-500 mb-2">
             Favorite SKUs (unlimited) — {items.length} options · scroll if needed
           </p>
-          <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[min(75vh,1400px)] overflow-y-auto overflow-x-hidden pr-1">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[min(75vh,1400px)] overflow-y-auto pr-1">
             {items.map((row) => {
               const isSelected = favSet.has(row.displayName);
               const cleanName = stripServingSize(row.displayName);
@@ -592,7 +592,7 @@ function CategoryBlock({
                     className={`w-full cursor-pointer rounded-lg p-2 h-full transition-all flex flex-col items-center gap-1.5 ${
                       isSelected
                         ? "border-2 border-black bg-amber-100 shadow-[2px_2px_0px_0px_#000]"
-                        : "border border-black/10 bg-amber-50/40 hover:bg-amber-50/80"
+                        : "border border-black/10 bg-amber-50/40"
                     }`}
                   >
                     {imageUrl ? (
