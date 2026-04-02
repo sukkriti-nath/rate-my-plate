@@ -120,27 +120,14 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Badge Tiers */}
-      <div className="bg-white rounded-xl p-5 mb-6 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
-        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b-2 border-black">
-          Badge Tiers
-        </h2>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-kikoff text-kikoff-dark border-black">{"\u{1F3C6}"} Super Prime</span>
-            <span className="text-gray-500">20+ / month</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-kikoff-lavender text-gray-800 border-black">{"\u2B50"} Prime</span>
-            <span className="text-gray-500">10-19 / month</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-amber-50 text-amber-800 border-amber-300">{"\u{1F4C8}"} Subprime</span>
-            <span className="text-gray-500">&lt;10 / month</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-blue-50 text-blue-800 border-blue-200">{"\u{1F476}"} New</span>
-            <span className="text-gray-500">First 3 reviews</span>
-          </div>
+      <div className="bg-white rounded-xl p-4 mb-6 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+          <span className="font-bold text-gray-500 uppercase tracking-wider">Badges:</span>
+          <span>{"\u{1F3C6}"} Super Prime <span className="text-gray-400">20+</span></span>
+          <span>{"\u2B50"} Prime <span className="text-gray-400">10-19</span></span>
+          <span>{"\u{1F4C8}"} Subprime <span className="text-gray-400">&lt;10</span></span>
+          <span>{"\u{1F476}"} New <span className="text-gray-400">first 3</span></span>
+          <span className="text-gray-400 text-[10px]">(reviews/month)</span>
         </div>
       </div>
 

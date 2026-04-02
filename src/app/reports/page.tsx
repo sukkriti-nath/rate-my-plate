@@ -115,7 +115,7 @@ export default function ReportsPage() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="font-display text-3xl text-gray-900">🏆 Weekly Power Rankings 🏆</h1>
+        <h1 className="font-display text-2xl sm:text-3xl text-gray-900 whitespace-nowrap">🏆 Weekly Power Rankings 🏆</h1>
         <p className="text-gray-400 mt-1">{report.period}</p>
         <div className="flex justify-center gap-3 mt-4">
           <button onClick={() => setWeeksAgo((w) => w + 1)} className="px-4 py-2 bg-white rounded-xl text-sm font-bold border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
@@ -156,7 +156,7 @@ export default function ReportsPage() {
                   <span className="text-sm">🔥</span>
                   <span className="font-medium text-xs">Most Active Day</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900 mt-auto">{mostActive?.dayName || "—"}</span>
+                <span className="text-xl sm:text-2xl font-bold text-gray-900 mt-auto truncate">{mostActive?.dayName || "—"}</span>
                 {mostActive && <span className="text-xs text-gray-400">{mostActive.totalVotes} votes</span>}
               </div>
             );
@@ -166,7 +166,7 @@ export default function ReportsPage() {
               <span className="text-sm">⭐</span>
               <span className="font-medium text-xs">Best Day</span>
             </div>
-            <span className="text-2xl font-bold text-green-600 mt-auto">{report.summary.bestDay?.name || "—"}</span>
+            <span className="text-xl sm:text-2xl font-bold text-green-600 mt-auto truncate">{report.summary.bestDay?.name || "—"}</span>
             {report.summary.bestDay && <span className="text-xs text-gray-400">{Math.round(report.summary.bestDay.avg)}/5</span>}
           </div>
         </div>
