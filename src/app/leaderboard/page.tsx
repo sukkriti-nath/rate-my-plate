@@ -49,6 +49,7 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [allTimeTop3, setAllTimeTop3] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(10);
 
   useEffect(() => {
     fetch("/api/leaderboard")
@@ -241,7 +242,7 @@ export default function LeaderboardPage() {
             All Reviewers
           </h2>
           <div className="space-y-2">
-            {rest.map((entry) => {
+            {rest.slice(0, visibleCount).map((entry) => {
               const badgeStyle = BADGE_STYLES[entry.badge];
               return (
                 <div
@@ -273,6 +274,14 @@ export default function LeaderboardPage() {
               );
             })}
           </div>
+          {visibleCount < rest.length && (
+            <button
+              onClick={() => setVisibleCount((prev) => prev + 10)}
+              className="w-full mt-4 py-2.5 text-sm font-bold text-kikoff-dark bg-kikoff-lavender rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
+            >
+              View more ({rest.length - visibleCount} remaining)
+            </button>
+          )}
         </div>
       )}
 
