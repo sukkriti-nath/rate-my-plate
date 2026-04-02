@@ -387,7 +387,7 @@ export default function SnackProfilePage() {
                   </span>
                 </div>
               </summary>
-              <div className="p-3 md:p-4 space-y-3 bg-white">
+              <div className="p-3 md:p-4 grid grid-cols-2 gap-2 sm:gap-3 bg-white items-start">
                 {bevCategories.map(({ category, items }) => (
                   <CategoryBlock
                     key={`bev-${category}`}
@@ -428,7 +428,7 @@ export default function SnackProfilePage() {
                   </span>
                 </div>
               </summary>
-              <div className="p-3 md:p-4 space-y-3 bg-white">
+              <div className="p-3 md:p-4 grid grid-cols-2 gap-2 sm:gap-3 bg-white items-start">
                 {snkCategories.map(({ category, items }) => (
                   <CategoryBlock
                     key={`snk-${category}`}
@@ -487,7 +487,7 @@ function CategoryBlock({
   const canSub = points >= STEP;
 
   return (
-    <div className="rounded-xl border-2 border-black/15 bg-white overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)]">
+    <div className="min-w-0 rounded-xl border-2 border-black/15 bg-white overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)]">
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:p-4 bg-gray-50 border-b border-black/10">
         <span className="font-semibold text-gray-900">{title}</span>
         <div className="flex items-center gap-2">
