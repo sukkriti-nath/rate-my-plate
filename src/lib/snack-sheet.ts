@@ -388,8 +388,12 @@ export function normalizeInventoryCategory(raw: string): string {
     return "Snack Bars";
   }
 
-  if (compact === "gummies" || compact === "gummies energy") {
-    return "Gummies";
+  if (compact === "gummies" || compact === "gummies energy" || compact === "candy") {
+    return "Gummies & Candy";
+  }
+
+  if (compact === "mints" || compact === "gum" || compact === "mint" || compact === "mints & gum") {
+    return "Mints & Gum";
   }
 
   if (
