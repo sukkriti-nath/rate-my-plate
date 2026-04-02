@@ -40,7 +40,7 @@ export default function Navbar() {
     : [
         { href: "/", label: "Vote" },
         { href: "/reports", label: "Rankings" },
-        { href: "/leaderboard", label: "Reviewers" },
+        { href: "/leaderboard", label: "Leaderboard" },
       ];
 
   async function handleLogout() {

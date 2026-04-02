@@ -162,11 +162,6 @@ export default function RatingForm({
             isNA={overallNA}
             onNAChange={setOverallNA}
           />
-          {reaction && (
-            <div className="mt-2 text-center text-base animate-slide-up" key={`${ratingOverall}-${overallNA}`}>
-              {reaction}
-            </div>
-          )}
         </div>
 
         {/* Per-dish Ratings */}
