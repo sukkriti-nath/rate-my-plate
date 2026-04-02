@@ -97,6 +97,53 @@ export default function LeaderboardPage() {
         </p>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
+          <div className="text-2xl font-bold text-kikoff-dark">
+            {entries.length}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Total Reviewers</div>
+        </div>
+        <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
+          <div className="text-2xl font-bold text-kikoff-dark">
+            {entries.filter((e) => e.badge === "Super Prime").length}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Super Prime</div>
+        </div>
+        <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
+          <div className="text-2xl font-bold text-kikoff-dark">
+            {Math.max(...entries.map((e) => e.monthlyVotes), 0)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Most Reviews</div>
+        </div>
+      </div>
+
+      {/* Badge Tiers */}
+      <div className="bg-white rounded-xl p-5 mb-6 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
+        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b-2 border-black">
+          Badge Tiers
+        </h2>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-kikoff text-kikoff-dark border-black">{"\u{1F3C6}"} Super Prime</span>
+            <span className="text-gray-500">20+ / month</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-kikoff-lavender text-gray-800 border-black">{"\u2B50"} Prime</span>
+            <span className="text-gray-500">10-19 / month</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-amber-50 text-amber-800 border-amber-300">{"\u{1F4C8}"} Subprime</span>
+            <span className="text-gray-500">&lt;10 / month</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-blue-50 text-blue-800 border-blue-200">{"\u{1F476}"} New</span>
+            <span className="text-gray-500">First 3 reviews</span>
+          </div>
+        </div>
+      </div>
+
       {/* Podium - Top 3 This Month */}
       <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
         <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider pb-3 border-b-2 border-black">
@@ -186,53 +233,6 @@ export default function LeaderboardPage() {
           </div>
         </div>
       )}
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
-          <div className="text-2xl font-bold text-kikoff-dark">
-            {entries.length}
-          </div>
-          <div className="text-xs text-gray-500 mt-1">Total Reviewers</div>
-        </div>
-        <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
-          <div className="text-2xl font-bold text-kikoff-dark">
-            {entries.filter((e) => e.badge === "Super Prime").length}
-          </div>
-          <div className="text-xs text-gray-500 mt-1">Super Prime</div>
-        </div>
-        <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
-          <div className="text-2xl font-bold text-kikoff-dark">
-            {Math.max(...entries.map((e) => e.monthlyVotes), 0)}
-          </div>
-          <div className="text-xs text-gray-500 mt-1">Most Reviews</div>
-        </div>
-      </div>
-
-      {/* Badge Tiers — moved above All Reviewers */}
-      <div className="bg-white rounded-xl p-5 mb-6 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
-        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b-2 border-black">
-          Badge Tiers
-        </h2>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-kikoff text-kikoff-dark border-black">{"\u{1F3C6}"} Super Prime</span>
-            <span className="text-gray-500">20+ / month</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-kikoff-lavender text-gray-800 border-black">{"\u2B50"} Prime</span>
-            <span className="text-gray-500">10-19 / month</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-amber-50 text-amber-800 border-amber-300">{"\u{1F4C8}"} Subprime</span>
-            <span className="text-gray-500">&lt;10 / month</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-blue-50 text-blue-800 border-blue-200">{"\u{1F476}"} New</span>
-            <span className="text-gray-500">First 3 reviews</span>
-          </div>
-        </div>
-      </div>
 
       {/* Full list */}
       {rest.length > 0 && (
