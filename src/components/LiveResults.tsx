@@ -47,15 +47,18 @@ function ratingEmoji(avg: number): string {
 export default function LiveResults({
   date,
   isToday = false,
+  hasVoted: initialHasVoted = false,
   pollInterval = 5000,
 }: {
   date: string;
   isToday?: boolean;
+  hasVoted?: boolean;
   pollInterval?: number;
 }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [votes, setVotes] = useState<Vote[]>([]);
   const [menu, setMenu] = useState<MenuData | null>(null);
+  const [hasVoted, setHasVoted] = useState(initialHasVoted);
 
   const fetchData = useCallback(async () => {
     try {
@@ -66,6 +69,11 @@ export default function LiveResults({
       setStats(data.stats);
       setVotes(data.votes);
       setMenu(data.menu);
+      // Derive hasVoted from the live API response so it stays accurate for
+      // past days and updates instantly after the user submits a new vote.
+      if (data.userVote != null) {
+        setHasVoted(true);
+      }
     } catch {
       // Silently retry next interval
     }
@@ -137,6 +145,21 @@ export default function LiveResults({
     .sort((a, b) => (stats.dishRatings[b.key]?.avg || 0) - (stats.dishRatings[a.key]?.avg || 0));
 
   return (
+    <div className="relative">
+      {/* Lock overlay — shown until the user has voted for this day */}
+      {!hasVoted && (
+        <div className="absolute inset-0 z-10 rounded-xl overflow-hidden flex flex-col items-start justify-start gap-3 px-6 pt-10 text-center"
+          style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", background: "rgba(255,255,255,0.55)" }}
+        >
+          <div className="bg-white rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_#000] px-6 py-5 flex flex-col items-center gap-2 w-full">
+            <span className="text-3xl">🔒</span>
+            <p className="text-base font-semibold text-gray-800 leading-snug">
+              Submit your rating above to see company wide results.
+            </p>
+          </div>
+        </div>
+      )}
+
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -281,6 +304,7 @@ export default function LiveResults({
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
