@@ -347,9 +347,14 @@ async function handleBlockAction(payload: Record<string, unknown>) {
       console.error("Failed to fetch user email:", err);
     }
 
-    // Save to DB — merge with any existing vote (don't overwrite with nulls)
+    // Save to DB — merge with any existing vote
+    // Use cached values directly (null = user chose N/A); only fall back to existing for fields NOT in cache
     try {
       const existing = await getUserVoteForDate(userEmail, date);
+
+      // "key in cached.dishes" means user explicitly set it (even to null/N/A)
+      const dishVal = (key: string) =>
+        key in cached.dishes ? cached.dishes[key] : (existing?.[`rating_${key}`] as number | null) ?? null;
 
       await upsertVote({
         menuDate: date,
@@ -357,12 +362,12 @@ async function handleBlockAction(payload: Record<string, unknown>) {
         userEmail,
         slackUserId: userId,
         avatarUrl,
-        ratingOverall: cached.overall ?? (existing?.rating_overall as number | null) ?? null,
-        ratingStarch: cached.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
-        ratingVeganProtein: cached.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
-        ratingVeg: cached.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
-        ratingProtein1: cached.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
-        ratingProtein2: cached.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+        ratingOverall: cached.overall,
+        ratingStarch: dishVal("starch"),
+        ratingVeganProtein: dishVal("vegan_protein"),
+        ratingVeg: dishVal("veg"),
+        ratingProtein1: dishVal("protein_1"),
+        ratingProtein2: dishVal("protein_2"),
         comment: (existing?.comment as string | null) ?? null,
         commentStarch: (existing?.comment_starch as string | null) ?? null,
         commentVeganProtein: (existing?.comment_vegan_protein as string | null) ?? null,
@@ -375,18 +380,18 @@ async function handleBlockAction(payload: Record<string, unknown>) {
       const menuForSync = await getMenuForDate(date);
       if (menuForSync) {
         syncVoteToSheetSafe(date, userName, userEmail, menuForSync as Record<string, unknown>, {
-          overall: cached.overall ?? (existing?.rating_overall as number | null) ?? null,
-          starch: cached.dishes.starch ?? (existing?.rating_starch as number | null) ?? null,
-          veganProtein: cached.dishes.vegan_protein ?? (existing?.rating_vegan_protein as number | null) ?? null,
-          veg: cached.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
-          protein1: cached.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
-          protein2: cached.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+          overall: cached.overall,
+          starch: dishVal("starch"),
+          veganProtein: dishVal("vegan_protein"),
+          veg: dishVal("veg"),
+          protein1: dishVal("protein_1"),
+          protein2: dishVal("protein_2"),
         }, (existing?.comment as string | null) ?? null);
       }
 
       // Build confirmation summary using merged data
       const EMOJIS: Record<number, string> = { 1: "🙁", 2: "😕", 3: "😐", 4: "😋", 5: "🤩" };
-      const finalOverall = cached.overall ?? (existing?.rating_overall as number | null) ?? null;
+      const finalOverall = cached.overall;
       const overallText = finalOverall ? `${finalOverall} ${EMOJIS[finalOverall]}` : "N/A";
       const dishCount = Object.values(cached.dishes).filter((v) => v !== null && v !== undefined).length;
 
