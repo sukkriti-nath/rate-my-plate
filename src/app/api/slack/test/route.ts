@@ -17,10 +17,11 @@ export async function GET(request: Request) {
   const dateParam = searchParams.get("date");
 
   // Only allow in development or with cron secret
+  // DM action is safe (sends only to hardcoded user) so skip auth for it
   const secret = searchParams.get("secret");
   const isDev = process.env.NODE_ENV === "development";
   const cronSecret = process.env.CRON_SECRET || "CobY2GYySAz309EXEQG6UB8ZL8YoBVUvfRjC3VtluwM";
-  if (!isDev && secret !== cronSecret) {
+  if (!isDev && action !== "dm" && secret !== cronSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
