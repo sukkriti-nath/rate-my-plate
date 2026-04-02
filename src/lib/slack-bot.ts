@@ -140,7 +140,7 @@ export async function buildDailyMenuBlocks(date: string): Promise<object[] | nul
       elements: [
         {
           type: "mrkdwn",
-          text: `📅 ${formatDateHeader(date)} • <https://main.d31cnpjkl9reeg.amplifyapp.com/|Rate on web instead>`,
+          text: `📅 ${formatDateHeader(date)} • <${process.env.NEXT_PUBLIC_APP_URL || "https://main.d31cnpjkl9reeg.amplifyapp.com"}|Rate on web instead>`,
         },
       ],
     },
