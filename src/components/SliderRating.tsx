@@ -40,9 +40,13 @@ export default function SliderRating({
           style={{
             background:
               isNA || unselected
-                ? "#e5e7eb"
+                ? "#f3f4f6"
                 : `linear-gradient(to right, #B5FC4F ${pct}%, #e5e7eb ${pct}%)`,
-            border: isNA ? undefined : "2px solid black",
+            border: isNA
+              ? undefined
+              : unselected
+              ? "2px dashed #9ca3af"
+              : "2px solid black",
             borderRadius: "9999px",
           }}
         />
@@ -67,10 +71,16 @@ export default function SliderRating({
           </button>
         )}
       </div>
-      <div className="flex justify-between text-[11px] text-gray-400 px-0.5">
-        <span>1 — {lowLabel}</span>
-        <span>{highLabel} — 5</span>
-      </div>
+      {unselected ? (
+        <div className="text-center text-[11px] text-gray-400 animate-pulse">
+          ← drag to rate →
+        </div>
+      ) : (
+        <div className="flex justify-between text-[11px] text-gray-400 px-0.5">
+          <span>1 — {lowLabel}</span>
+          <span>{highLabel} — 5</span>
+        </div>
+      )}
     </div>
   );
 }
