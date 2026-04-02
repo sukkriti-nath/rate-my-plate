@@ -45,8 +45,6 @@ export default function RatingForm({
   const [comment, setComment] = useState(
     (existingVote?.comment as string) || ""
   );
-  const [dishComments, setDishComments] = useState<Record<string, string>>({});
-  const [expandedDish, setExpandedDish] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -77,11 +75,6 @@ export default function RatingForm({
           ratingProtein1: dishNAs.protein_1 ? null : (dishRatings.protein_1 || null),
           ratingProtein2: dishNAs.protein_2 ? null : (dishRatings.protein_2 || null),
           comment: comment || null,
-          commentStarch: dishComments.starch || null,
-          commentVeganProtein: dishComments.vegan_protein || null,
-          commentVeg: dishComments.veg || null,
-          commentProtein1: dishComments.protein_1 || null,
-          commentProtein2: dishComments.protein_2 || null,
         }),
       });
 
@@ -129,7 +122,7 @@ export default function RatingForm({
                     <span className="text-sm text-gray-700">{dish.name}</span>
                   </div>
                   <span className="font-bold text-sm text-gray-700">
-                    {val ? `${val}/5` : "—"}
+                    {val ? `${val}/5` : <span className="text-gray-400 font-normal">Not tried</span>}
                   </span>
                 </div>
               );
@@ -176,25 +169,6 @@ export default function RatingForm({
           )}
         </div>
 
-        {/* General comment */}
-        <div>
-          <label className="block text-sm font-bold text-gray-800 mb-2">
-            Drop a hot take 🌶️ <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            maxLength={280}
-            rows={2}
-            placeholder="The vibes were immaculate..."
-            className="w-full rounded-xl border-2 border-black px-4 py-3 text-sm text-gray-700
-              focus:outline-none focus:border-kikoff transition-colors resize-none"
-          />
-          <div className="text-right text-[10px] text-gray-300 mt-1">
-            {comment.length}/280
-          </div>
-        </div>
-
         {/* Per-dish Ratings */}
         {availableDishes.length > 0 && (
           <div className="space-y-3">
@@ -207,7 +181,6 @@ export default function RatingForm({
               </span>
             </div>
             {availableDishes.map((dish, i) => {
-              const isExpanded = expandedDish === dish.key;
               const dishNA = dishNAs[dish.key] || false;
 
               return (
@@ -235,36 +208,30 @@ export default function RatingForm({
                       onNAChange={() => toggleDishNA(dish.key)}
                     />
                   </div>
-
-                  {/* Expandable feedback */}
-                  <button
-                    type="button"
-                    onClick={() => setExpandedDish(isExpanded ? null : dish.key)}
-                    className="w-full text-left px-4 py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors border-t border-gray-50"
-                  >
-                    {isExpanded ? "Hide feedback ▴" : "Add feedback ▾"}
-                  </button>
-
-                  {isExpanded && (
-                    <div className="px-4 pb-3 animate-slide-up">
-                      <textarea
-                        value={dishComments[dish.key] || ""}
-                        onChange={(e) =>
-                          setDishComments((prev) => ({ ...prev, [dish.key]: e.target.value }))
-                        }
-                        maxLength={200}
-                        rows={2}
-                        placeholder={`What did you think of the ${dish.label.toLowerCase()}?`}
-                        className="w-full rounded-xl border-2 border-black px-3 py-2 text-sm text-gray-700
-                          focus:outline-none focus:border-kikoff transition-colors resize-none"
-                      />
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
         )}
+
+        {/* General comment */}
+        <div>
+          <label className="block text-sm font-bold text-gray-800 mb-2">
+            Share any additional comments <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={280}
+            rows={2}
+            placeholder="The vibes were immaculate..."
+            className="w-full rounded-xl border-2 border-black px-4 py-3 text-sm text-gray-700
+              focus:outline-none focus:border-kikoff transition-colors resize-none"
+          />
+          <div className="text-right text-[10px] text-gray-300 mt-1">
+            {comment.length}/280
+          </div>
+        </div>
 
         <button
           type="submit"

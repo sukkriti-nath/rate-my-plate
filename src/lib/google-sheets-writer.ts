@@ -353,6 +353,7 @@ export interface BiWeeklyTrendsRow {
   recPhaseOut: string;
   recReplicate: string;
   recImprove: string;
+  dishRatings?: { category: string; dishName: string; avgRating: number; totalRatings: number; datesServed?: string[] }[];
 }
 
 export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<void> {
@@ -384,6 +385,35 @@ export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<voi
     valueInputOption: "RAW",
     requestBody: { values: [rowValues] },
   });
+
+  // Append dish ratings section below the trends data
+  if (trends.dishRatings && trends.dishRatings.length > 0) {
+    // Find the next empty row after existing data
+    const existing = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: `'${range}'!A:A`,
+    });
+    const nextRow = (existing.data.values?.length ?? 1) + 2; // leave a gap
+
+    const dishSection = [
+      ["ALL DISHES SERVED (Mon-Thu)", "", "", "", ""],
+      ["Category", "Dish", "Avg Rating", "# Ratings", "Date(s) Served"],
+      ...trends.dishRatings.map((d) => [
+        d.category,
+        d.dishName,
+        Math.round(d.avgRating * 100) / 100,
+        d.totalRatings,
+        (d.datesServed ?? []).join(", "),
+      ]),
+    ];
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: `'${range}'!A${nextRow}`,
+      valueInputOption: "RAW",
+      requestBody: { values: dishSection },
+    });
+  }
 }
 
 // ─── Friday Catering Sync ─────────────────────────────────────────────────
@@ -472,6 +502,7 @@ export interface SuperReviewerRow {
   currentStreak: number;
   longestStreak: number;
   lastVoteDate: string;
+  monthlyVotes: number;
   badge: string;
 }
 
@@ -486,7 +517,7 @@ export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise
 
   const headers = [
     "Rank", "Name", "Email", "Current Streak", "Longest Streak",
-    "Last Vote Date", "Badge",
+    "Last Vote Date", "Monthly Votes", "Badge",
   ];
 
   const values = [
@@ -498,6 +529,7 @@ export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise
       r.currentStreak,
       r.longestStreak,
       r.lastVoteDate,
+      r.monthlyVotes,
       r.badge,
     ]),
   ];
@@ -505,7 +537,7 @@ export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise
   // Clear and rewrite the whole tab (leaderboard changes with every vote)
   await sheets.spreadsheets.values.clear({
     spreadsheetId: sheetId,
-    range: `'${range}'!A:G`,
+    range: `'${range}'!A:H`,
   });
 
   await sheets.spreadsheets.values.update({

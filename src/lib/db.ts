@@ -447,6 +447,85 @@ export interface StreakInfo {
   currentStreak: number;
   longestStreak: number;
   lastVoteDate: string;
+  monthlyReviews: number;
+}
+
+// ─── Monthly vote counts for badge logic ───────────────────────────────────
+
+export interface UserBadgeData {
+  userName: string;
+  userEmail: string;
+  allTimeVotes: number;
+  currentMonthVotes: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastVoteDate: string;
+}
+
+export async function getUserBadgeData(): Promise<UserBadgeData[]> {
+  const db = await getDb();
+
+  // Current month boundaries (Pacific time approximation — use UTC month)
+  const now = new Date();
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const monthEnd = nextMonth.toISOString().split("T")[0];
+
+  // All-time vote counts per user
+  const allTimeResult = await db.query(
+    `SELECT user_email, user_name, COUNT(*) as total
+     FROM votes GROUP BY user_email, user_name`
+  );
+  const allTimeMap = new Map<string, { userName: string; total: number }>();
+  for (const row of allTimeResult.rows as { user_email: string; user_name: string; total: string }[]) {
+    allTimeMap.set(row.user_email, { userName: row.user_name, total: Number(row.total) });
+  }
+
+  // Current month vote counts per user
+  const monthlyResult = await db.query(
+    `SELECT user_email, COUNT(*) as total
+     FROM votes
+     WHERE menu_date >= $1 AND menu_date < $2
+     GROUP BY user_email`,
+    [monthStart, monthEnd]
+  );
+  const monthlyMap = new Map<string, number>();
+  for (const row of monthlyResult.rows as { user_email: string; total: string }[]) {
+    monthlyMap.set(row.user_email, Number(row.total));
+  }
+
+  // Get streaks (reuse existing logic)
+  const streaks = await getVotingStreaks();
+  const streakMap = new Map<string, StreakInfo>();
+  for (const s of streaks) {
+    streakMap.set(s.userEmail, s);
+  }
+
+  // Merge into badge data
+  const results: UserBadgeData[] = [];
+  for (const [email, { userName, total }] of allTimeMap) {
+    const streak = streakMap.get(email);
+    results.push({
+      userName,
+      userEmail: email,
+      allTimeVotes: total,
+      currentMonthVotes: monthlyMap.get(email) ?? 0,
+      currentStreak: streak?.currentStreak ?? 0,
+      longestStreak: streak?.longestStreak ?? 0,
+      lastVoteDate: streak?.lastVoteDate ?? "",
+    });
+  }
+
+  return results.sort((a, b) => b.currentMonthVotes - a.currentMonthVotes || b.allTimeVotes - a.allTimeVotes);
+}
+
+export function computeBadge(allTimeVotes: number, currentMonthVotes: number): "Super Prime" | "Prime" | "Subprime" | "New" {
+  // New = first 3 reviews all-time (regardless of month)
+  if (allTimeVotes <= 3) return "New";
+  // Monthly tiers
+  if (currentMonthVotes >= 20) return "Super Prime";
+  if (currentMonthVotes >= 10) return "Prime";
+  return "Subprime";
 }
 
 export async function getVotingStreaks(): Promise<StreakInfo[]> {
@@ -473,6 +552,10 @@ export async function getVotingStreaks(): Promise<StreakInfo[]> {
     userVotes.get(v.user_email)!.dates.add(v.menu_date);
   }
 
+  // Current month boundaries for monthly review count
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
   const results: StreakInfo[] = [];
 
   for (const [email, { userName, dates }] of userVotes) {
@@ -492,12 +575,18 @@ export async function getVotingStreaks(): Promise<StreakInfo[]> {
     }
     const currentStreak = streak;
 
+    // Count reviews in current month
+    let monthlyReviews = 0;
+    for (const d of dates) {
+      if (d.startsWith(currentMonth)) monthlyReviews++;
+    }
+
     if (lastVoteDate) {
-      results.push({ userName, userEmail: email, currentStreak, longestStreak, lastVoteDate });
+      results.push({ userName, userEmail: email, currentStreak, longestStreak, lastVoteDate, monthlyReviews });
     }
   }
 
-  return results.sort((a, b) => b.currentStreak - a.currentStreak);
+  return results.sort((a, b) => b.monthlyReviews - a.monthlyReviews);
 }
 
 // ─── Bi-Weekly Trends Data ───────────────────────────────────────────────────
@@ -511,6 +600,7 @@ export interface BiWeeklyTrendsData {
   dayRankings: WeeklyDayRanking[];
   categoryFavorites: { category: string; dishName: string; avgRating: number; timesServed: number }[];
   categoryWorst: { category: string; dishName: string; avgRating: number; timesServed: number }[];
+  allDishRatings: { category: string; dishName: string; avgRating: number; totalRatings: number; datesServed: string[] }[];
 }
 
 export async function getBiWeeklyTrendsData(startDate: string, endDate: string): Promise<BiWeeklyTrendsData> {
@@ -594,6 +684,32 @@ export async function getBiWeeklyTrendsData(startDate: string, endDate: string):
     }
   }
 
+  // Build complete dish ratings list (every dish served, grouped by category)
+  const allDishRatings: { category: string; dishName: string; avgRating: number; totalRatings: number; datesServed: string[] }[] = [];
+  for (const cat of dishCategories) {
+    const dishMap = new Map<string, { ratings: number[]; dates: Set<string> }>();
+    for (const vote of allVotes) {
+      const dishName = vote[cat.menuCol] as string | null;
+      const rating = vote[cat.ratingCol] as number | null;
+      const voteDate = vote.menu_date as string;
+      if (dishName && rating !== null) {
+        if (!dishMap.has(dishName)) dishMap.set(dishName, { ratings: [], dates: new Set() });
+        const entry = dishMap.get(dishName)!;
+        entry.ratings.push(rating);
+        if (voteDate) entry.dates.add(voteDate);
+      }
+    }
+    for (const [name, { ratings, dates }] of dishMap.entries()) {
+      allDishRatings.push({
+        category: cat.label,
+        dishName: name,
+        avgRating: ratings.reduce((a, b) => a + b, 0) / ratings.length,
+        totalRatings: ratings.length,
+        datesServed: Array.from(dates).sort(),
+      });
+    }
+  }
+
   return {
     startDate,
     endDate,
@@ -603,6 +719,7 @@ export async function getBiWeeklyTrendsData(startDate: string, endDate: string):
     dayRankings: monThuRankings.sort((a, b) => b.avgOverall - a.avgOverall),
     categoryFavorites,
     categoryWorst,
+    allDishRatings: allDishRatings.sort((a, b) => b.avgRating - a.avgRating),
   };
 }
 

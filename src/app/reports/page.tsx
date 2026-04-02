@@ -213,7 +213,9 @@ export default function ReportsPage() {
         <h2 className="font-display text-xl text-gray-900 mb-4">📅 Day-by-Day Breakdown</h2>
         <div className="space-y-3">
           {report.dayByDay.map((day) => {
-            const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })).toISOString().split("T")[0];
+            const ptNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+            const today = ptNow.toISOString().split("T")[0];
+            const ptHour = ptNow.getHours();
             const isFuture = day.date > today;
             const isToday = day.date === today;
 
@@ -242,8 +244,10 @@ export default function ReportsPage() {
                 </div>
                 {isFuture ? (
                   <p className="text-xs text-gray-400 mt-2">⏳ Check back on {day.dayName}!</p>
-                ) : isToday && day.totalVotes === 0 ? (
+                ) : isToday && day.totalVotes === 0 && ptHour >= 12 ? (
                   <p className="text-xs text-gray-400 mt-2">🗳️ No votes yet — voting is open!</p>
+                ) : isToday && day.totalVotes === 0 && ptHour < 12 ? (
+                  <p className="text-xs text-gray-400 mt-2">🕐 Voting opens at 12pm PT</p>
                 ) : (
                   <div className="flex flex-col sm:flex-row sm:gap-4 gap-0.5 mt-2 text-xs text-gray-400">
                     <span>{day.totalVotes} votes</span>

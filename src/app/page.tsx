@@ -147,6 +147,13 @@ export default async function Home({ searchParams }: PageProps) {
               🍴 Catered by {restaurant}
             </p>
           )}
+          {!votingClosed && (
+            <p className="text-xs text-gray-400 mt-2">
+              {existingVote
+                ? "Thank you for voting! Your feedback is shared bi-weekly with our caterers to help shape upcoming lunch menus."
+                : "Cast your vote below! Your feedback is shared bi-weekly with our caterers to help shape upcoming lunch menus."}
+            </p>
+          )}
         </div>
       )}
 
@@ -201,7 +208,7 @@ export default async function Home({ searchParams }: PageProps) {
       {/* Live Results */}
       <section className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
         <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
-          <LiveResults date={selectedDate} isToday={isToday} />
+          <LiveResults date={selectedDate} isToday={isToday} hasVoted={!!existingVote} />
         </div>
       </section>
     </div>

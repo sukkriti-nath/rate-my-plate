@@ -59,6 +59,7 @@ export async function GET() {
         recPhaseOut: topWorst ? `${topWorst.dishName} — ${topWorst.avgRating.toFixed(1)}/5` : "",
         recReplicate: `${bestDay.dayName} ${bestDay.date} menu (${bestDay.avgOverall.toFixed(1)}/5)`,
         recImprove: `${worstDay.dayName} ${worstDay.date} menu (${worstDay.avgOverall.toFixed(1)}/5)`,
+        dishRatings: trendsData.allDishRatings,
       });
     }
 
