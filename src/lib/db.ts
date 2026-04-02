@@ -450,6 +450,84 @@ export interface StreakInfo {
   monthlyReviews: number;
 }
 
+// ─── Monthly vote counts for badge logic ───────────────────────────────────
+
+export interface UserBadgeData {
+  userName: string;
+  userEmail: string;
+  allTimeVotes: number;
+  currentMonthVotes: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastVoteDate: string;
+}
+
+export async function getUserBadgeData(): Promise<UserBadgeData[]> {
+  const db = await getDb();
+
+  // Current month boundaries (Pacific time approximation — use UTC month)
+  const now = new Date();
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const monthEnd = nextMonth.toISOString().split("T")[0];
+
+  // All-time vote counts per user
+  const allTimeResult = await db.query(
+    `SELECT user_email, user_name, COUNT(*) as total
+     FROM votes GROUP BY user_email, user_name`
+  );
+  const allTimeMap = new Map<string, { userName: string; total: number }>();
+  for (const row of allTimeResult.rows as { user_email: string; user_name: string; total: string }[]) {
+    allTimeMap.set(row.user_email, { userName: row.user_name, total: Number(row.total) });
+  }
+
+  // Current month vote counts per user
+  const monthlyResult = await db.query(
+    `SELECT user_email, COUNT(*) as total
+     FROM votes
+     WHERE menu_date >= $1 AND menu_date < $2
+     GROUP BY user_email`,
+    [monthStart, monthEnd]
+  );
+  const monthlyMap = new Map<string, number>();
+  for (const row of monthlyResult.rows as { user_email: string; total: string }[]) {
+    monthlyMap.set(row.user_email, Number(row.total));
+  }
+
+  // Get streaks (reuse existing logic)
+  const streaks = await getVotingStreaks();
+  const streakMap = new Map<string, StreakInfo>();
+  for (const s of streaks) {
+    streakMap.set(s.userEmail, s);
+  }
+
+  // Merge into badge data
+  const results: UserBadgeData[] = [];
+  for (const [email, { userName, total }] of allTimeMap) {
+    const streak = streakMap.get(email);
+    results.push({
+      userName,
+      userEmail: email,
+      allTimeVotes: total,
+      currentMonthVotes: monthlyMap.get(email) ?? 0,
+      currentStreak: streak?.currentStreak ?? 0,
+      longestStreak: streak?.longestStreak ?? 0,
+      lastVoteDate: streak?.lastVoteDate ?? "",
+    });
+  }
+
+  return results.sort((a, b) => b.currentMonthVotes - a.currentMonthVotes || b.allTimeVotes - a.allTimeVotes);
+}
+
+export function computeBadge(allTimeVotes: number, currentMonthVotes: number): "Super Reviewer" | "Regular" | "Light" | "New" {
+  // New = first 3 reviews all-time (regardless of month)
+  if (allTimeVotes <= 3) return "New";
+  // Monthly tiers
+  if (currentMonthVotes >= 20) return "Super Reviewer";
+  if (currentMonthVotes >= 10) return "Regular";
+  return "Light";
+}
+
 export async function getVotingStreaks(): Promise<StreakInfo[]> {
   const db = await getDb();
 

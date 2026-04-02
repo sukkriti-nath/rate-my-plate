@@ -8,7 +8,7 @@ import {
 } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { syncVoteToSheet, syncDailySummary, syncSuperReviewers } from "@/lib/google-sheets-writer";
-import { getVotingStreaks } from "@/lib/db";
+import { getUserBadgeData, computeBadge } from "@/lib/db";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -198,23 +198,17 @@ export async function POST(request: Request) {
   }).catch((err) => console.error("Daily Summary sync failed:", err));
 
   // Sync Super Reviewers leaderboard (fire-and-forget)
-  getVotingStreaks().then((streaks) => {
-    const reviewers = streaks.map((s, idx) => {
-      const engagement = s.currentStreak + s.longestStreak;
-      let badge: string;
-      if (engagement >= 20) badge = "Super Reviewer";
-      else if (engagement >= 10) badge = "Regular";
-      else badge = "New";
-      return {
-        rank: idx + 1,
-        userName: s.userName,
-        userEmail: s.userEmail,
-        currentStreak: s.currentStreak,
-        longestStreak: s.longestStreak,
-        lastVoteDate: s.lastVoteDate,
-        badge,
-      };
-    });
+  getUserBadgeData().then((badgeData) => {
+    const reviewers = badgeData.map((s, idx) => ({
+      rank: idx + 1,
+      userName: s.userName,
+      userEmail: s.userEmail,
+      currentStreak: s.currentStreak,
+      longestStreak: s.longestStreak,
+      lastVoteDate: s.lastVoteDate,
+      monthlyVotes: s.currentMonthVotes,
+      badge: computeBadge(s.allTimeVotes, s.currentMonthVotes),
+    }));
     return syncSuperReviewers(reviewers);
   }).catch((err) => console.error("Super Reviewers sync failed:", err));
 

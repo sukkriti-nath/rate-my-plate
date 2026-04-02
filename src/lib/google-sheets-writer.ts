@@ -478,6 +478,7 @@ export interface SuperReviewerRow {
   currentStreak: number;
   longestStreak: number;
   lastVoteDate: string;
+  monthlyVotes: number;
   badge: string;
 }
 
@@ -492,7 +493,7 @@ export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise
 
   const headers = [
     "Rank", "Name", "Email", "Current Streak", "Longest Streak",
-    "Last Vote Date", "Badge",
+    "Last Vote Date", "Monthly Votes", "Badge",
   ];
 
   const values = [
@@ -504,6 +505,7 @@ export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise
       r.currentStreak,
       r.longestStreak,
       r.lastVoteDate,
+      r.monthlyVotes,
       r.badge,
     ]),
   ];
@@ -511,7 +513,7 @@ export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise
   // Clear and rewrite the whole tab (leaderboard changes with every vote)
   await sheets.spreadsheets.values.clear({
     spreadsheetId: sheetId,
-    range: `'${range}'!A:G`,
+    range: `'${range}'!A:H`,
   });
 
   await sheets.spreadsheets.values.update({

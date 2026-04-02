@@ -1,27 +1,21 @@
 import { NextResponse } from "next/server";
-import { getVotingStreaks } from "@/lib/db";
+import { getUserBadgeData, computeBadge } from "@/lib/db";
 
 export async function GET() {
   try {
-    const streaks = await getVotingStreaks();
+    const badgeData = await getUserBadgeData();
 
-    const leaderboard = streaks.map((s, idx) => {
-      let badge: "Super Reviewer" | "Regular" | "New";
-      const totalDays = s.longestStreak; // approximate total from longest streak
-      // Use current streak + longest streak as proxy for engagement
-      const totalVotes = s.currentStreak + s.longestStreak;
-      if (totalVotes >= 20) badge = "Super Reviewer";
-      else if (totalVotes >= 10) badge = "Regular";
-      else badge = "New";
-
+    const leaderboard = badgeData.map((s, idx) => {
+      const badge = computeBadge(s.allTimeVotes, s.currentMonthVotes);
       return {
         rank: idx + 1,
         userName: s.userName,
         userEmail: s.userEmail,
         currentStreak: s.currentStreak,
         longestStreak: s.longestStreak,
-        monthlyReviews: s.monthlyReviews,
         lastVoteDate: s.lastVoteDate,
+        monthlyVotes: s.currentMonthVotes,
+        allTimeVotes: s.allTimeVotes,
         badge,
       };
     });

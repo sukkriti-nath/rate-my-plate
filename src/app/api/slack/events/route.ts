@@ -13,7 +13,7 @@ import {
 } from "@/lib/slack-bot";
 import { upsertVote, getMenuForDate, getUserVoteForDate, getVoteStatsForDate, warmDb } from "@/lib/db";
 import { syncVoteToSheet, syncDailySummary, syncSuperReviewers } from "@/lib/google-sheets-writer";
-import { getVotingStreaks } from "@/lib/db";
+import { getUserBadgeData, computeBadge } from "@/lib/db";
 
 // Eagerly start DB connection on module load (reduces cold start latency)
 warmDb();
@@ -107,23 +107,17 @@ async function syncVoteToSheetSafe(
   }).catch((err) => console.error("Daily Summary sync failed:", err));
 
   // Also sync Super Reviewers leaderboard
-  getVotingStreaks().then((streaks) => {
-    const reviewers = streaks.map((s, idx) => {
-      const engagement = s.currentStreak + s.longestStreak;
-      let badge: string;
-      if (engagement >= 20) badge = "Super Reviewer";
-      else if (engagement >= 10) badge = "Regular";
-      else badge = "New";
-      return {
-        rank: idx + 1,
-        userName: s.userName,
-        userEmail: s.userEmail,
-        currentStreak: s.currentStreak,
-        longestStreak: s.longestStreak,
-        lastVoteDate: s.lastVoteDate,
-        badge,
-      };
-    });
+  getUserBadgeData().then((badgeData) => {
+    const reviewers = badgeData.map((s, idx) => ({
+      rank: idx + 1,
+      userName: s.userName,
+      userEmail: s.userEmail,
+      currentStreak: s.currentStreak,
+      longestStreak: s.longestStreak,
+      lastVoteDate: s.lastVoteDate,
+      monthlyVotes: s.currentMonthVotes,
+      badge: computeBadge(s.allTimeVotes, s.currentMonthVotes),
+    }));
     return syncSuperReviewers(reviewers);
   }).catch((err) => console.error("Super Reviewers sync failed:", err));
 }

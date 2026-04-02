@@ -8,9 +8,10 @@ interface LeaderboardEntry {
   userEmail: string;
   currentStreak: number;
   longestStreak: number;
-  monthlyReviews: number;
   lastVoteDate: string;
-  badge: "Super Reviewer" | "Regular" | "New";
+  monthlyVotes: number;
+  allTimeVotes: number;
+  badge: "Super Reviewer" | "Regular" | "Light" | "New";
 }
 
 const BADGE_STYLES = {
@@ -18,18 +19,28 @@ const BADGE_STYLES = {
     bg: "bg-kikoff",
     text: "text-kikoff-dark",
     border: "border-black",
+    emoji: "🏆",
     label: "Super Reviewer",
   },
   Regular: {
     bg: "bg-kikoff-lavender",
     text: "text-gray-800",
     border: "border-black",
+    emoji: "⭐",
     label: "Regular",
+  },
+  Light: {
+    bg: "bg-amber-50",
+    text: "text-amber-800",
+    border: "border-amber-300",
+    emoji: "🌱",
+    label: "Light",
   },
   New: {
     bg: "bg-blue-50",
     text: "text-blue-800",
     border: "border-blue-200",
+    emoji: "✨",
     label: "New",
   },
 };
@@ -107,18 +118,18 @@ export default function LeaderboardPage() {
                     <div className="font-semibold text-gray-900">
                       {entry.userName}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 mt-1">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
+                        className={`text-xs font-bold px-3 py-1 rounded-full border-2 ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
                       >
-                        {badgeStyle.label}
+                        {badgeStyle.emoji} {badgeStyle.label}
                       </span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-kikoff-dark">
-                    {entry.monthlyReviews}
+                    {entry.monthlyVotes}
                   </div>
                   <div className="text-xs text-gray-500">this month</div>
                 </div>
@@ -144,7 +155,7 @@ export default function LeaderboardPage() {
         </div>
         <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
           <div className="text-2xl font-bold text-kikoff-dark">
-            {Math.max(...entries.map((e) => e.monthlyReviews), 0)}
+            {Math.max(...entries.map((e) => e.monthlyVotes), 0)}
           </div>
           <div className="text-xs text-gray-500 mt-1">Most Reviews</div>
         </div>
@@ -173,15 +184,15 @@ export default function LeaderboardPage() {
                         {entry.userName}
                       </div>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
+                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border-2 ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
                       >
-                        {badgeStyle.label}
+                        {badgeStyle.emoji} {badgeStyle.label}
                       </span>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-kikoff-dark">
-                      {entry.monthlyReviews}
+                      {entry.monthlyVotes}
                     </div>
                     <div className="text-[10px] text-gray-500">this month</div>
                   </div>
@@ -193,12 +204,30 @@ export default function LeaderboardPage() {
       )}
 
       {/* Badge Legend */}
-      <div className="text-center text-xs text-gray-400 space-y-1">
-        <p>
-          <strong>Super Reviewer</strong> = 20+ engagement score &nbsp;|&nbsp;
-          <strong>Regular</strong> = 10-19 &nbsp;|&nbsp;
-          <strong>New</strong> = under 10
-        </p>
+      <div className="bg-white rounded-xl p-5 mb-6 border-2 border-black shadow-[4px_4px_0px_0px_#000]">
+        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b-2 border-black">
+          Badge Tiers
+        </h2>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-kikoff text-kikoff-dark border-black">🏆 Super Reviewer</span>
+            <span className="text-gray-500">20+ / month</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-kikoff-lavender text-gray-800 border-black">⭐ Regular</span>
+            <span className="text-gray-500">10-19 / month</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-amber-50 text-amber-800 border-amber-300">🌱 Light</span>
+            <span className="text-gray-500">&lt;10 / month</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border-2 bg-blue-50 text-blue-800 border-blue-200">✨ New</span>
+            <span className="text-gray-500">First 3 reviews</span>
+          </div>
+        </div>
+      </div>
+      <div className="text-center text-xs text-gray-400">
         <p>Powered by RateMyPlate • Built with 💚 at Kikoff</p>
       </div>
     </div>
