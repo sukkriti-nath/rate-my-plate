@@ -15,12 +15,11 @@ export interface FoodProduct {
 }
 
 /**
- * Simplify product name to a generic version (e.g., "Cheetos Flamin Hot 8oz" -> "Cheetos")
- * For deduplication, we want brand-level grouping
+ * Simplify product name by removing size/weight info (e.g., "Cheetos Flamin Hot 8oz" -> "Cheetos Flamin Hot")
  */
-function simplifyName(name: string, brand: string): string {
+function simplifyName(name: string): string {
   // Remove size/weight info (8oz, 100g, 12 pack, etc.)
-  let simplified = name
+  const simplified = name
     .replace(/\b\d+(\.\d+)?\s*(oz|g|ml|l|lb|kg|ct|pack|count)\b/gi, "")
     .replace(/\b\d+\s*x\s*\d+/gi, "") // "12 x 1oz"
     .replace(/\s{2,}/g, " ")
@@ -148,7 +147,7 @@ export async function searchProducts(
     }
 
     const brand = item.brands?.split(",")[0]?.trim() || "";
-    const simplifiedName = simplifyName(name, brand);
+    const simplifiedName = simplifyName(name);
 
     products.push({
       id: item.code || item._id || "",

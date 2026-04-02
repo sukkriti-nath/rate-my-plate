@@ -1,98 +1,116 @@
 # Snack Overflow Integration
 
-Snack Overflow has been integrated into this repo as a second Slack bot for managing snack/drink preferences.
+Snack Overflow is integrated into this repo as a second app for managing snack/drink preferences. It uses **Google Sheets as the database** (no PostgreSQL required).
 
-## New Environment Variables
+## Environment Variables
 
-Add these to your `.env.local` (separate from the Rate My Plate variables):
+Add these to your `.env.local`:
 
 ```bash
 # Snack Overflow Slack Bot (separate Slack app)
 SNACK_SLACK_BOT_TOKEN=xoxb-...
 SNACK_SLACK_SIGNING_SECRET=...
 SNACK_SLACK_CHANNEL_ID=C...
+
+# Google Sheets (uses same service account as Rate My Plate)
+SNACK_SHEET_ID=...  # Spreadsheet ID for snack inventory/profiles
 ```
 
-## New Files Created
+## Architecture
+
+### Data Storage (Google Sheets)
+
+All data is stored in Google Sheets tabs:
+
+| Tab | Purpose |
+|-----|---------|
+| `Snack Profiles` | User profiles with category allocations and favorites |
+| `Snack Suggestions` | User-submitted snack suggestions |
+| `Suggestion Votes` | Tracks who voted on which suggestions |
+| `Snack Leaderboard` | Points and engagement tracking |
+| `Beverages` | Beverage inventory |
+| `Snacks` | Snack inventory |
+
+Tabs are auto-created if they don't exist.
 
 ### Library Files
-- `src/lib/snack-db.ts` - Database functions for snack profiles, leaderboard, out-of-stock
-- `src/lib/snack-inventory.ts` - Inventory data (beverages + snacks)
-- `src/lib/snack-bot.ts` - Slack bot utilities and message builders
+
+| File | Purpose |
+|------|---------|
+| `src/lib/snack-sheets-sync.ts` | Main data layer - profiles, suggestions, votes, leaderboard |
+| `src/lib/snack-sheet.ts` | Inventory reading and survey cache |
+| `src/lib/snack-inventory.ts` | Inventory constants and helpers |
+| `src/lib/snack-bot.ts` | Slack bot utilities and message builders |
+| `src/lib/openfoodfacts-api.ts` | Open Food Facts API for product search |
 
 ### API Routes
-- `src/app/api/snacks/events/route.ts` - Slack events webhook handler
-- `src/app/api/snacks/stats/route.ts` - Dashboard stats API
-- `src/app/api/health/route.ts` - Health check endpoint
+
+| Route | Purpose |
+|-------|---------|
+| `/api/snacks/events` | Slack events/commands webhook handler |
+| `/api/snacks/suggestions` | Get/create/vote on snack suggestions |
+| `/api/snacks/web-profile` | Get/save user profiles (web UI) |
+| `/api/snacks/inventory` | Get inventory items by category |
+| `/api/snacks/stats` | Dashboard statistics |
+| `/api/snacks/search` | Search Open Food Facts for products |
+| `/api/snacks/images` | Fetch product images from Open Food Facts |
+| `/api/snacks/test` | Testing endpoint for surveys |
 
 ### Pages
-- `src/app/snacks/page.tsx` - Snack Overflow dashboard
 
-### Modified Files (minimal)
-- `src/components/Navbar.tsx` - Added "Snacks" link (1 line change)
-
-## Slack App Setup
-
-Create a new Slack app at https://api.slack.com/apps with these settings:
-
-### OAuth & Permissions
-Bot Token Scopes:
-- `chat:write`
-- `commands`
-- `users:read`
-
-### Slash Commands
-| Command | Request URL | Description |
-|---------|-------------|-------------|
-| `/snack-profile` | `https://your-domain/api/snacks/events` | Create or edit your snack profile |
-| `/snack-empty` | `https://your-domain/api/snacks/events` | Report out-of-stock item |
-| `/snack-list` | `https://your-domain/api/snacks/events` | Browse inventory categories |
-
-### Interactivity & Shortcuts
-- Request URL: `https://your-domain/api/snacks/events`
-
-### Event Subscriptions
-- Request URL: `https://your-domain/api/snacks/events`
-
-## Database Tables
-
-The following tables are auto-created on first request:
-
-- `snack_profiles` - User profiles with token allocations
-- `snack_leaderboard` - Points and engagement tracking
-- `snack_out_of_stock` - Out of stock reports
-- `snack_surveys` - Weekly survey data (future feature)
+| Page | Purpose |
+|------|---------|
+| `/snacks` | Dashboard with suggestions leaderboard |
+| `/snacks/profile` | Profile editor (allocate points, pick favorites) |
 
 ## Features
 
-### `/snack-profile` Command
-Multi-step profile creation via DM:
-1. **Step 1**: Allocate 100 tokens across 10 drink categories
-2. **Step 2**: Allocate 100 tokens across 10 snack categories
-3. **Step 3**: Pick favorite items from inventory
+### Web UI
 
-Points awarded:
-- New profile: 10 pts
-- Profile update: 5 pts
+**Snack Profile** (`/snacks/profile`):
+- Allocate 100 points across beverage and snack categories
+- Pick favorite items from inventory
+- Redirects to dashboard after saving
 
-### `/snack-empty` Command
-Report out-of-stock items via modal. Posts alert to channel and awards 1 point.
+**Suggestions Leaderboard** (`/snacks`):
+- Submit new snack suggestions with autocomplete (Open Food Facts)
+- Upvote/downvote suggestions (one vote per user per item)
+- Auto-upvote when you submit a suggestion
+- Ranked leaderboard with medals
 
-### Dashboard (`/snacks`)
-Live dashboard showing:
-- Profile count and total points
-- Category demand (token allocation visualization)
-- Snack Champions leaderboard
-- Most Wanted Items
-- Out of Stock reports table
+### Slack Commands
+
+| Command | Description |
+|---------|-------------|
+| `/snack-profile` | Create or edit snack profile via DM |
+| `/snack-empty` | Report out-of-stock item |
+| `/snack-list` | Browse inventory categories |
+
+### Points System
+
+| Action | Points |
+|--------|--------|
+| New profile | 10 pts |
+| Profile update | 5 pts |
+| Report out-of-stock | 1 pt |
+
+## Slack App Setup
+
+Create a new Slack app at https://api.slack.com/apps:
+
+### OAuth & Permissions
+Bot Token Scopes: `chat:write`, `commands`, `users:read`
+
+### Slash Commands
+Request URL: `https://your-domain/api/snacks/events`
+
+### Interactivity & Shortcuts
+Request URL: `https://your-domain/api/snacks/events`
 
 ## Categories
 
-### Drinks (10 categories, 100 tokens)
-☕ Coffee & Lattes, 🍵 Tea, 🧉 Yerba Mate, 🧃 Juice, ⚡ Energy Drinks,
-🥤 Sparkling & Soda, 💧 Water, 🥛 Milk Tea, 💪 Protein Drinks, 🌿 Wellness Shots
+### Beverages (10 categories)
+Coffee & Lattes, Tea, Yerba Mate, Juice, Energy Drinks, Sparkling & Soda, Water, Milk Tea, Protein Drinks, Wellness Shots
 
-### Snacks (10 categories, 100 tokens)
-🍪 Baked Goods, 🍫 Chocolate & Candy, 🥜 Chips, 🍿 Popcorn & Crackers,
-💪 Protein Bars, 🥗 Granola & Oatmeal, 🍎 Fruit Snacks, 🥩 Jerky,
-🌊 Seaweed, 🥾 Trail Mix & Nuts
+### Snacks (10 categories)
+Baked Goods, Chocolate & Candy, Chips, Popcorn & Crackers, Protein Bars, Granola & Oatmeal, Fruit Snacks, Jerky, Seaweed, Trail Mix & Nuts
