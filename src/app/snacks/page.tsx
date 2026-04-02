@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 
 interface SearchProduct {
   id: string;
@@ -12,7 +12,6 @@ interface SearchProduct {
 }
 
 interface UserSession {
-  id: string;
   displayName: string;
   email: string;
   avatarUrl?: string;
@@ -23,6 +22,41 @@ interface UserProfile {
   snacksAllocation: Record<string, number>;
   favoriteDrinks: string[];
   favoriteSnacks: string[];
+}
+
+type InventoryRow = {
+  category: string;
+  brand: string;
+  flavor: string;
+  packSize: string;
+  displayName: string;
+  latestStock: string | null;
+  tab: "beverages" | "snacks";
+};
+
+/** Strip serving size after middle dot (matches profile page) */
+function stripServingSize(name: string): string {
+  const dotIndex = name.indexOf("·");
+  if (dotIndex === -1) return name;
+  return name.slice(0, dotIndex).trim();
+}
+
+function displayNameToCategoryMap(
+  items: InventoryRow[],
+  tab: "beverages" | "snacks"
+): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const r of items) {
+    if (r.tab !== tab) continue;
+    const cat = (r.category || "").trim() || "Other";
+    m.set(r.displayName, cat);
+  }
+  return m;
+}
+
+/** Matches `getWebSnackProfileUserId` in snack-sheets-sync (web profile id). */
+function webSnackProfileUserId(email: string): string {
+  return `web:${email.trim().toLowerCase()}`;
 }
 
 interface Suggestion {
@@ -39,10 +73,12 @@ interface Suggestion {
 export default function SnacksPage() {
   const [user, setUser] = useState<UserSession | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [inventory, setInventory] = useState<InventoryRow[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [suggestionText, setSuggestionText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -56,12 +92,26 @@ export default function SnacksPage() {
       const userData = await userRes.json();
       setUser(userData.user || null);
 
-      // Fetch profile if logged in
-      if (userData.user) {
-        const profileRes = await fetch("/api/snacks/web-profile", { credentials: "same-origin" });
+      if (!userData.user) {
+        setProfile(null);
+        setInventory([]);
+      } else {
+        const [profileRes, invRes] = await Promise.all([
+          fetch("/api/snacks/web-profile", { credentials: "same-origin" }),
+          fetch("/api/snacks/inventory", {
+            cache: "no-store",
+            credentials: "same-origin",
+          }),
+        ]);
         if (profileRes.ok) {
           const profileData = await profileRes.json();
           setProfile(profileData.profile || null);
+        }
+        if (invRes.ok) {
+          const invData = (await invRes.json()) as { items?: InventoryRow[] };
+          setInventory(invData.items ?? []);
+        } else {
+          setInventory([]);
         }
       }
 
@@ -171,6 +221,72 @@ export default function SnacksPage() {
     }
   };
 
+  const handleDeleteSuggestion = async (suggestionId: string) => {
+    if (!user) return;
+    if (!window.confirm("Remove this suggestion from the leaderboard?")) return;
+
+    setDeletingId(suggestionId);
+    try {
+      const res = await fetch("/api/snacks/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action: "delete", suggestionId }),
+      });
+      if (res.ok) {
+        await fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to delete suggestion:", err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const bevDisplayToCategory = useMemo(
+    () => displayNameToCategoryMap(inventory, "beverages"),
+    [inventory]
+  );
+  const snkDisplayToCategory = useMemo(
+    () => displayNameToCategoryMap(inventory, "snacks"),
+    [inventory]
+  );
+
+  const drinkPointsRows = useMemo(
+    () =>
+      profile
+        ? Object.entries(profile.drinksAllocation).filter(([, pts]) => pts > 0)
+        : [],
+    [profile]
+  );
+  const snackPointsRows = useMemo(
+    () =>
+      profile
+        ? Object.entries(profile.snacksAllocation).filter(([, pts]) => pts > 0)
+        : [],
+    [profile]
+  );
+
+  const bevFavoritesOrphans = useMemo(() => {
+    if (!profile) return [];
+    const catsWithPoints = new Set(drinkPointsRows.map(([c]) => c));
+    return profile.favoriteDrinks.filter((f) => {
+      const c = bevDisplayToCategory.get(f);
+      if (!c) return true;
+      return !catsWithPoints.has(c);
+    });
+  }, [profile, bevDisplayToCategory, drinkPointsRows]);
+
+  const snkFavoritesOrphans = useMemo(() => {
+    if (!profile) return [];
+    const catsWithPoints = new Set(snackPointsRows.map(([c]) => c));
+    return profile.favoriteSnacks.filter((f) => {
+      const c = snkDisplayToCategory.get(f);
+      if (!c) return true;
+      return !catsWithPoints.has(c);
+    });
+  }, [profile, snkDisplayToCategory, snackPointsRows]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -186,13 +302,6 @@ export default function SnacksPage() {
     ? Object.values(profile.drinksAllocation).reduce((a, b) => a + b, 0) +
       Object.values(profile.snacksAllocation).reduce((a, b) => a + b, 0)
     : 0;
-
-  const topCategories = profile
-    ? [...Object.entries(profile.drinksAllocation), ...Object.entries(profile.snacksAllocation)]
-        .filter(([, v]) => v > 0)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-    : [];
 
   const sortedSuggestions = [...suggestions].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
 
@@ -220,7 +329,7 @@ export default function SnacksPage() {
                       Sign in
                     </Link>
                   </div>
-                ) : !profile || totalAllocated === 0 ? (
+                ) : !profile ? (
                   <div className="text-center py-4">
                     <div className="text-4xl mb-3">🎯</div>
                     <p className="text-gray-600 text-sm mb-4">
@@ -234,8 +343,8 @@ export default function SnacksPage() {
                     </Link>
                   </div>
                 ) : (
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full border-2 border-black" />
                       ) : (
@@ -243,150 +352,445 @@ export default function SnacksPage() {
                           {user.displayName.charAt(0)}
                         </div>
                       )}
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-semibold text-gray-900">{user.displayName}</div>
-                        <div className="text-xs text-gray-500">{totalAllocated} points allocated</div>
-                      </div>
-                    </div>
-                    {topCategories.length > 0 && (
-                      <div className="mb-4">
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Top Categories</div>
-                        <div className="space-y-1.5">
-                          {topCategories.map(([cat, pts]) => (
-                            <div key={cat} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-700">{cat}</span>
-                              <span className="font-semibold text-amber-700">{pts} pts</span>
-                            </div>
-                          ))}
+                        <div className="text-xs text-gray-500">
+                          {totalAllocated} / 100 points ·{" "}
+                          <span className="text-cyan-800">
+                            🥤 {Object.values(profile.drinksAllocation).reduce((a, b) => a + b, 0)} bev
+                          </span>
+                          {" · "}
+                          <span className="text-amber-800">
+                            🍿 {Object.values(profile.snacksAllocation).reduce((a, b) => a + b, 0)} snack
+                          </span>
                         </div>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="max-h-[min(70vh,520px)] overflow-y-auto pr-1 space-y-4 text-sm border-t border-black/10 pt-4">
+                      {inventory.length === 0 &&
+                      (profile.favoriteDrinks.length > 0 || profile.favoriteSnacks.length > 0) ? (
+                        <p className="text-xs text-amber-900/90 mb-2">
+                          Inventory isn’t available to group picks — favorites are listed flat below.
+                        </p>
+                      ) : null}
+
+                      <div>
+                        <div className="text-xs font-bold text-cyan-900 uppercase tracking-wider mb-2">
+                          🥤 Beverages — by category
+                        </div>
+                        {drinkPointsRows.length === 0 ? (
+                          <p className="text-gray-500 text-xs">No beverage points allocated.</p>
+                        ) : inventory.length === 0 ? (
+                          <ul className="space-y-1.5">
+                            {[...drinkPointsRows]
+                              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                              .map(([cat, pts]) => (
+                                <li
+                                  key={`d-${cat}`}
+                                  className="flex justify-between gap-2 text-gray-800"
+                                >
+                                  <span className="min-w-0 break-words">{cat}</span>
+                                  <span className="shrink-0 font-semibold text-cyan-800 tabular-nums">
+                                    {pts} pts
+                                  </span>
+                                </li>
+                              ))}
+                          </ul>
+                        ) : (
+                          <div className="space-y-2">
+                            {[...drinkPointsRows]
+                              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                              .map(([cat, pts]) => {
+                                const favs = profile.favoriteDrinks
+                                  .filter((f) => bevDisplayToCategory.get(f) === cat)
+                                  .slice()
+                                  .sort((a, b) =>
+                                    stripServingSize(a).localeCompare(stripServingSize(b))
+                                  );
+                                return (
+                                  <details
+                                    key={`d-${cat}`}
+                                    className="group/bevcat rounded-lg border border-black/20 bg-white overflow-hidden"
+                                  >
+                                    <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2 px-2 py-2 text-sm bg-cyan-50/80 hover:bg-cyan-50 border-b border-black/10 [&::-webkit-details-marker]:hidden">
+                                      <span className="font-medium text-gray-900 min-w-0 break-words pr-1">
+                                        {cat}
+                                      </span>
+                                      <span className="flex items-center gap-2 shrink-0">
+                                        <span className="font-semibold text-cyan-800 tabular-nums">
+                                          {pts} pts
+                                        </span>
+                                        <span
+                                          className="text-gray-500 text-xs transition-transform group-open/bevcat:rotate-180"
+                                          aria-hidden
+                                        >
+                                          ▼
+                                        </span>
+                                      </span>
+                                    </summary>
+                                    <div className="px-2 py-2 bg-white">
+                                      {favs.length === 0 ? (
+                                        <p className="text-xs text-gray-500 italic pl-1">
+                                          No favorites picked in this category.
+                                        </p>
+                                      ) : (
+                                        <ul className="space-y-1.5">
+                                          {favs.map((name) => (
+                                            <li
+                                              key={`d-${cat}-${name}`}
+                                              className="text-xs text-gray-800 break-words pl-2 border-l-2 border-cyan-400/70"
+                                            >
+                                              {stripServingSize(name)}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  </details>
+                                );
+                              })}
+                            {bevFavoritesOrphans.length > 0 ? (
+                              <details className="group/bevorph rounded-lg border border-dashed border-black/25 bg-amber-50/40 overflow-hidden">
+                                <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2 px-2 py-2 text-sm [&::-webkit-details-marker]:hidden">
+                                  <span className="font-medium text-gray-700">
+                                    Other beverages ({bevFavoritesOrphans.length})
+                                  </span>
+                                  <span
+                                    className="text-gray-500 text-xs transition-transform group-open/bevorph:rotate-180"
+                                    aria-hidden
+                                  >
+                                    ▼
+                                  </span>
+                                </summary>
+                                <div className="px-2 pb-2 border-t border-black/10">
+                                  <p className="text-[10px] text-gray-500 pt-1 pb-2">
+                                    Not tied to a category with points, or no longer in inventory.
+                                  </p>
+                                  <ul className="space-y-1">
+                                    {bevFavoritesOrphans
+                                      .slice()
+                                      .sort((a, b) =>
+                                        stripServingSize(a).localeCompare(stripServingSize(b))
+                                      )
+                                      .map((name) => (
+                                        <li
+                                          key={`bev-orph-${name}`}
+                                          className="text-xs text-gray-800 break-words pl-2 border-l-2 border-amber-400/70"
+                                        >
+                                          {stripServingSize(name)}
+                                        </li>
+                                      ))}
+                                  </ul>
+                                </div>
+                              </details>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-2">
+                          🍿 Snacks — by category
+                        </div>
+                        {snackPointsRows.length === 0 ? (
+                          <p className="text-gray-500 text-xs">No snack points allocated.</p>
+                        ) : inventory.length === 0 ? (
+                          <ul className="space-y-1.5">
+                            {[...snackPointsRows]
+                              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                              .map(([cat, pts]) => (
+                                <li
+                                  key={`s-${cat}`}
+                                  className="flex justify-between gap-2 text-gray-800"
+                                >
+                                  <span className="min-w-0 break-words">{cat}</span>
+                                  <span className="shrink-0 font-semibold text-amber-800 tabular-nums">
+                                    {pts} pts
+                                  </span>
+                                </li>
+                              ))}
+                          </ul>
+                        ) : (
+                          <div className="space-y-2">
+                            {[...snackPointsRows]
+                              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                              .map(([cat, pts]) => {
+                                const favs = profile.favoriteSnacks
+                                  .filter((f) => snkDisplayToCategory.get(f) === cat)
+                                  .slice()
+                                  .sort((a, b) =>
+                                    stripServingSize(a).localeCompare(stripServingSize(b))
+                                  );
+                                return (
+                                  <details
+                                    key={`s-${cat}`}
+                                    className="group/snkcat rounded-lg border border-black/20 bg-white overflow-hidden"
+                                  >
+                                    <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2 px-2 py-2 text-sm bg-amber-50/80 hover:bg-amber-50 border-b border-black/10 [&::-webkit-details-marker]:hidden">
+                                      <span className="font-medium text-gray-900 min-w-0 break-words pr-1">
+                                        {cat}
+                                      </span>
+                                      <span className="flex items-center gap-2 shrink-0">
+                                        <span className="font-semibold text-amber-800 tabular-nums">
+                                          {pts} pts
+                                        </span>
+                                        <span
+                                          className="text-gray-500 text-xs transition-transform group-open/snkcat:rotate-180"
+                                          aria-hidden
+                                        >
+                                          ▼
+                                        </span>
+                                      </span>
+                                    </summary>
+                                    <div className="px-2 py-2 bg-white">
+                                      {favs.length === 0 ? (
+                                        <p className="text-xs text-gray-500 italic pl-1">
+                                          No favorites picked in this category.
+                                        </p>
+                                      ) : (
+                                        <ul className="space-y-1.5">
+                                          {favs.map((name) => (
+                                            <li
+                                              key={`s-${cat}-${name}`}
+                                              className="text-xs text-gray-800 break-words pl-2 border-l-2 border-amber-400/70"
+                                            >
+                                              {stripServingSize(name)}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  </details>
+                                );
+                              })}
+                            {snkFavoritesOrphans.length > 0 ? (
+                              <details className="group/snkorph rounded-lg border border-dashed border-black/25 bg-amber-50/40 overflow-hidden">
+                                <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2 px-2 py-2 text-sm [&::-webkit-details-marker]:hidden">
+                                  <span className="font-medium text-gray-700">
+                                    Other snacks ({snkFavoritesOrphans.length})
+                                  </span>
+                                  <span
+                                    className="text-gray-500 text-xs transition-transform group-open/snkorph:rotate-180"
+                                    aria-hidden
+                                  >
+                                    ▼
+                                  </span>
+                                </summary>
+                                <div className="px-2 pb-2 border-t border-black/10">
+                                  <p className="text-[10px] text-gray-500 pt-1 pb-2">
+                                    Not tied to a category with points, or no longer in inventory.
+                                  </p>
+                                  <ul className="space-y-1">
+                                    {snkFavoritesOrphans
+                                      .slice()
+                                      .sort((a, b) =>
+                                        stripServingSize(a).localeCompare(stripServingSize(b))
+                                      )
+                                      .map((name) => (
+                                        <li
+                                          key={`snk-orph-${name}`}
+                                          className="text-xs text-gray-800 break-words pl-2 border-l-2 border-amber-400/70"
+                                        >
+                                          {stripServingSize(name)}
+                                        </li>
+                                      ))}
+                                  </ul>
+                                </div>
+                              </details>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+
+                      {inventory.length === 0 &&
+                      (profile.favoriteDrinks.length > 0 || profile.favoriteSnacks.length > 0) ? (
+                        <>
+                          <div>
+                            <div className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                              Favorite beverages (flat)
+                            </div>
+                            {profile.favoriteDrinks.length === 0 ? (
+                              <p className="text-gray-500 text-xs">None selected.</p>
+                            ) : (
+                              <ul className="list-disc list-inside space-y-1 text-gray-800 text-xs">
+                                {profile.favoriteDrinks.map((name) => (
+                                  <li key={`fd-fb-${name}`} className="break-words">
+                                    {stripServingSize(name)}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                              Favorite snacks (flat)
+                            </div>
+                            {profile.favoriteSnacks.length === 0 ? (
+                              <p className="text-gray-500 text-xs">None selected.</p>
+                            ) : (
+                              <ul className="list-disc list-inside space-y-1 text-gray-800 text-xs">
+                                {profile.favoriteSnacks.map((name) => (
+                                  <li key={`fs-fb-${name}`} className="break-words">
+                                    {stripServingSize(name)}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+
                     <Link
                       href="/snacks/profile"
-                      className="block text-center text-sm font-semibold text-amber-700 hover:text-amber-900"
+                      className="block text-center text-sm font-semibold text-amber-700 hover:text-amber-900 pt-2 border-t border-black/10"
                     >
-                      Edit Profile →
+                      Edit profile →
                     </Link>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Suggestion Form */}
+          </div>
+
+          {/* Suggestions: add at top, leaderboard below */}
+          <div className="lg:col-span-2">
             <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] overflow-visible">
-              <div className="p-5 border-b-2 border-black bg-cyan-50 rounded-t-xl">
-                <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                  <span>💡</span> Suggest a Snack
+              <div className="p-5 border-b-2 border-black bg-gradient-to-r from-cyan-50 via-amber-50 to-orange-50">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2 flex-wrap">
+                  <span>🏆</span> Snack suggestions
                 </h2>
+                <p className="text-xs text-gray-600 mt-1">
+                  Add an idea below — it joins the leaderboard. Vote on what you want in the kitchen.
+                </p>
               </div>
-              <div className="p-5 relative">
+
+              <div className="p-5 bg-white relative">
+                <p className="text-xs font-bold text-cyan-900 uppercase tracking-wider mb-3">
+                  Suggest a snack
+                </p>
                 {!user ? (
                   <p className="text-gray-500 text-sm text-center py-2">Sign in to suggest snacks</p>
                 ) : (
                   <form onSubmit={handleSubmitSuggestion}>
-                    <div className="relative" ref={dropdownRef}>
-                      <input
-                        type="text"
-                        value={suggestionText}
-                        onChange={(e) => handleSuggestionInputChange(e.target.value)}
-                        onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
-                        placeholder="Search snacks & drinks..."
-                        className="w-full px-4 py-2.5 rounded-lg border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                      />
-                      {searching && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                        </div>
-                      )}
-                      {showDropdown && searchResults.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_#000] max-h-60 overflow-y-auto">
-                          {searchResults.map((product) => (
-                            <button
-                              key={product.id}
-                              type="button"
-                              onClick={() => handleSelectProduct(product)}
-                              className="w-full px-3 py-2 text-left hover:bg-amber-50 flex items-center gap-3 border-b border-black/10 last:border-b-0"
-                            >
-                              {product.imageUrl ? (
-                                <img
-                                  src={product.imageUrl}
-                                  alt=""
-                                  className="w-10 h-10 object-contain rounded border border-black/10"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 bg-gray-100 rounded border border-black/10 flex items-center justify-center text-lg">
-                                  🍿
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-gray-900 truncate">
-                                  {product.name}
-                                </div>
-                                {product.category && (
-                                  <div className="text-xs text-gray-500 truncate">
-                                    {product.category.replace(/-/g, " ")}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+                      <div className="relative min-w-0 flex-1" ref={dropdownRef}>
+                        <input
+                          type="text"
+                          value={suggestionText}
+                          onChange={(e) => handleSuggestionInputChange(e.target.value)}
+                          onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                          placeholder="Search snacks & drinks..."
+                          className="w-full px-4 py-2.5 rounded-lg border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                        {searching && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                        {showDropdown && searchResults.length > 0 && (
+                          <div className="absolute z-50 left-0 right-0 mt-1 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_#000] max-h-60 overflow-y-auto">
+                            {searchResults.map((product) => (
+                              <button
+                                key={product.id}
+                                type="button"
+                                onClick={() => handleSelectProduct(product)}
+                                className="w-full px-3 py-2 text-left hover:bg-amber-50 flex items-center gap-3 border-b border-black/10 last:border-b-0"
+                              >
+                                {product.imageUrl ? (
+                                  <img
+                                    src={product.imageUrl}
+                                    alt=""
+                                    className="w-10 h-10 object-contain rounded border border-black/10"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 bg-gray-100 rounded border border-black/10 flex items-center justify-center text-lg">
+                                    🍿
                                   </div>
                                 )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-gray-900 truncate">
+                                    {product.name}
+                                  </div>
+                                  {product.category && (
+                                    <div className="text-xs text-gray-500 truncate">
+                                      {product.category.replace(/-/g, " ")}
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={!suggestionText.trim() || submitting}
+                        className="w-full shrink-0 whitespace-nowrap bg-cyan-400 text-black font-bold py-2.5 px-4 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:min-h-[42px]"
+                      >
+                        {submitting ? "Submitting..." : "Add to leaderboard"}
+                      </button>
                     </div>
                     <p className="text-xs text-gray-400 mt-1.5">
                       Type to search or enter any snack name
                     </p>
-                    <button
-                      type="submit"
-                      disabled={!suggestionText.trim() || submitting}
-                      className="mt-3 w-full bg-cyan-400 text-black font-bold py-2.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {submitting ? "Submitting..." : "Submit Suggestion"}
-                    </button>
                   </form>
                 )}
               </div>
-            </div>
-          </div>
 
-          {/* Right Column - Suggestions Leaderboard */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] overflow-hidden">
-              <div className="p-5 border-b-2 border-black bg-gradient-to-r from-amber-50 to-orange-50">
-                <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                  <span>🏆</span> Snack Suggestions Leaderboard
-                </h2>
-                <p className="text-xs text-gray-500 mt-1">Vote for snacks you want to see in the kitchen!</p>
-              </div>
-              <div className="p-5">
+              <div className="p-5 bg-gray-50/80">
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4">
+                  Leaderboard
+                </h3>
                 {sortedSuggestions.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="text-4xl mb-3">🍿</div>
-                    <p className="text-gray-500">No suggestions yet. Be the first!</p>
+                    <p className="text-gray-500">No suggestions yet. Add one above!</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {sortedSuggestions.map((suggestion, i) => {
                       const netVotes = suggestion.upvotes - suggestion.downvotes;
+                      const isMine =
+                        !!user &&
+                        suggestion.submittedBy === webSnackProfileUserId(user.email);
                       return (
                         <div
                           key={suggestion.id}
-                          className="flex items-center gap-4 p-4 rounded-xl border-2 border-black/10 bg-gray-50 hover:bg-amber-50/50 transition-colors"
+                          className="flex items-center gap-3 sm:gap-4 p-4 rounded-xl border-2 border-black/10 bg-white hover:bg-amber-50/50 transition-colors"
                         >
-                          {/* Rank */}
                           <div className="text-xl w-8 text-center shrink-0">
                             {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
                           </div>
 
-                          {/* Snack Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-gray-900 truncate">{suggestion.snackName || "(unnamed)"}</div>
-                            <div className="text-xs text-gray-500">
-                              by {suggestion.submittedByName}
+                            <div className="font-semibold text-gray-900 truncate">
+                              {suggestion.snackName || "(unnamed)"}
                             </div>
+                            <div className="text-xs text-gray-500">by {suggestion.submittedByName}</div>
                           </div>
 
-                          {/* Vote Buttons */}
+                          {isMine ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteSuggestion(suggestion.id)}
+                              disabled={deletingId === suggestion.id}
+                              className="shrink-0 flex h-7 w-7 items-center justify-center rounded-md border border-black/15 text-base leading-none text-gray-500 hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
+                              title="Remove your suggestion"
+                              aria-label="Remove your suggestion"
+                            >
+                              {deletingId === suggestion.id ? (
+                                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                              ) : (
+                                <span aria-hidden className="font-light">
+                                  ×
+                                </span>
+                              )}
+                            </button>
+                          ) : null}
+
                           <div className="flex items-center gap-2 shrink-0">
                             <button
                               onClick={() => handleVote(suggestion.id, "up")}
@@ -400,7 +804,11 @@ export default function SnacksPage() {
                             >
                               <span className="text-lg">👍</span>
                             </button>
-                            <div className={`font-bold text-lg w-10 text-center ${netVotes > 0 ? "text-green-600" : netVotes < 0 ? "text-red-500" : "text-gray-500"}`}>
+                            <div
+                              className={`font-bold text-lg w-10 text-center ${
+                                netVotes > 0 ? "text-green-600" : netVotes < 0 ? "text-red-500" : "text-gray-500"
+                              }`}
+                            >
                               {netVotes > 0 ? `+${netVotes}` : netVotes}
                             </div>
                             <button

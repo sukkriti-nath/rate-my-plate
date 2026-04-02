@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import {
   addSuggestion,
   awardPoints,
+  deleteSuggestion,
   getSuggestions,
   getWebSnackProfileUserId,
   voteSuggestion,
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) as {
-      action: "add" | "vote";
+      action: "add" | "vote" | "delete";
       snackName?: string;
       suggestionId?: string;
       vote?: "up" | "down";
@@ -72,6 +73,31 @@ export async function POST(req: Request) {
       }
       await voteSuggestion(body.suggestionId, userId, body.vote);
       return NextResponse.json({ ok: true });
+    }
+
+    if (body.action === "delete") {
+      if (!body.suggestionId) {
+        return NextResponse.json(
+          { error: "suggestionId is required" },
+          { status: 400 }
+        );
+      }
+      try {
+        await deleteSuggestion(body.suggestionId, userId);
+        return NextResponse.json({ ok: true });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg === "Forbidden") {
+          return NextResponse.json(
+            { error: "You can only delete suggestions you created" },
+            { status: 403 }
+          );
+        }
+        if (msg === "Not found") {
+          return NextResponse.json({ error: "Suggestion not found" }, { status: 404 });
+        }
+        throw err;
+      }
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

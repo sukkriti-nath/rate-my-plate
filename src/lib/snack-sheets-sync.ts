@@ -323,6 +323,117 @@ export async function voteSuggestion(
   }
 }
 
+/**
+ * Delete a suggestion and all votes for it. Only the user who submitted it may delete.
+ */
+export async function deleteSuggestion(
+  suggestionId: string,
+  userId: string
+): Promise<void> {
+  if (!isGoogleServiceAccountConfigured()) {
+    throw new Error("Sheets not configured");
+  }
+
+  const sheets = getSheetsClient();
+  const spreadsheetId = SNACK_SHEETS_SPREADSHEET_ID;
+
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const suggestionsSheetId = meta.data.sheets?.find(
+    (s) => s.properties?.title === TABS.SUGGESTIONS
+  )?.properties?.sheetId;
+  const votesSheetId = meta.data.sheets?.find(
+    (s) => s.properties?.title === TABS.SUGGESTION_VOTES
+  )?.properties?.sheetId;
+
+  if (
+    typeof suggestionsSheetId !== "number" ||
+    typeof votesSheetId !== "number"
+  ) {
+    throw new Error("Not found");
+  }
+
+  const suggestionsTab = escapeSheetTitle(TABS.SUGGESTIONS);
+  const suggestionsRes = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${suggestionsTab}!A:G`,
+  });
+  const rows = suggestionsRes.data.values || [];
+
+  const hasHeader = rows.length > 0 && rows[0][0] === "id";
+  const dataStart = hasHeader ? 1 : 0;
+
+  let suggestionRowIndex = -1;
+  let submitterId = "";
+  for (let i = dataStart; i < rows.length; i++) {
+    if (rows[i][0] === suggestionId) {
+      suggestionRowIndex = i;
+      submitterId = String(rows[i][2] ?? "");
+      break;
+    }
+  }
+
+  if (suggestionRowIndex === -1) {
+    throw new Error("Not found");
+  }
+  if (submitterId !== userId) {
+    throw new Error("Forbidden");
+  }
+
+  const votesTab = escapeSheetTitle(TABS.SUGGESTION_VOTES);
+  const votesRes = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${votesTab}!A:C`,
+  });
+  const voteRows = votesRes.data.values || [];
+  const voteRowIndices: number[] = [];
+  for (let i = 0; i < voteRows.length; i++) {
+    if (voteRows[i][0] === suggestionId) {
+      voteRowIndices.push(i);
+    }
+  }
+  voteRowIndices.sort((a, b) => b - a);
+
+  const requests: Array<{
+    deleteDimension: {
+      range: {
+        sheetId: number;
+        dimension: "ROWS";
+        startIndex: number;
+        endIndex: number;
+      };
+    };
+  }> = [];
+
+  for (const idx of voteRowIndices) {
+    requests.push({
+      deleteDimension: {
+        range: {
+          sheetId: votesSheetId,
+          dimension: "ROWS",
+          startIndex: idx,
+          endIndex: idx + 1,
+        },
+      },
+    });
+  }
+
+  requests.push({
+    deleteDimension: {
+      range: {
+        sheetId: suggestionsSheetId,
+        dimension: "ROWS",
+        startIndex: suggestionRowIndex,
+        endIndex: suggestionRowIndex + 1,
+      },
+    },
+  });
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: { requests },
+  });
+}
+
 // ============== Profiles ==============
 
 export interface SnackProfile {
