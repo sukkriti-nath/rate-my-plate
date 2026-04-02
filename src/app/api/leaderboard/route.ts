@@ -20,7 +20,12 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ leaderboard });
+    // All-time top 3 (sorted by allTimeVotes desc)
+    const allTimeTop3 = [...leaderboard]
+      .sort((a, b) => b.allTimeVotes - a.allTimeVotes)
+      .slice(0, 3);
+
+    return NextResponse.json({ leaderboard, allTimeTop3 });
   } catch (error) {
     console.error("GET /api/leaderboard error:", error);
     return NextResponse.json(

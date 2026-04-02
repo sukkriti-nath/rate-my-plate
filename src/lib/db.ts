@@ -519,13 +519,13 @@ export async function getUserBadgeData(): Promise<UserBadgeData[]> {
   return results.sort((a, b) => b.currentMonthVotes - a.currentMonthVotes || b.allTimeVotes - a.allTimeVotes);
 }
 
-export function computeBadge(allTimeVotes: number, currentMonthVotes: number): "Super Reviewer" | "Regular" | "Light" | "New" {
+export function computeBadge(allTimeVotes: number, currentMonthVotes: number): "Super Prime" | "Prime" | "Subprime" | "New" {
   // New = first 3 reviews all-time (regardless of month)
   if (allTimeVotes <= 3) return "New";
   // Monthly tiers
-  if (currentMonthVotes >= 20) return "Super Reviewer";
-  if (currentMonthVotes >= 10) return "Regular";
-  return "Light";
+  if (currentMonthVotes >= 20) return "Super Prime";
+  if (currentMonthVotes >= 10) return "Prime";
+  return "Subprime";
 }
 
 export async function getVotingStreaks(): Promise<StreakInfo[]> {
