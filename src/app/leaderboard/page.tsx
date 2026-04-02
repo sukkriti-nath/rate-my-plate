@@ -8,6 +8,7 @@ interface LeaderboardEntry {
   userEmail: string;
   currentStreak: number;
   longestStreak: number;
+  monthlyReviews: number;
   lastVoteDate: string;
   badge: "Super Reviewer" | "Regular" | "New";
 }
@@ -76,7 +77,7 @@ export default function LeaderboardPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="text-center mb-6">
         <h1 className="font-display text-3xl text-gray-900 mb-1 font-extrabold">
-          ⭐ Super Reviewers
+          ⭐ Super Reviewers ⭐
         </h1>
         <p className="text-gray-400">
           The most dedicated food critics at Kikoff
@@ -117,9 +118,9 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-kikoff-dark">
-                    {entry.currentStreak}
+                    {entry.monthlyReviews}
                   </div>
-                  <div className="text-xs text-gray-500">day streak</div>
+                  <div className="text-xs text-gray-500">this month</div>
                 </div>
               </div>
             );
@@ -143,9 +144,9 @@ export default function LeaderboardPage() {
         </div>
         <div className="bg-white rounded-xl p-4 border-2 border-black shadow-[4px_4px_0px_0px_#000] text-center">
           <div className="text-2xl font-bold text-kikoff-dark">
-            {Math.max(...entries.map((e) => e.longestStreak), 0)}
+            {Math.max(...entries.map((e) => e.monthlyReviews), 0)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Longest Streak</div>
+          <div className="text-xs text-gray-500 mt-1">Most Reviews</div>
         </div>
       </div>
 
@@ -180,9 +181,9 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-kikoff-dark">
-                      {entry.currentStreak}
+                      {entry.monthlyReviews}
                     </div>
-                    <div className="text-[10px] text-gray-500">streak</div>
+                    <div className="text-[10px] text-gray-500">this month</div>
                   </div>
                 </div>
               );

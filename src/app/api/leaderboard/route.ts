@@ -20,6 +20,7 @@ export async function GET() {
         userEmail: s.userEmail,
         currentStreak: s.currentStreak,
         longestStreak: s.longestStreak,
+        monthlyReviews: s.monthlyReviews,
         lastVoteDate: s.lastVoteDate,
         badge,
       };

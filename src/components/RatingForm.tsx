@@ -129,7 +129,7 @@ export default function RatingForm({
                     <span className="text-sm text-gray-700">{dish.name}</span>
                   </div>
                   <span className="font-bold text-sm text-gray-700">
-                    {val ? `${val}/5` : "—"}
+                    {val ? `${val}/5` : <span className="text-gray-400 font-normal">Not tried</span>}
                   </span>
                 </div>
               );

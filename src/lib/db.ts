@@ -447,6 +447,7 @@ export interface StreakInfo {
   currentStreak: number;
   longestStreak: number;
   lastVoteDate: string;
+  monthlyReviews: number;
 }
 
 export async function getVotingStreaks(): Promise<StreakInfo[]> {
@@ -473,6 +474,10 @@ export async function getVotingStreaks(): Promise<StreakInfo[]> {
     userVotes.get(v.user_email)!.dates.add(v.menu_date);
   }
 
+  // Current month boundaries for monthly review count
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
   const results: StreakInfo[] = [];
 
   for (const [email, { userName, dates }] of userVotes) {
@@ -492,12 +497,18 @@ export async function getVotingStreaks(): Promise<StreakInfo[]> {
     }
     const currentStreak = streak;
 
+    // Count reviews in current month
+    let monthlyReviews = 0;
+    for (const d of dates) {
+      if (d.startsWith(currentMonth)) monthlyReviews++;
+    }
+
     if (lastVoteDate) {
-      results.push({ userName, userEmail: email, currentStreak, longestStreak, lastVoteDate });
+      results.push({ userName, userEmail: email, currentStreak, longestStreak, lastVoteDate, monthlyReviews });
     }
   }
 
-  return results.sort((a, b) => b.currentStreak - a.currentStreak);
+  return results.sort((a, b) => b.monthlyReviews - a.monthlyReviews);
 }
 
 // ─── Bi-Weekly Trends Data ───────────────────────────────────────────────────
