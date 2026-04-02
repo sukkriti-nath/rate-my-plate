@@ -32,15 +32,17 @@ export default function RatingForm({
   existingVote,
   onVoteSubmitted,
 }: RatingFormProps) {
-  const [ratingOverall, setRatingOverall] = useState(0);
+  const [ratingOverall, setRatingOverall] = useState(1);
+  const [overallHasValue, setOverallHasValue] = useState(false);
   const [overallNA, setOverallNA] = useState(false);
   const [dishRatings, setDishRatings] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     for (const dish of dishes) {
-      initial[dish.key] = 0;
+      initial[dish.key] = 1;
     }
     return initial;
   });
+  const [dishHasValues, setDishHasValues] = useState<Record<string, boolean>>({});
   const [dishNAs, setDishNAs] = useState<Record<string, boolean>>({});
   const [comment, setComment] = useState(
     (existingVote?.comment as string) || ""
@@ -51,6 +53,7 @@ export default function RatingForm({
 
   function setDishRating(key: string, value: number) {
     setDishRatings((prev) => ({ ...prev, [key]: value }));
+    setDishHasValues((prev) => ({ ...prev, [key]: true }));
   }
 
   function toggleDishNA(key: string) {
@@ -59,7 +62,7 @@ export default function RatingForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!overallNA && ratingOverall === 0) return;
+    if (!overallNA && !overallHasValue) return;
 
     setSubmitting(true);
     try {
@@ -69,11 +72,11 @@ export default function RatingForm({
         body: JSON.stringify({
           date,
           ratingOverall: overallNA ? null : ratingOverall,
-          ratingStarch: dishNAs.starch ? null : (dishRatings.starch || null),
-          ratingVeganProtein: dishNAs.vegan_protein ? null : (dishRatings.vegan_protein || null),
-          ratingVeg: dishNAs.veg ? null : (dishRatings.veg || null),
-          ratingProtein1: dishNAs.protein_1 ? null : (dishRatings.protein_1 || null),
-          ratingProtein2: dishNAs.protein_2 ? null : (dishRatings.protein_2 || null),
+          ratingStarch: dishNAs.starch ? null : (dishHasValues.starch ? dishRatings.starch : null),
+          ratingVeganProtein: dishNAs.vegan_protein ? null : (dishHasValues.vegan_protein ? dishRatings.vegan_protein : null),
+          ratingVeg: dishNAs.veg ? null : (dishHasValues.veg ? dishRatings.veg : null),
+          ratingProtein1: dishNAs.protein_1 ? null : (dishHasValues.protein_1 ? dishRatings.protein_1 : null),
+          ratingProtein2: dishNAs.protein_2 ? null : (dishHasValues.protein_2 ? dishRatings.protein_2 : null),
           comment: comment || null,
         }),
       });
@@ -93,8 +96,8 @@ export default function RatingForm({
   }
 
   const availableDishes = dishes.filter((d) => d.name);
-  const reaction = overallNA ? "🤷 Didn't eat" : (OVERALL_REACTIONS[ratingOverall] || "");
-  const canSubmit = overallNA || ratingOverall > 0;
+  const reaction = overallNA ? "🤷 Didn't eat" : overallHasValue ? (OVERALL_REACTIONS[ratingOverall] || "") : "";
+  const canSubmit = overallNA || overallHasValue;
   const alreadyVoted = !!existingVote && !submitted;
 
   if (alreadyVoted) {
@@ -151,13 +154,14 @@ export default function RatingForm({
             </label>
           </div>
           <p className="text-xs text-gray-400 mb-3">
-            Drag to rate from 0 (skip next time) to 5 (want it every week).
+            Drag to rate from 1 (skip next time) to 5 (want it every week).
           </p>
           <SliderRating
             value={ratingOverall}
-            onChange={setRatingOverall}
+            onChange={(v) => { setRatingOverall(v); setOverallHasValue(true); }}
             lowLabel="Skip next time"
             highLabel="Want it every week"
+            hasValue={overallHasValue}
             showNA
             isNA={overallNA}
             onNAChange={setOverallNA}
@@ -194,10 +198,11 @@ export default function RatingForm({
                       </span>
                     </div>
                     <SliderRating
-                      value={dishRatings[dish.key] || 0}
+                      value={dishRatings[dish.key] || 1}
                       onChange={(v) => setDishRating(dish.key, v)}
                       lowLabel="Didn't like it"
                       highLabel="Loved it"
+                      hasValue={dishHasValues[dish.key] || false}
                       showNA
                       isNA={dishNA}
                       onNAChange={() => toggleDishNA(dish.key)}
