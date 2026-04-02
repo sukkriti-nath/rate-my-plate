@@ -36,6 +36,7 @@ export default function Navbar() {
     ? [
         { href: "/snacks", label: "Dashboard" },
         { href: "/snacks/profile", label: "Profile" },
+        { href: "/snacks/reports", label: "Reports" },
       ]
     : [
         { href: "/", label: "Vote" },
