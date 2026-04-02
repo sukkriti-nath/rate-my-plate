@@ -329,6 +329,7 @@ export interface BiWeeklyTrendsRow {
   recPhaseOut: string;
   recReplicate: string;
   recImprove: string;
+  dishRatings?: { category: string; dishName: string; avgRating: number; totalRatings: number }[];
 }
 
 export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<void> {
@@ -360,6 +361,34 @@ export async function syncBiWeeklyTrends(trends: BiWeeklyTrendsRow): Promise<voi
     valueInputOption: "RAW",
     requestBody: { values: [rowValues] },
   });
+
+  // Append dish ratings section below the trends data
+  if (trends.dishRatings && trends.dishRatings.length > 0) {
+    // Find the next empty row after existing data
+    const existing = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: `'${range}'!A:A`,
+    });
+    const nextRow = (existing.data.values?.length ?? 1) + 2; // leave a gap
+
+    const dishSection = [
+      ["ALL DISHES SERVED (Mon-Thu)", "", "", ""],
+      ["Category", "Dish", "Avg Rating", "# Ratings"],
+      ...trends.dishRatings.map((d) => [
+        d.category,
+        d.dishName,
+        Math.round(d.avgRating * 100) / 100,
+        d.totalRatings,
+      ]),
+    ];
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: `'${range}'!A${nextRow}`,
+      valueInputOption: "RAW",
+      requestBody: { values: dishSection },
+    });
+  }
 }
 
 // ─── Friday Catering Sync ─────────────────────────────────────────────────

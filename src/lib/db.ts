@@ -511,6 +511,7 @@ export interface BiWeeklyTrendsData {
   dayRankings: WeeklyDayRanking[];
   categoryFavorites: { category: string; dishName: string; avgRating: number; timesServed: number }[];
   categoryWorst: { category: string; dishName: string; avgRating: number; timesServed: number }[];
+  allDishRatings: { category: string; dishName: string; avgRating: number; totalRatings: number }[];
 }
 
 export async function getBiWeeklyTrendsData(startDate: string, endDate: string): Promise<BiWeeklyTrendsData> {
@@ -594,6 +595,28 @@ export async function getBiWeeklyTrendsData(startDate: string, endDate: string):
     }
   }
 
+  // Build complete dish ratings list (every dish served, grouped by category)
+  const allDishRatings: { category: string; dishName: string; avgRating: number; totalRatings: number }[] = [];
+  for (const cat of dishCategories) {
+    const dishMap = new Map<string, number[]>();
+    for (const vote of allVotes) {
+      const dishName = vote[cat.menuCol] as string | null;
+      const rating = vote[cat.ratingCol] as number | null;
+      if (dishName && rating !== null) {
+        if (!dishMap.has(dishName)) dishMap.set(dishName, []);
+        dishMap.get(dishName)!.push(rating);
+      }
+    }
+    for (const [name, ratings] of dishMap.entries()) {
+      allDishRatings.push({
+        category: cat.label,
+        dishName: name,
+        avgRating: ratings.reduce((a, b) => a + b, 0) / ratings.length,
+        totalRatings: ratings.length,
+      });
+    }
+  }
+
   return {
     startDate,
     endDate,
@@ -603,6 +626,7 @@ export async function getBiWeeklyTrendsData(startDate: string, endDate: string):
     dayRankings: monThuRankings.sort((a, b) => b.avgOverall - a.avgOverall),
     categoryFavorites,
     categoryWorst,
+    allDishRatings: allDishRatings.sort((a, b) => b.avgRating - a.avgRating),
   };
 }
 
