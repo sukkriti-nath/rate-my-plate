@@ -354,13 +354,13 @@ export function normalizeInventoryCategory(raw: string): string {
   if (
     compact === "cold brew latte" ||
     compact === "cold brew latte alternative" ||
-    compact === "cold brew latte protein"
+    compact === "cold brew latte protein" ||
+    compact === "cold brew tea" ||
+    compact === "milk tea" ||
+    compact === "milk tea alternative" ||
+    compact === "sparkling tea"
   ) {
-    return "Cold Brew Latte";
-  }
-
-  if (compact === "milk tea" || compact === "milk tea alternative") {
-    return "Milk Tea";
+    return "Teas";
   }
 
   if (
@@ -371,13 +371,26 @@ export function normalizeInventoryCategory(raw: string): string {
     return "Energy Drink";
   }
 
-  /** Sparkling, vitamin, and protein waters — one bucket in profile / inventory. */
   if (
     compact === "water protein" ||
+    compact === "protein shake" ||
+    compact === "protein drink"
+  ) {
+    return "Protein Drinks";
+  }
+
+  if (
     compact === "water sparkling" ||
     compact === "water vitamin"
   ) {
     return "Enhanced Water";
+  }
+
+  if (
+    compact === "probiotic soda" ||
+    compact === "tepache"
+  ) {
+    return "Probiotic Sodas";
   }
 
   if (
@@ -400,9 +413,10 @@ export function normalizeInventoryCategory(raw: string): string {
     compact === "fruit gummies" ||
     compact === "fruit jerky" ||
     compact === "fruit leather" ||
-    compact === "fruit leathers"
+    compact === "fruit leathers" ||
+    compact === "dried fruit"
   ) {
-    return "Fruit Snacks";
+    return "Dried Fruit";
   }
 
   if (
@@ -414,6 +428,14 @@ export function normalizeInventoryCategory(raw: string): string {
     compact === "chips vegetable"
   ) {
     return "Chips";
+  }
+
+  if (compact === "popcorn" || compact === "crackers") {
+    return "Popcorn & Crackers";
+  }
+
+  if (compact === "protein bar" || compact === "cookie protein") {
+    return "Protein Bars & Cookies";
   }
 
   if (compact === "meat jerky" || compact === "meat sticks") {
