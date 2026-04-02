@@ -14,6 +14,9 @@ SNACK_SLACK_CHANNEL_ID=C...
 
 # Google Sheets (uses same service account as Rate My Plate)
 SNACK_SHEET_ID=...  # Spreadsheet ID for snack inventory/profiles
+
+# Spoonacular API (for product images - 150 free requests/day)
+SPOONACULAR_API_KEY=...
 ```
 
 ## Architecture
@@ -30,6 +33,7 @@ All data is stored in Google Sheets tabs:
 | `Snack Leaderboard` | Points and engagement tracking |
 | `Beverages` | Beverage inventory |
 | `Snacks` | Snack inventory |
+| `Image Cache` | Cached product images (auto-populated) |
 
 Tabs are auto-created if they don't exist.
 
@@ -53,7 +57,7 @@ Tabs are auto-created if they don't exist.
 | `/api/snacks/inventory` | Get inventory items by category |
 | `/api/snacks/stats` | Dashboard statistics |
 | `/api/snacks/search` | Search Open Food Facts for products |
-| `/api/snacks/images` | Fetch product images from Open Food Facts |
+| `/api/snacks/images` | Fetch product images (Spoonacular + Open Food Facts fallback, cached to Sheets) |
 | `/api/snacks/test` | Testing endpoint for surveys |
 
 ### Pages

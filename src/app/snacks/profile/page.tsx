@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useProductImages } from "@/lib/useProductImages";
 
 const STEP = 10;
 /** One shared pool across every beverage + snack category. */
@@ -91,8 +92,7 @@ export default function SnackProfilePage() {
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [productImages, setProductImages] = useState<Record<string, string | null>>({});
-  const fetchedImagesRef = useRef<Set<string>>(new Set());
+  const { getImage, prefetchImages } = useProductImages();
 
   const bevCategories = useMemo(
     () => groupRowsByCategory(inventory, "beverages"),
@@ -189,58 +189,30 @@ export default function SnackProfilePage() {
     snkCatNames,
   ]);
 
-  // Fetch images for items in categories with allocated points
+  // Prefetch images for items in categories with allocated points
   useEffect(() => {
     const itemsToFetch: string[] = [];
 
-    // Get items from beverage categories with points
     for (const { category, items } of bevCategories) {
       if ((drinksAllocation[category] ?? 0) > 0) {
         for (const item of items) {
-          const name = stripServingSize(item.displayName);
-          if (!fetchedImagesRef.current.has(name)) {
-            itemsToFetch.push(name);
-            fetchedImagesRef.current.add(name);
-          }
+          itemsToFetch.push(stripServingSize(item.displayName));
         }
       }
     }
 
-    // Get items from snack categories with points
     for (const { category, items } of snkCategories) {
       if ((snacksAllocation[category] ?? 0) > 0) {
         for (const item of items) {
-          const name = stripServingSize(item.displayName);
-          if (!fetchedImagesRef.current.has(name)) {
-            itemsToFetch.push(name);
-            fetchedImagesRef.current.add(name);
-          }
+          itemsToFetch.push(stripServingSize(item.displayName));
         }
       }
     }
 
-    if (itemsToFetch.length === 0) return;
-
-    // Fetch in batches
-    const fetchBatch = async (names: string[]) => {
-      try {
-        const res = await fetch("/api/snacks/images", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ names }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setProductImages((prev) => ({ ...prev, ...data.images }));
-        }
-      } catch (err) {
-        console.error("Failed to fetch images:", err);
-      }
-    };
-
-    // Fetch first 20 items
-    void fetchBatch(itemsToFetch.slice(0, 20));
-  }, [bevCategories, snkCategories, drinksAllocation, snacksAllocation]);
+    if (itemsToFetch.length > 0) {
+      void prefetchImages(itemsToFetch);
+    }
+  }, [bevCategories, snkCategories, drinksAllocation, snacksAllocation, prefetchImages]);
 
   const adjust = useCallback(
     (which: "drinks" | "snacks", category: string, delta: number) => {
@@ -463,7 +435,7 @@ export default function SnackProfilePage() {
                     items={items}
                     favorites={favoriteDrinks}
                     onToggleFav={(name) => toggleFavorite("drinks", name)}
-                    productImages={productImages}
+                    getImage={getImage}
                   />
                 ))}
               </div>
@@ -505,7 +477,7 @@ export default function SnackProfilePage() {
                     items={items}
                     favorites={favoriteSnacks}
                     onToggleFav={(name) => toggleFavorite("snacks", name)}
-                    productImages={productImages}
+                    getImage={getImage}
                   />
                 ))}
               </div>
@@ -539,7 +511,7 @@ function CategoryBlock({
   items,
   favorites,
   onToggleFav,
-  productImages,
+  getImage,
 }: {
   title: string;
   points: number;
@@ -548,7 +520,7 @@ function CategoryBlock({
   items: InventoryRow[];
   favorites: string[];
   onToggleFav: (displayName: string) => void;
-  productImages: Record<string, string | null>;
+  getImage: (name: string) => string | null;
 }) {
   const favSet = useMemo(() => new Set(favorites), [favorites]);
   const canAdd =
@@ -588,17 +560,17 @@ function CategoryBlock({
           <p className="text-xs text-gray-500 mb-2">
             Favorite SKUs (unlimited) — {items.length} options · scroll if needed
           </p>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5 max-h-[min(75vh,1400px)] overflow-y-auto overflow-x-hidden pr-1">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[min(75vh,1400px)] overflow-y-auto overflow-x-hidden pr-1">
             {items.map((row) => {
               const isSelected = favSet.has(row.displayName);
               const cleanName = stripServingSize(row.displayName);
-              const imageUrl = productImages[cleanName];
+              const imageUrl = getImage(cleanName);
               return (
-                <li key={row.displayName} className="min-w-0">
+                <li key={row.displayName}>
                   <button
                     type="button"
                     onClick={() => onToggleFav(row.displayName)}
-                    className={`w-full text-left cursor-pointer rounded-md px-2 py-1.5 h-full transition-all flex items-center gap-2 ${
+                    className={`w-full cursor-pointer rounded-lg p-2 h-full transition-all flex flex-col items-center gap-1.5 ${
                       isSelected
                         ? "border-2 border-black bg-amber-100 shadow-[2px_2px_0px_0px_#000]"
                         : "border border-black/10 bg-amber-50/40 hover:bg-amber-50/80"
@@ -608,20 +580,16 @@ function CategoryBlock({
                       <img
                         src={imageUrl}
                         alt=""
-                        className="w-8 h-8 object-contain rounded shrink-0"
+                        loading="lazy"
+                        className="w-16 h-16 object-contain rounded"
                       />
                     ) : (
-                      <div className="w-8 h-8 bg-gray-100 rounded shrink-0 flex items-center justify-center text-sm">
+                      <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-2xl">
                         {title.toLowerCase().includes("beverage") || title.toLowerCase().includes("drink") || title.toLowerCase().includes("water") || title.toLowerCase().includes("tea") || title.toLowerCase().includes("coffee") || title.toLowerCase().includes("soda") || title.toLowerCase().includes("juice") ? "🥤" : "🍿"}
                       </div>
                     )}
-                    <span className="text-xs sm:text-sm min-w-0 leading-snug">
-                      <span className="text-gray-900 break-words">{cleanName}</span>
-                      {row.latestStock != null && row.latestStock !== "" ? (
-                        <span className="block text-[10px] sm:text-xs text-gray-500 tabular-nums mt-0.5">
-                          stock {row.latestStock}
-                        </span>
-                      ) : null}
+                    <span className="text-[11px] sm:text-xs text-center text-gray-900 leading-tight line-clamp-2">
+                      {cleanName}
                     </span>
                   </button>
                 </li>
