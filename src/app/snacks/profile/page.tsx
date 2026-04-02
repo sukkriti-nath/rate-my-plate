@@ -527,6 +527,23 @@ function CategoryBlock({
     remaining >= STEP && points + STEP <= POINT_BUDGET_TOTAL;
   const canSub = points >= STEP;
 
+  const [hovered, setHovered] = useState<{ name: string; imageUrl: string; x: number; y: number } | null>(null);
+
+  const handleMouseEnter = (e: React.MouseEvent, name: string, imageUrl: string | null) => {
+    if (!imageUrl) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHovered({
+      name,
+      imageUrl,
+      x: rect.right + 10,
+      y: rect.top,
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHovered(null);
+  };
+
   return (
     <div className="min-w-0 rounded-xl border-2 border-black/15 bg-white overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)]">
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:p-4 bg-gray-50 border-b border-black/10">
@@ -560,7 +577,7 @@ function CategoryBlock({
           <p className="text-xs text-gray-500 mb-2">
             Favorite SKUs (unlimited) — {items.length} options · scroll if needed
           </p>
-          <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[min(75vh,1400px)] overflow-y-auto overflow-x-hidden pr-1">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[min(75vh,1400px)] overflow-y-auto pr-1">
             {items.map((row) => {
               const isSelected = favSet.has(row.displayName);
               const cleanName = stripServingSize(row.displayName);
@@ -570,10 +587,12 @@ function CategoryBlock({
                   <button
                     type="button"
                     onClick={() => onToggleFav(row.displayName)}
-                    className={`w-full cursor-pointer rounded-lg p-2 h-full transition-all flex flex-col items-center gap-1.5 ${
+                    onMouseEnter={(e) => handleMouseEnter(e, cleanName, imageUrl)}
+                    onMouseLeave={handleMouseLeave}
+                    className={`w-full cursor-pointer rounded-lg p-2 h-full transition-all flex flex-col items-center gap-1.5 hover:bg-amber-50 ${
                       isSelected
                         ? "border-2 border-black bg-amber-100 shadow-[2px_2px_0px_0px_#000]"
-                        : "border border-black/10 bg-amber-50/40 hover:bg-amber-50/80"
+                        : "border border-black/10 bg-amber-50/40"
                     }`}
                   >
                     {imageUrl ? (
@@ -596,6 +615,24 @@ function CategoryBlock({
               );
             })}
           </ul>
+
+          {/* Floating preview tooltip */}
+          {hovered && (
+            <div
+              className="fixed z-50 bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-3 pointer-events-none"
+              style={{
+                left: Math.min(hovered.x, window.innerWidth - 220),
+                top: Math.max(10, Math.min(hovered.y, window.innerHeight - 280)),
+              }}
+            >
+              <img
+                src={hovered.imageUrl}
+                alt={hovered.name}
+                className="w-48 h-48 object-contain rounded-lg"
+              />
+              <p className="text-sm font-medium text-center mt-2 max-w-[192px]">{hovered.name}</p>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-xs text-gray-400 px-3 py-2 md:px-4 italic">
