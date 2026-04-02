@@ -72,21 +72,20 @@ function formatDateHeader(date: string): string {
 // Kate's design: emoji buttons in-channel for overall rating (1🙁 - 5🤩 + N/A)
 
 const DAILY_INTROS = [
-  "Today's menu just dropped 🎤",
-  "Here's what's cooking today 🍳",
-  "Lunch is served — check it out 👇",
-  "The menu for today is in 📋",
-  "Take a look at today's lineup 👀",
-  "Fresh menu, fresh opinions — let's go 🍽️",
-  "Today's lunch menu is ready for you 📝",
-  "See what's on the menu today ☕",
-  "Another day, another menu to rate 🗳️",
-  "Lunchtime — here's what we've got 🧑‍🍳",
-  "The kitchen has spoken — here's today's menu 🔔",
-  "Your daily lunch menu has arrived 📬",
-  "Time to see what's for lunch 🍴",
-  "Here's today's spread — rate away 📊",
-  "Lunch lineup is up — take a look 👇",
+  // Hype / excitement
+  "Lunch just dropped. 👀 How'd it hit?",
+  "The kitchen has spoken. Have you? Rate today's spread 🍽️",
+  "Your opinion is the secret ingredient. Rate today's lunch 🧂",
+  // Outcome-focused
+  "Rate today's lunch → shape next week's menu 🗳️",
+  "Your rating = next week's food. No pressure 👨‍🍳",
+  "The catering team is listening. Don't let bad food survive 📣",
+  // Hype / excitement
+  "Lunch just landed — what's the verdict? 🍽️",
+  "Your taste buds have opinions. Share them 🧂",
+  // Outcome-focused
+  "Every rating shapes what's on the menu next week 📊",
+  "Your feedback goes straight to the catering team 🗳️",
 ];
 
 function getDailyIntro(date: string): string {
