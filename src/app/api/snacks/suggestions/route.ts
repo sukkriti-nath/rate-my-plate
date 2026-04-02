@@ -71,7 +71,21 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      await voteSuggestion(body.suggestionId, userId, body.vote);
+      try {
+        await voteSuggestion(body.suggestionId, userId, body.vote);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg === "UPVOTE_LIMIT") {
+          return NextResponse.json(
+            {
+              error:
+                "You can upvote at most 3 suggestions from other people (your own suggestions don’t count toward that limit).",
+            },
+            { status: 400 }
+          );
+        }
+        throw err;
+      }
       return NextResponse.json({ ok: true });
     }
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { MAX_UPVOTES_ON_OTHERS_SUGGESTIONS } from "@/lib/snack-suggestion-limits";
 
 interface SearchProduct {
   id: string;
@@ -279,8 +280,31 @@ export default function SnacksPage() {
     }
   };
 
+  const othersUpvotesUsed = useMemo(() => {
+    if (!user) return 0;
+    const uid = webSnackProfileUserId(user.email);
+    return suggestions.filter(
+      (s) => s.userVote === "up" && s.submittedBy !== uid
+    ).length;
+  }, [user, suggestions]);
+
   const handleVote = async (suggestionId: string, vote: "up" | "down") => {
     if (!user) return;
+
+    const target = suggestions.find((s) => s.id === suggestionId);
+    if (!target) return;
+
+    const uid = webSnackProfileUserId(user.email);
+    const isOwn = target.submittedBy === uid;
+
+    if (
+      vote === "up" &&
+      !isOwn &&
+      target.userVote !== "up" &&
+      othersUpvotesUsed >= MAX_UPVOTES_ON_OTHERS_SUGGESTIONS
+    ) {
+      return;
+    }
 
     let rollback: Suggestion[] | null = null;
     setSuggestions((prev) => {
@@ -306,6 +330,14 @@ export default function SnacksPage() {
         await fetchSuggestions();
       } else if (rollback) {
         setSuggestions(rollback);
+        if (res.status === 400) {
+          try {
+            const data = (await res.json()) as { error?: string };
+            if (data?.error) window.alert(data.error);
+          } catch {
+            /* ignore */
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to vote:", err);
@@ -463,7 +495,8 @@ export default function SnacksPage() {
                       {inventory.length === 0 &&
                       (profile.favoriteDrinks.length > 0 || profile.favoriteSnacks.length > 0) ? (
                         <p className="text-xs text-amber-900/90 mb-2">
-                          Inventory isn’t available to group picks — favorites are listed flat below.
+                          Inventory isn’t loaded yet — categories below still show your points; favorite
+                          SKUs are grouped when inventory loads, or see the flat lists at the bottom.
                         </p>
                       ) : null}
 
@@ -473,33 +506,20 @@ export default function SnacksPage() {
                         </div>
                         {drinkPointsRows.length === 0 ? (
                           <p className="text-gray-500 text-xs">No beverage points allocated.</p>
-                        ) : inventory.length === 0 ? (
-                          <ul className="space-y-1.5">
-                            {[...drinkPointsRows]
-                              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-                              .map(([cat, pts]) => (
-                                <li
-                                  key={`d-${cat}`}
-                                  className="flex justify-between gap-2 text-gray-800"
-                                >
-                                  <span className="min-w-0 break-words">{cat}</span>
-                                  <span className="shrink-0 font-semibold text-cyan-800 tabular-nums">
-                                    {pts} pts
-                                  </span>
-                                </li>
-                              ))}
-                          </ul>
                         ) : (
                           <div className="space-y-2">
                             {[...drinkPointsRows]
                               .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
                               .map(([cat, pts]) => {
-                                const favs = profile.favoriteDrinks
-                                  .filter((f) => bevDisplayToCategory.get(f) === cat)
-                                  .slice()
-                                  .sort((a, b) =>
-                                    stripServingSize(a).localeCompare(stripServingSize(b))
-                                  );
+                                const hasInventory = inventory.length > 0;
+                                const favs = hasInventory
+                                  ? profile.favoriteDrinks
+                                      .filter((f) => bevDisplayToCategory.get(f) === cat)
+                                      .slice()
+                                      .sort((a, b) =>
+                                        stripServingSize(a).localeCompare(stripServingSize(b))
+                                      )
+                                  : [];
                                 return (
                                   <details
                                     key={`d-${cat}`}
@@ -522,7 +542,12 @@ export default function SnacksPage() {
                                       </span>
                                     </summary>
                                     <div className="px-2 py-2 bg-white">
-                                      {favs.length === 0 ? (
+                                      {!hasInventory ? (
+                                        <p className="text-xs text-gray-500 italic pl-1">
+                                          Loading inventory to show your favorite SKUs here — full
+                                          lists appear below if needed.
+                                        </p>
+                                      ) : favs.length === 0 ? (
                                         <p className="text-xs text-gray-500 italic pl-1">
                                           No favorites picked in this category.
                                         </p>
@@ -587,33 +612,20 @@ export default function SnacksPage() {
                         </div>
                         {snackPointsRows.length === 0 ? (
                           <p className="text-gray-500 text-xs">No snack points allocated.</p>
-                        ) : inventory.length === 0 ? (
-                          <ul className="space-y-1.5">
-                            {[...snackPointsRows]
-                              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-                              .map(([cat, pts]) => (
-                                <li
-                                  key={`s-${cat}`}
-                                  className="flex justify-between gap-2 text-gray-800"
-                                >
-                                  <span className="min-w-0 break-words">{cat}</span>
-                                  <span className="shrink-0 font-semibold text-amber-800 tabular-nums">
-                                    {pts} pts
-                                  </span>
-                                </li>
-                              ))}
-                          </ul>
                         ) : (
                           <div className="space-y-2">
                             {[...snackPointsRows]
                               .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
                               .map(([cat, pts]) => {
-                                const favs = profile.favoriteSnacks
-                                  .filter((f) => snkDisplayToCategory.get(f) === cat)
-                                  .slice()
-                                  .sort((a, b) =>
-                                    stripServingSize(a).localeCompare(stripServingSize(b))
-                                  );
+                                const hasInventory = inventory.length > 0;
+                                const favs = hasInventory
+                                  ? profile.favoriteSnacks
+                                      .filter((f) => snkDisplayToCategory.get(f) === cat)
+                                      .slice()
+                                      .sort((a, b) =>
+                                        stripServingSize(a).localeCompare(stripServingSize(b))
+                                      )
+                                  : [];
                                 return (
                                   <details
                                     key={`s-${cat}`}
@@ -636,7 +648,12 @@ export default function SnacksPage() {
                                       </span>
                                     </summary>
                                     <div className="px-2 py-2 bg-white">
-                                      {favs.length === 0 ? (
+                                      {!hasInventory ? (
+                                        <p className="text-xs text-gray-500 italic pl-1">
+                                          Loading inventory to show your favorite SKUs here — full
+                                          lists appear below if needed.
+                                        </p>
+                                      ) : favs.length === 0 ? (
                                         <p className="text-xs text-gray-500 italic pl-1">
                                           No favorites picked in this category.
                                         </p>
@@ -834,9 +851,22 @@ export default function SnacksPage() {
                 </div>
 
                 <div className="p-5 border-t border-black/[0.06]">
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4">
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
                   Leaderboard
                 </h3>
+                {user &&
+                othersUpvotesUsed >= MAX_UPVOTES_ON_OTHERS_SUGGESTIONS ? (
+                  <p className="text-xs text-amber-900/90 mb-3">
+                    You’ve used your {MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} upvotes on others’
+                    suggestions. Remove one to upvote another — your own suggestions don’t
+                    count toward this limit.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 mb-3">
+                    Up to {MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} upvotes on teammates’ ideas
+                    (yours don’t count).
+                  </p>
+                )}
                 {sortedSuggestions.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="text-4xl mb-3">🍿</div>
@@ -849,6 +879,11 @@ export default function SnacksPage() {
                       const isMine =
                         !!user &&
                         suggestion.submittedBy === webSnackProfileUserId(user.email);
+                      const upvoteOnOthersBlocked =
+                        !!user &&
+                        !isMine &&
+                        suggestion.userVote !== "up" &&
+                        othersUpvotesUsed >= MAX_UPVOTES_ON_OTHERS_SUGGESTIONS;
                       return (
                         <div
                           key={suggestion.id}
@@ -886,13 +921,17 @@ export default function SnacksPage() {
 
                           <div className="flex items-center gap-2 shrink-0">
                             <span
-                              className="inline-flex cursor-help rounded-lg"
-                              title={upvoteHoverText(suggestion.upvoterNames)}
+                              className={`inline-flex rounded-lg ${upvoteOnOthersBlocked ? "cursor-not-allowed" : "cursor-help"}`}
+                              title={
+                                upvoteOnOthersBlocked
+                                  ? `You can upvote up to ${MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} suggestions from others. Remove an upvote elsewhere to free a slot.`
+                                  : upvoteHoverText(suggestion.upvoterNames)
+                              }
                             >
                               <button
                                 type="button"
                                 onClick={() => handleVote(suggestion.id, "up")}
-                                disabled={!user}
+                                disabled={!user || upvoteOnOthersBlocked}
                                 className={`p-2 rounded-lg border-2 transition-all ${
                                   suggestion.userVote === "up"
                                     ? "bg-green-400 border-black"

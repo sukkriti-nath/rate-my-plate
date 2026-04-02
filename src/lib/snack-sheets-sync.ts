@@ -1,4 +1,9 @@
 import { getSheetsClient, isGoogleServiceAccountConfigured } from "@/lib/google-sheets-writer";
+import {
+  MAX_UPVOTES_ON_OTHERS_SUGGESTIONS,
+  buildSuggestionSubmitterMap,
+  countOthersUpvotes,
+} from "@/lib/snack-suggestion-limits";
 
 /**
  * Snack Overflow data stored in Google Sheets (no Postgres).
@@ -311,6 +316,23 @@ export async function voteSuggestion(
     if (suggestionRowIndex === -1) {
       console.warn(`[snack-sheets] Suggestion ${suggestionId} not found`);
       return;
+    }
+
+    const submitterByForSuggestion = String(
+      suggestionRows[suggestionRowIndex][2] ?? ""
+    );
+    const isOwnSuggestion = submitterByForSuggestion === userId;
+    const submitterById = buildSuggestionSubmitterMap(suggestionRows);
+    const othersUpCount = countOthersUpvotes(userId, voteRows, submitterById);
+
+    if (
+      vote === "up" &&
+      !isOwnSuggestion &&
+      existingVote !== "up"
+    ) {
+      if (othersUpCount >= MAX_UPVOTES_ON_OTHERS_SUGGESTIONS) {
+        throw new Error("UPVOTE_LIMIT");
+      }
     }
 
     let newUpvotes = currentUpvotes;

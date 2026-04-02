@@ -537,7 +537,7 @@ export async function getInventoryStructuredRows(): Promise<
     return rows;
   } catch (e) {
     console.error("fetchInventoryStructuredProducts failed:", e);
-    inventoryStructuredCache = { rows: [], fetchedAt: Date.now() };
+    // Do not cache failures: a transient error would otherwise lock in [] for SURVEY_CACHE_MS.
     return [];
   }
 }
