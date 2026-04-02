@@ -8,6 +8,7 @@ import {
   getWebSnackProfileUserId,
   voteSuggestion,
 } from "@/lib/snack-sheets-sync";
+import { searchDuckDuckGoImage } from "@/lib/duckduckgo-images";
 
 export const dynamic = "force-dynamic";
 
@@ -49,10 +50,15 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+
+      // Scrape image from DuckDuckGo
+      const imageUrl = await searchDuckDuckGoImage(body.snackName.trim());
+
       const suggestion = await addSuggestion(
         body.snackName.trim(),
         userId,
-        session.displayName
+        session.displayName,
+        imageUrl
       );
       await awardPoints(userId, "suggestion", session.displayName);
       return NextResponse.json({ ok: true, suggestion });
@@ -109,6 +115,12 @@ export async function POST(req: Request) {
         }
         if (msg === "Not found") {
           return NextResponse.json({ error: "Suggestion not found" }, { status: 404 });
+        }
+        if (msg === "TooManyUpvotes") {
+          return NextResponse.json(
+            { error: "Cannot delete suggestions with 2 or more upvotes" },
+            { status: 400 }
+          );
         }
         throw err;
       }

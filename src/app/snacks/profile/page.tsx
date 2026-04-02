@@ -589,7 +589,7 @@ function CategoryBlock({
                     onClick={() => onToggleFav(row.displayName)}
                     onMouseEnter={(e) => handleMouseEnter(e, cleanName, imageUrl)}
                     onMouseLeave={handleMouseLeave}
-                    className={`w-full cursor-pointer rounded-lg p-2 h-full transition-all flex flex-col items-center gap-1.5 hover:bg-amber-50 ${
+                    className={`w-full cursor-pointer rounded-lg p-2 h-full transition-all flex flex-col items-center gap-1.5 ${
                       isSelected
                         ? "border-2 border-black bg-amber-100 shadow-[2px_2px_0px_0px_#000]"
                         : "border border-black/10 bg-amber-50/40"
@@ -621,8 +621,8 @@ function CategoryBlock({
             <div
               className="fixed z-50 bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-3 pointer-events-none"
               style={{
-                left: Math.min(hovered.x, window.innerWidth - 220),
-                top: Math.max(10, Math.min(hovered.y, window.innerHeight - 280)),
+                left: Math.min(hovered.x, typeof window !== "undefined" ? window.innerWidth - 220 : 500),
+                top: Math.max(10, Math.min(hovered.y, typeof window !== "undefined" ? window.innerHeight - 280 : 500)),
               }}
             >
               <img
