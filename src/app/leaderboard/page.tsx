@@ -87,7 +87,7 @@ export default function LeaderboardPage() {
   const rest = entries.slice(3);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="text-center mb-6">
         <h1 className="font-display text-3xl text-gray-900 mb-1 font-extrabold">
           {"\u2B50"} Super Reviewers {"\u2B50"}
@@ -144,95 +144,95 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {/* Podium - Top 3 This Month */}
-      <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
-        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider pb-3 border-b-2 border-black">
-          Leaderboard — This Month
-        </h2>
-        <p className="text-xs text-gray-400 mt-2 mb-4">Ranked by total reviews submitted this month</p>
-        <div className="space-y-3">
-          {podium.map((entry, i) => {
-            const medal = i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : "\u{1F949}";
-            const badgeStyle = BADGE_STYLES[entry.badge];
-            return (
-              <div
-                key={entry.userEmail}
-                className={`rounded-xl px-5 py-4 flex items-center justify-between border-2 border-black shadow-[4px_4px_0px_0px_#000] animate-slide-up ${
-                  i === 0 ? "bg-kikoff" : "bg-kikoff-lavender"
-                }`}
-                style={{ animationDelay: `${i * 0.08}s` }}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{medal}</span>
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {entry.userName}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className={`text-xs font-bold px-3 py-1 rounded-full border-2 ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
-                      >
-                        {badgeStyle.emoji} {badgeStyle.label}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-kikoff-dark">
-                    {entry.monthlyVotes}
-                  </div>
-                  <div className="text-xs text-gray-500">reviews this month</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* All Time Top 3 */}
-      {allTimeTop3.length > 0 && (
-        <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 pb-3 border-b-2 border-black">
-            {"\u{1F451}"} All Time Leaderboard
+      {/* Leaderboards — Side by Side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* This Month */}
+        <div className="bg-white rounded-xl p-5 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider pb-3 border-b-2 border-black">
+            Leaderboard — This Month
           </h2>
+          <p className="text-xs text-gray-400 mt-2 mb-4">Ranked by reviews this month</p>
           <div className="space-y-3">
-            {allTimeTop3.map((entry, i) => {
+            {podium.map((entry, i) => {
               const medal = i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : "\u{1F949}";
               const badgeStyle = BADGE_STYLES[entry.badge];
               return (
                 <div
                   key={entry.userEmail}
-                  className={`rounded-xl px-5 py-4 flex items-center justify-between border-2 border-black shadow-[4px_4px_0px_0px_#000] ${
-                    i === 0 ? "bg-gradient-to-r from-amber-50 to-yellow-100" : "bg-gray-50"
+                  className={`rounded-xl px-4 py-3 flex items-center justify-between border-2 border-black shadow-[3px_3px_0px_0px_#000] animate-slide-up ${
+                    i === 0 ? "bg-kikoff" : "bg-kikoff-lavender"
                   }`}
+                  style={{ animationDelay: `${i * 0.08}s` }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{medal}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{medal}</span>
                     <div>
-                      <div className="font-semibold text-gray-900">
+                      <div className="font-semibold text-gray-900 text-sm">
                         {entry.userName}
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span
-                          className={`text-xs font-bold px-3 py-1 rounded-full border-2 ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
-                        >
-                          {badgeStyle.emoji} {badgeStyle.label}
-                        </span>
-                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-2 ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
+                      >
+                        {badgeStyle.emoji} {badgeStyle.label}
+                      </span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-kikoff-dark">
-                      {entry.allTimeVotes}
+                    <div className="text-xl font-bold text-kikoff-dark">
+                      {entry.monthlyVotes}
                     </div>
-                    <div className="text-xs text-gray-500">all time</div>
+                    <div className="text-[10px] text-gray-500">this month</div>
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
-      )}
+
+        {/* All Time */}
+        {allTimeTop3.length > 0 && (
+          <div className="bg-white rounded-xl p-5 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider pb-3 border-b-2 border-black">
+              {"\u{1F451}"} All Time Leaderboard
+            </h2>
+            <p className="text-xs text-gray-400 mt-2 mb-4">Ranked by total reviews all time</p>
+            <div className="space-y-3">
+              {allTimeTop3.map((entry, i) => {
+                const medal = i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : "\u{1F949}";
+                const badgeStyle = BADGE_STYLES[entry.badge];
+                return (
+                  <div
+                    key={entry.userEmail}
+                    className={`rounded-xl px-4 py-3 flex items-center justify-between border-2 border-black shadow-[3px_3px_0px_0px_#000] ${
+                      i === 0 ? "bg-gradient-to-r from-amber-50 to-yellow-100" : "bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{medal}</span>
+                      <div>
+                        <div className="font-semibold text-gray-900 text-sm">
+                          {entry.userName}
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-2 ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
+                        >
+                          {badgeStyle.emoji} {badgeStyle.label}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-kikoff-dark">
+                        {entry.allTimeVotes}
+                      </div>
+                      <div className="text-[10px] text-gray-500">all time</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Full list */}
       {rest.length > 0 && (
