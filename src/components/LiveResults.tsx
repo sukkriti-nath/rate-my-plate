@@ -48,11 +48,13 @@ export default function LiveResults({
   date,
   isToday = false,
   hasVoted: initialHasVoted = false,
+  isBeforeNoon = false,
   pollInterval = 5000,
 }: {
   date: string;
   isToday?: boolean;
   hasVoted?: boolean;
+  isBeforeNoon?: boolean;
   pollInterval?: number;
 }) {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -112,10 +114,6 @@ export default function LiveResults({
   }
 
   if (stats.totalVotes === 0) {
-    const ptHour = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })).getHours();
-    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })).toISOString().split("T")[0];
-    const isBeforeNoon = date === today && ptHour < 12;
-
     return (
       <div>
         {headerBlock}

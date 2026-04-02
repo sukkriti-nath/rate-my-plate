@@ -208,7 +208,7 @@ export default async function Home({ searchParams }: PageProps) {
       {/* Live Results */}
       <section className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
         <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] p-6">
-          <LiveResults date={selectedDate} isToday={isToday} hasVoted={!!existingVote} />
+          <LiveResults date={selectedDate} isToday={isToday} hasVoted={!!existingVote} isBeforeNoon={votingClosed} />
         </div>
       </section>
     </div>
