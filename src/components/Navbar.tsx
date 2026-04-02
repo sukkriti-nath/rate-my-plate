@@ -68,7 +68,7 @@ export default function Navbar() {
               )}
               <span className="font-display text-lg sm:text-xl text-kikoff-dark font-extrabold">
                 {isSnacksApp ? (
-                  <>Snack<span className="bg-amber-500 text-white px-1.5 py-0.5 rounded-xl mx-0.5">Over</span>flow</>
+                  <>Snack<span className="bg-kikoff-dark text-kikoff px-1.5 py-0.5 rounded-xl mx-0.5">Overflow</span></>
                 ) : (
                   <>Rate<span className="bg-kikoff-dark text-kikoff px-1.5 py-0.5 rounded-xl mx-0.5">My</span>Plate</>
                 )}
