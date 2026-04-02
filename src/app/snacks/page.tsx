@@ -68,6 +68,73 @@ interface Suggestion {
   downvotes: number;
   userVote: "up" | "down" | null;
   createdAt: string;
+  upvoterNames?: string[];
+}
+
+function upvoteHoverText(names: string[] | undefined): string {
+  const list = names ?? [];
+  if (list.length === 0) return "No upvotes yet";
+  const max = 35;
+  if (list.length <= max) {
+    return `Upvoted by: ${list.join(", ")}`;
+  }
+  return `Upvoted by: ${list.slice(0, max).join(", ")} (+${list.length - max} more)`;
+}
+
+/** Mirror server vote rules so the UI can update before the API returns. */
+function optimisticSuggestionAfterVote(
+  s: Suggestion,
+  vote: "up" | "down",
+  userDisplayName: string
+): Suggestion {
+  const prev = s.userVote;
+  let up = s.upvotes;
+  let down = s.downvotes;
+  let names = [...(s.upvoterNames ?? [])];
+  let nextVote: "up" | "down" | null = prev;
+
+  if (prev === vote) {
+    nextVote = null;
+    if (vote === "up") {
+      up = Math.max(0, up - 1);
+      names = names.filter((n) => n !== userDisplayName);
+    } else {
+      down = Math.max(0, down - 1);
+    }
+  } else if (prev) {
+    nextVote = vote;
+    if (vote === "up") {
+      up += 1;
+      down = Math.max(0, down - 1);
+      if (!names.includes(userDisplayName)) {
+        names.push(userDisplayName);
+        names.sort((a, b) => a.localeCompare(b));
+      }
+    } else {
+      up = Math.max(0, up - 1);
+      down += 1;
+      names = names.filter((n) => n !== userDisplayName);
+    }
+  } else {
+    nextVote = vote;
+    if (vote === "up") {
+      up += 1;
+      if (!names.includes(userDisplayName)) {
+        names.push(userDisplayName);
+        names.sort((a, b) => a.localeCompare(b));
+      }
+    } else {
+      down += 1;
+    }
+  }
+
+  return {
+    ...s,
+    upvotes: up,
+    downvotes: down,
+    userVote: nextVote,
+    upvoterNames: names,
+  };
 }
 
 export default function SnacksPage() {
@@ -84,6 +151,20 @@ export default function SnacksPage() {
   const [searching, setSearching] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchSuggestions = useCallback(async () => {
+    try {
+      const suggestionsRes = await fetch("/api/snacks/suggestions", {
+        credentials: "same-origin",
+      });
+      if (suggestionsRes.ok) {
+        const suggestionsData = await suggestionsRes.json();
+        setSuggestions(suggestionsData.suggestions || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch suggestions:", err);
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -115,18 +196,13 @@ export default function SnacksPage() {
         }
       }
 
-      // Fetch suggestions
-      const suggestionsRes = await fetch("/api/snacks/suggestions", { credentials: "same-origin" });
-      if (suggestionsRes.ok) {
-        const suggestionsData = await suggestionsRes.json();
-        setSuggestions(suggestionsData.suggestions || []);
-      }
+      await fetchSuggestions();
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchSuggestions]);
 
   useEffect(() => {
     void fetchData();
@@ -206,6 +282,19 @@ export default function SnacksPage() {
   const handleVote = async (suggestionId: string, vote: "up" | "down") => {
     if (!user) return;
 
+    let rollback: Suggestion[] | null = null;
+    setSuggestions((prev) => {
+      rollback = prev.map((s) => ({
+        ...s,
+        upvoterNames: s.upvoterNames ? [...s.upvoterNames] : [],
+      }));
+      return prev.map((s) =>
+        s.id === suggestionId
+          ? optimisticSuggestionAfterVote(s, vote, user.displayName)
+          : s
+      );
+    });
+
     try {
       const res = await fetch("/api/snacks/suggestions", {
         method: "POST",
@@ -214,10 +303,13 @@ export default function SnacksPage() {
         body: JSON.stringify({ action: "vote", suggestionId, vote }),
       });
       if (res.ok) {
-        await fetchData();
+        await fetchSuggestions();
+      } else if (rollback) {
+        setSuggestions(rollback);
       }
     } catch (err) {
       console.error("Failed to vote:", err);
+      if (rollback) setSuggestions(rollback);
     }
   };
 
@@ -667,7 +759,8 @@ export default function SnacksPage() {
                 </p>
               </div>
 
-              <div className="p-5 bg-white relative">
+              <div className="bg-gradient-to-b from-amber-50/55 via-amber-50/40 to-orange-50/35">
+                <div className="p-5 relative">
                 <p className="text-xs font-bold text-cyan-900 uppercase tracking-wider mb-3">
                   Suggest a snack
                 </p>
@@ -738,9 +831,9 @@ export default function SnacksPage() {
                     </p>
                   </form>
                 )}
-              </div>
+                </div>
 
-              <div className="p-5 bg-gray-50/80">
+                <div className="p-5 border-t border-black/[0.06]">
                 <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4">
                   Leaderboard
                 </h3>
@@ -792,18 +885,23 @@ export default function SnacksPage() {
                           ) : null}
 
                           <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              onClick={() => handleVote(suggestion.id, "up")}
-                              disabled={!user}
-                              className={`p-2 rounded-lg border-2 transition-all ${
-                                suggestion.userVote === "up"
-                                  ? "bg-green-400 border-black"
-                                  : "bg-white border-black/20 hover:border-black hover:bg-green-50"
-                              } disabled:opacity-50 disabled:cursor-not-allowed`}
-                              title="Upvote"
+                            <span
+                              className="inline-flex cursor-help rounded-lg"
+                              title={upvoteHoverText(suggestion.upvoterNames)}
                             >
-                              <span className="text-lg">👍</span>
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => handleVote(suggestion.id, "up")}
+                                disabled={!user}
+                                className={`p-2 rounded-lg border-2 transition-all ${
+                                  suggestion.userVote === "up"
+                                    ? "bg-green-400 border-black"
+                                    : "bg-white border-black/20 hover:border-black hover:bg-green-50"
+                                } disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed`}
+                              >
+                                <span className="text-lg">👍</span>
+                              </button>
+                            </span>
                             <div
                               className={`font-bold text-lg w-10 text-center ${
                                 netVotes > 0 ? "text-green-600" : netVotes < 0 ? "text-red-500" : "text-gray-500"
@@ -829,6 +927,7 @@ export default function SnacksPage() {
                     })}
                   </div>
                 )}
+                </div>
               </div>
             </div>
           </div>

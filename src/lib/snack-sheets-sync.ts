@@ -67,6 +67,35 @@ export interface SnackSuggestion {
   downvotes: number;
   userVote: "up" | "down" | null;
   createdAt: string;
+  /** Display names of users who upvoted (for tooltips). */
+  upvoterNames: string[];
+}
+
+function buildVoterDisplayNameResolver(
+  profiles: Array<{ email: string; displayName: string }>
+) {
+  const webIdToName = new Map<string, string>();
+  const slackIdToName = new Map<string, string>();
+  for (const p of profiles) {
+    const raw = (p.email || "").trim();
+    if (!raw) continue;
+    const name = (p.displayName || "").trim() || raw;
+    if (raw.includes("@")) {
+      webIdToName.set(`web:${raw.toLowerCase()}`, name);
+    } else {
+      slackIdToName.set(raw, name);
+    }
+  }
+  return (userId: string): string => {
+    if (webIdToName.has(userId)) return webIdToName.get(userId)!;
+    if (slackIdToName.has(userId)) return slackIdToName.get(userId)!;
+    if (userId.startsWith("web:")) {
+      const email = userId.slice(4).trim();
+      const local = email.split("@")[0];
+      return local || email;
+    }
+    return userId.length > 14 ? `${userId.slice(0, 12)}…` : userId;
+  };
 }
 
 function generateSuggestionId(): string {
@@ -75,8 +104,12 @@ function generateSuggestionId(): string {
 
 /**
  * Get all suggestions from the sheet, with the current user's vote status.
+ * @param profilesOptional — pass from callers that already loaded profiles to avoid a second fetch.
  */
-export async function getSuggestions(viewerUserId?: string): Promise<SnackSuggestion[]> {
+export async function getSuggestions(
+  viewerUserId?: string,
+  profilesOptional?: SnackProfile[]
+): Promise<SnackSuggestion[]> {
   if (!isGoogleServiceAccountConfigured()) return [];
 
   try {
@@ -93,25 +126,38 @@ export async function getSuggestions(viewerUserId?: string): Promise<SnackSugges
     });
     const suggestionRows = suggestionsRes.data.values || [];
 
-    // Get user votes to determine current user's vote on each suggestion
-    let userVotes: Map<string, "up" | "down"> = new Map();
-    if (viewerUserId) {
-      try {
-        const votesRes = await sheets.spreadsheets.values.get({
-          spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-          range: `${escapeSheetTitle(TABS.SUGGESTION_VOTES)}!A:C`,
-        });
-        const voteRows = votesRes.data.values || [];
-        for (const row of voteRows) {
-          if (row[1] === viewerUserId) {
-            userVotes.set(row[0], row[2] as "up" | "down");
-          }
+    const userVotes: Map<string, "up" | "down"> = new Map();
+    const upvoterIdsBySuggestion = new Map<string, Set<string>>();
+
+    try {
+      const votesRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
+        range: `${escapeSheetTitle(TABS.SUGGESTION_VOTES)}!A:C`,
+      });
+      const voteRows = votesRes.data.values || [];
+      for (const row of voteRows) {
+        const sid = row[0];
+        const voter = row[1];
+        const v = row[2] as string | undefined;
+        if (!sid || !voter) continue;
+
+        if (viewerUserId && voter === viewerUserId) {
+          userVotes.set(sid, v as "up" | "down");
         }
-      } catch (e) {
-        // Tab might not exist yet - that's ok, just no votes recorded
-        console.warn("[snack-sheets] Could not read Suggestion Votes tab:", e);
+        if (v === "up") {
+          if (!upvoterIdsBySuggestion.has(sid)) {
+            upvoterIdsBySuggestion.set(sid, new Set());
+          }
+          upvoterIdsBySuggestion.get(sid)!.add(voter);
+        }
       }
+    } catch (e) {
+      console.warn("[snack-sheets] Could not read Suggestion Votes tab:", e);
     }
+
+    const profiles =
+      profilesOptional ?? (await getAllProfiles());
+    const resolveName = buildVoterDisplayNameResolver(profiles);
 
     // Skip header row if present
     const dataRows = suggestionRows.length > 0 && suggestionRows[0][0] === "id"
@@ -120,16 +166,22 @@ export async function getSuggestions(viewerUserId?: string): Promise<SnackSugges
 
     return dataRows
       .filter(row => row[0]) // Must have an ID
-      .map((row) => ({
-        id: row[0] || "",
-        snackName: row[1] || "",
-        submittedBy: row[2] || "",
-        submittedByName: row[3] || "",
-        upvotes: parseInt(row[4]) || 0,
-        downvotes: parseInt(row[5]) || 0,
-        createdAt: row[6] || "",
-        userVote: userVotes.get(row[0]) || null,
-      }))
+      .map((row) => {
+        const id = row[0] || "";
+        const ids = [...(upvoterIdsBySuggestion.get(id) ?? [])];
+        const upvoterNames = ids.map(resolveName).sort((a, b) => a.localeCompare(b));
+        return {
+          id,
+          snackName: row[1] || "",
+          submittedBy: row[2] || "",
+          submittedByName: row[3] || "",
+          upvotes: parseInt(row[4]) || 0,
+          downvotes: parseInt(row[5]) || 0,
+          createdAt: row[6] || "",
+          userVote: userVotes.get(id) || null,
+          upvoterNames,
+        };
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (e) {
     console.error("[snack-sheets] getSuggestions failed:", e);
@@ -193,6 +245,7 @@ export async function addSuggestion(
     downvotes: 0,
     userVote: "up",
     createdAt,
+    upvoterNames: [submittedByName],
   };
 }
 
@@ -739,9 +792,9 @@ export async function getSnackStats(): Promise<{
   suggestionCount: number;
   totalPoints: number;
 }> {
-  const [profiles, suggestions, leaderboard] = await Promise.all([
-    getAllProfiles(),
-    getSuggestions(),
+  const profiles = await getAllProfiles();
+  const [suggestions, leaderboard] = await Promise.all([
+    getSuggestions(undefined, profiles),
     getLeaderboard(1000),
   ]);
 
