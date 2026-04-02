@@ -497,60 +497,56 @@ export async function syncSuperReviewers(reviewers: SuperReviewerRow[]): Promise
 const DRIVE_FOLDER_ID = "1AEA_wG2ySh4Q9NOgaiygrO_F3QL28qYy";
 
 /**
- * Export the "Bi-Weekly Trends" tab as a PDF and upload to Google Drive.
+ * Copy the "Bi-Weekly Trends" tab into a new Google Sheet in the Drive folder.
  * Returns the file ID and web link.
  */
-export async function exportBiWeeklyTrendsPdf(
+export async function exportBiWeeklyTrendsSheet(
   dateRange: string
 ): Promise<{ fileId: string; webViewLink: string }> {
   const auth = getAuthClient();
   const sheetId = getOutputSheetId();
+  const drive = google.drive({ version: "v3", auth });
+  const sheets = getSheetsClient();
 
   // Get the sheet GID for the Bi-Weekly Trends tab
-  const sheets = getSheetsClient();
   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
   const trendsTab = spreadsheet.data.sheets?.find(
     (s) => s.properties?.title === "Bi-Weekly Trends"
   );
-  const gid = trendsTab?.properties?.sheetId ?? 0;
+  const trendsSheetId = trendsTab?.properties?.sheetId ?? 0;
 
-  // Export as PDF using the Google Sheets export URL
-  const authClient = await auth.getClient();
-  const token = await authClient.getAccessToken();
-  const exportUrl =
-    `https://docs.google.com/spreadsheets/d/${sheetId}/export?` +
-    `format=pdf&gid=${gid}&portrait=false&fitw=true&gridlines=false`;
-
-  const pdfResponse = await fetch(exportUrl, {
-    headers: { Authorization: `Bearer ${token.token}` },
-  });
-
-  if (!pdfResponse.ok) {
-    throw new Error(`PDF export failed: ${pdfResponse.status} ${pdfResponse.statusText}`);
-  }
-
-  const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
-
-  // Upload to Google Drive
-  const drive = google.drive({ version: "v3", auth });
+  // Copy the entire spreadsheet to a new file
   const sanitizedRange = dateRange.replace(/\//g, "-");
-  const fileName = `Bi-Weekly Trends Report ${sanitizedRange}.pdf`;
+  const fileName = `Bi-Weekly Trends: ${sanitizedRange}`;
 
-  const driveResponse = await drive.files.create({
+  const copyResponse = await drive.files.copy({
+    fileId: sheetId,
     requestBody: {
       name: fileName,
-      mimeType: "application/pdf",
       parents: [DRIVE_FOLDER_ID],
-    },
-    media: {
-      mimeType: "application/pdf",
-      body: require("stream").Readable.from(pdfBuffer),
     },
     fields: "id,webViewLink",
   });
 
+  const newFileId = copyResponse.data.id!;
+
+  // Remove all tabs except "Bi-Weekly Trends" from the copy
+  const newSpreadsheet = await sheets.spreadsheets.get({ spreadsheetId: newFileId });
+  const deleteRequests = (newSpreadsheet.data.sheets || [])
+    .filter((s) => s.properties?.sheetId !== trendsSheetId)
+    .map((s) => ({
+      deleteSheet: { sheetId: s.properties!.sheetId! },
+    }));
+
+  if (deleteRequests.length > 0) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: newFileId,
+      requestBody: { requests: deleteRequests },
+    });
+  }
+
   return {
-    fileId: driveResponse.data.id!,
-    webViewLink: driveResponse.data.webViewLink!,
+    fileId: newFileId,
+    webViewLink: copyResponse.data.webViewLink!,
   };
 }

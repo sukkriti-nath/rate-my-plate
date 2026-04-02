@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBiWeeklyTrendsData } from "@/lib/db";
-import { syncBiWeeklyTrends } from "@/lib/google-sheets-writer";
+import { syncBiWeeklyTrends, exportBiWeeklyTrendsSheet } from "@/lib/google-sheets-writer";
 
 function getBiWeeklyDateRange(): { startDate: string; endDate: string } {
   const now = new Date();
@@ -62,6 +62,16 @@ export async function GET() {
       });
     }
 
+    // Export Bi-Weekly Trends tab as a new Google Sheet in Drive folder
+    let sheetLink = "";
+    try {
+      const exported = await exportBiWeeklyTrendsSheet(`${startDate} to ${endDate}`);
+      sheetLink = exported.webViewLink;
+      console.log(`Bi-weekly trends sheet exported: ${sheetLink}`);
+    } catch (err) {
+      console.error("Failed to export bi-weekly trends sheet:", err);
+    }
+
     return NextResponse.json({
       success: true,
       startDate,
@@ -69,6 +79,7 @@ export async function GET() {
       daysRated: trendsData.totalDays,
       totalVotes: trendsData.totalVotes,
       avgOverall: trendsData.avgOverall,
+      exportedSheet: sheetLink || null,
     });
   } catch (error) {
     console.error("Failed to generate bi-weekly trends:", error);
