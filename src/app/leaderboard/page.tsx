@@ -97,9 +97,10 @@ export default function LeaderboardPage() {
 
       {/* Podium - Top 3 */}
       <div className="bg-white rounded-xl p-6 mb-6 border-2 border-black shadow-[8px_8px_0px_0px_#000]">
-        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 pb-3 border-b-2 border-black">
+        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider pb-3 border-b-2 border-black">
           Leaderboard
         </h2>
+        <p className="text-xs text-gray-400 mt-2 mb-4">Ranked by total reviews submitted this month</p>
         <div className="space-y-3">
           {podium.map((entry, i) => {
             const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉";
@@ -131,7 +132,7 @@ export default function LeaderboardPage() {
                   <div className="text-2xl font-bold text-kikoff-dark">
                     {entry.monthlyVotes}
                   </div>
-                  <div className="text-xs text-gray-500">this month</div>
+                  <div className="text-xs text-gray-500">reviews this month</div>
                 </div>
               </div>
             );

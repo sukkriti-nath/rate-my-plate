@@ -196,6 +196,13 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
           )}
         </div>
+        {session && !votingClosed && (
+          <p className="text-xs text-gray-400 text-center mt-3">
+            {existingVote
+              ? "Thank you for voting! Your feedback is shared bi-weekly with our caterers to help shape upcoming lunch menus."
+              : "Cast your vote below! Your feedback is shared bi-weekly with our caterers to help shape upcoming lunch menus."}
+          </p>
+        )}
       </section>
 
       {/* Live Results */}
