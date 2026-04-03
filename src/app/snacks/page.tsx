@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { MAX_UPVOTES_ON_OTHERS_SUGGESTIONS } from "@/lib/snack-suggestion-limits";
 
 interface UserSession {
@@ -795,6 +796,7 @@ export default function SnacksPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    <AnimatePresence mode="popLayout">
                     {sortedSuggestions.map((suggestion, i) => {
                       const netVotes = suggestion.upvotes - suggestion.downvotes;
                       const isMine =
@@ -806,8 +808,17 @@ export default function SnacksPage() {
                         suggestion.userVote !== "up" &&
                         othersUpvotesUsed >= MAX_UPVOTES_ON_OTHERS_SUGGESTIONS;
                       return (
-                        <div
+                        <motion.div
                           key={suggestion.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{
+                            layout: { type: "spring", stiffness: 350, damping: 30 },
+                            opacity: { duration: 0.2 },
+                            scale: { duration: 0.2 },
+                          }}
                           className="flex items-center gap-3 sm:gap-4 p-4 rounded-xl border-2 border-black/10 bg-white hover:bg-amber-50/50 transition-colors"
                         >
                           {/* Image with rank badge */}
@@ -898,9 +909,10 @@ export default function SnacksPage() {
                               <span className="text-lg">👎</span>
                             </button>
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
+                    </AnimatePresence>
                   </div>
                 )}
                 </div>
