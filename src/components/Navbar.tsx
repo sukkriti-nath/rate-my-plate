@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import type { UserSession } from "@/lib/types";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<UserSession | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
@@ -30,7 +31,10 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isSnacksApp = pathname.startsWith("/snacks");
+  // Check if we're in the snacks app, or on login page coming from snacks
+  const nextParam = searchParams.get("next");
+  const isSnacksApp = pathname.startsWith("/snacks") ||
+    (pathname === "/login" && nextParam?.startsWith("/snacks"));
 
   const links = isSnacksApp
     ? [
@@ -57,7 +61,13 @@ export default function Navbar() {
           <div className="flex items-center gap-1 shrink-0" ref={appMenuRef}>
             <Link href={isSnacksApp ? "/snacks" : "/"} className="flex items-center gap-2.5">
               {isSnacksApp ? (
-                <span className="text-2xl">🍿</span>
+                <Image
+                  src="/snack-overflow-icon.png"
+                  alt="SnackOverflow"
+                  width={30}
+                  height={30}
+                  className="rounded-lg"
+                />
               ) : (
                 <Image
                   src="/logo.png"
@@ -95,7 +105,7 @@ export default function Navbar() {
                     <div className="text-sm font-semibold text-kikoff-dark">RateMyPlate</div>
                   </Link>
                   <Link href="/snacks" onClick={() => setAppMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 ${isSnacksApp ? "bg-amber-50" : ""}`}>
-                    <span className="text-xl">🍿</span>
+                    <Image src="/snack-overflow-icon.png" alt="" width={24} height={24} className="rounded" />
                     <div className="text-sm font-semibold text-kikoff-dark">SnackOverflow</div>
                   </Link>
                 </div>
@@ -149,10 +159,10 @@ export default function Navbar() {
               </>
             ) : (
               <Link
-                href="/login"
+                href={isSnacksApp ? "/login?next=/snacks" : "/login"}
                 className="text-xs sm:text-sm font-bold bg-kikoff-dark text-kikoff px-4 sm:px-5 py-2 rounded-full hover:bg-kikoff-dark/90 transition-all whitespace-nowrap"
               >
-                Start Rating
+                {isSnacksApp ? "Sign In" : "Start Rating"}
               </Link>
             )}
 

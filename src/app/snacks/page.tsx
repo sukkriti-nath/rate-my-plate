@@ -716,7 +716,8 @@ export default function SnacksPage() {
             <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000] overflow-hidden">
               <div className="p-5 border-b-2 border-black bg-gradient-to-r from-cyan-50 via-amber-50 to-orange-50">
                 <h2 className="font-bold text-gray-900 flex items-center gap-2 flex-wrap">
-                  <span>🏆</span> Snack suggestions
+                  <img src="/snack-overflow-icon.png" alt="Snack Overflow" className="w-8 h-8 rounded-lg" />
+                  Snack Overflow
                 </h2>
                 <p className="text-xs text-gray-600 mt-1">
                   Add an idea below — it joins the leaderboard. Vote on what you want in the kitchen.
@@ -730,6 +731,16 @@ export default function SnacksPage() {
                 </p>
                 {!user ? (
                   <p className="text-gray-500 text-sm text-center py-2">Sign in to suggest snacks</p>
+                ) : !profile ? (
+                  <div className="text-center py-2">
+                    <p className="text-gray-600 text-sm mb-2">Create your snack profile to suggest snacks</p>
+                    <Link
+                      href="/snacks/profile"
+                      className="inline-block bg-amber-400 text-black font-bold px-4 py-2 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all text-sm"
+                    >
+                      Create Profile
+                    </Link>
+                  </div>
                 ) : (
                   <form onSubmit={handleSubmitSuggestion}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
@@ -777,8 +788,21 @@ export default function SnacksPage() {
                 <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
                   Leaderboard
                 </h3>
-                {user &&
-                othersUpvotesUsed >= MAX_UPVOTES_ON_OTHERS_SUGGESTIONS ? (
+                {!user ? (
+                  <p className="text-xs text-gray-500 mb-3">
+                    Sign in and create a profile to vote on suggestions.
+                  </p>
+                ) : !profile ? (
+                  <div className="text-xs text-amber-900/90 mb-3 flex items-center gap-2 flex-wrap">
+                    <span>Create a profile to vote.</span>
+                    <Link
+                      href="/snacks/profile"
+                      className="inline-block bg-amber-400 text-black font-bold px-2 py-1 rounded border border-black text-xs hover:bg-amber-300 transition-colors"
+                    >
+                      Create Profile
+                    </Link>
+                  </div>
+                ) : othersUpvotesUsed >= MAX_UPVOTES_ON_OTHERS_SUGGESTIONS ? (
                   <p className="text-xs text-amber-900/90 mb-3">
                     You’ve used your {MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} upvotes for this 2-week period.
                     Remove one to upvote another — your own suggestions don’t count toward this limit.
@@ -869,9 +893,11 @@ export default function SnacksPage() {
 
                           <div className="flex items-center gap-2 shrink-0">
                             <span
-                              className={`inline-flex rounded-lg ${upvoteOnOthersBlocked ? "cursor-not-allowed" : "cursor-help"}`}
+                              className={`inline-flex rounded-lg ${upvoteOnOthersBlocked || !profile ? "cursor-not-allowed" : "cursor-help"}`}
                               title={
-                                upvoteOnOthersBlocked
+                                !profile
+                                  ? "Create a profile to vote"
+                                  : upvoteOnOthersBlocked
                                   ? `You can upvote up to ${MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} suggestions from others. Remove an upvote elsewhere to free a slot.`
                                   : upvoteHoverText(suggestion.upvoterNames)
                               }
@@ -879,7 +905,7 @@ export default function SnacksPage() {
                               <button
                                 type="button"
                                 onClick={() => handleVote(suggestion.id, "up")}
-                                disabled={!user || upvoteOnOthersBlocked}
+                                disabled={!user || !profile || upvoteOnOthersBlocked}
                                 className={`p-2 rounded-lg border-2 transition-all ${
                                   suggestion.userVote === "up"
                                     ? "bg-green-400 border-black"
@@ -898,13 +924,13 @@ export default function SnacksPage() {
                             </div>
                             <button
                               onClick={() => handleVote(suggestion.id, "down")}
-                              disabled={!user}
+                              disabled={!user || !profile}
                               className={`p-2 rounded-lg border-2 transition-all ${
                                 suggestion.userVote === "down"
                                   ? "bg-red-400 border-black"
                                   : "bg-white border-black/20 hover:border-black hover:bg-red-50"
                               } disabled:opacity-50 disabled:cursor-not-allowed`}
-                              title="Downvote"
+                              title={!profile ? "Create a profile to vote" : "Downvote"}
                             >
                               <span className="text-lg">👎</span>
                             </button>

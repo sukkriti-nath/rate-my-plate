@@ -7,6 +7,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const nextPath = searchParams.get("next");
+  const isSnacksApp = nextPath?.startsWith("/snacks");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -60,12 +61,28 @@ function LoginContent() {
               <span>🔥</span> New at Kikoff
             </div>
           )}
-          <h1 className="font-display text-5xl text-kikoff-dark mb-3 leading-tight font-extrabold">
-            Rate<span className="bg-kikoff px-2 py-0.5 rounded-xl mx-1">My</span>Plate
-          </h1>
-          <p className="text-gray-500 text-lg">
-            We all already have opinions about lunch.<br />Now, let&apos;s make them matter.
-          </p>
+          {isSnacksApp ? (
+            <>
+              <div className="flex justify-center mb-4">
+                <img src="/snack-overflow-icon.png" alt="" className="w-16 h-16 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_#000]" />
+              </div>
+              <h1 className="font-display text-5xl text-kikoff-dark mb-3 leading-tight font-extrabold">
+                Snack<span className="bg-kikoff px-2 py-0.5 rounded-xl mx-1">Overflow</span>
+              </h1>
+              <p className="text-gray-500 text-lg">
+                Vote on snacks. Shape the kitchen.<br />Your cravings, our inventory.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-display text-5xl text-kikoff-dark mb-3 leading-tight font-extrabold">
+                Rate<span className="bg-kikoff px-2 py-0.5 rounded-xl mx-1">My</span>Plate
+              </h1>
+              <p className="text-gray-500 text-lg">
+                We all already have opinions about lunch.<br />Now, let&apos;s make them matter.
+              </p>
+            </>
+          )}
         </div>
 
         {(error || loginError) && (
@@ -111,22 +128,45 @@ function LoginContent() {
 
         {/* Fun stats teaser */}
         <div className="mt-10 grid grid-cols-4 gap-4 text-center max-w-xs mx-auto">
-          <a href="/" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
-            <div className="text-2xl">🗳️</div>
-            <div className="text-[10px] text-gray-500 mt-1 font-bold">Vote</div>
-          </a>
-          <a href="/reports" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
-            <div className="text-2xl">🏆</div>
-            <div className="text-[10px] text-gray-500 mt-1 font-bold">Rankings</div>
-          </a>
-          <a href="/leaderboard" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
-            <div className="text-2xl">🥇</div>
-            <div className="text-[10px] text-gray-500 mt-1 font-bold">Leaderboard</div>
-          </a>
-          <a href="/reports" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
-            <div className="text-2xl">📊</div>
-            <div className="text-[10px] text-gray-500 mt-1 font-bold">Reports</div>
-          </a>
+          {isSnacksApp ? (
+            <>
+              <a href="/snacks" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
+                <div className="text-2xl">🏠</div>
+                <div className="text-[10px] text-gray-500 mt-1 font-bold">Dashboard</div>
+              </a>
+              <a href="/snacks/profile" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
+                <div className="text-2xl">👤</div>
+                <div className="text-[10px] text-gray-500 mt-1 font-bold">Profile</div>
+              </a>
+              <a href="/snacks" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
+                <div className="text-2xl">🗳️</div>
+                <div className="text-[10px] text-gray-500 mt-1 font-bold">Vote</div>
+              </a>
+              <a href="/snacks/reports" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
+                <div className="text-2xl">📊</div>
+                <div className="text-[10px] text-gray-500 mt-1 font-bold">Reports</div>
+              </a>
+            </>
+          ) : (
+            <>
+              <a href="/" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
+                <div className="text-2xl">🗳️</div>
+                <div className="text-[10px] text-gray-500 mt-1 font-bold">Vote</div>
+              </a>
+              <a href="/reports" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
+                <div className="text-2xl">🏆</div>
+                <div className="text-[10px] text-gray-500 mt-1 font-bold">Rankings</div>
+              </a>
+              <a href="/leaderboard" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
+                <div className="text-2xl">🥇</div>
+                <div className="text-[10px] text-gray-500 mt-1 font-bold">Leaderboard</div>
+              </a>
+              <a href="/reports" className="border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_#000] bg-white aspect-square flex flex-col items-center justify-center hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer">
+                <div className="text-2xl">📊</div>
+                <div className="text-[10px] text-gray-500 mt-1 font-bold">Reports</div>
+              </a>
+            </>
+          )}
         </div>
       </div>
     </div>
