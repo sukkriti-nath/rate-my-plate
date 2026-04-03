@@ -10,6 +10,54 @@ import {
 } from "@/lib/snack-sheets-sync";
 import { searchDuckDuckGoImage } from "@/lib/duckduckgo-images";
 
+// Blocklist of obviously non-food items
+const NON_FOOD_TERMS = [
+  // Vehicles & brands
+  "car", "truck", "suv", "sedan", "coupe", "van", "bus", "motorcycle", "bike",
+  "toyota", "honda", "ford", "chevy", "chevrolet", "bmw", "mercedes", "audi",
+  "tesla", "prius", "camry", "civic", "mustang", "corvette", "ferrari", "porsche",
+  "lamborghini", "bentley", "rolls royce", "lexus", "nissan", "hyundai", "kia",
+  "volvo", "subaru", "mazda", "jeep", "dodge", "chrysler", "cadillac", "buick",
+  "volkswagen", "vw", "jaguar", "land rover", "maserati", "bugatti", "mclaren",
+  // Car/vehicle parts
+  "tire", "tires", "wheel", "engine", "transmission", "brake", "exhaust", "bumper",
+  "windshield", "headlight", "taillight", "muffler", "carburetor", "radiator",
+  // Heavy machinery & construction
+  "excavator", "bulldozer", "crane", "forklift", "tractor", "backhoe", "loader",
+  "dump truck", "cement mixer", "steamroller", "hydraulic", "caterpillar", "komatsu",
+  "john deere", "bobcat", "jcb", "hitachi", "kubota",
+  // Electronics
+  "iphone", "macbook", "laptop", "computer", "monitor", "keyboard", "mouse",
+  "television", "tv", "playstation", "xbox", "nintendo", "airpods", "ipad",
+  "samsung", "pixel", "android", "tablet", "smartphone", "printer", "router",
+  // Furniture
+  "couch", "sofa", "table", "chair", "desk", "bed", "mattress", "dresser",
+  "bookshelf", "cabinet", "wardrobe", "nightstand", "ottoman", "recliner",
+  // Landmarks & buildings
+  "bridge", "tower", "statue", "monument", "building", "skyscraper", "castle",
+  "golden gate", "eiffel", "big ben", "colosseum", "taj mahal", "great wall",
+  "empire state", "burj", "sydney opera", "stonehenge", "pyramid",
+  // Books, movies, media
+  "treasure island", "harry potter", "lord of the rings", "game of thrones",
+  "star wars", "marvel", "dc comics", "batman", "superman", "spiderman",
+  "netflix", "disney", "pixar", "dreamworks", "novel", "textbook",
+  // Other nonsense
+  "house", "apartment", "money", "cash", "bitcoin", "crypto", "stock", "nft",
+  "cocaine", "weed", "drugs", "gun", "weapon", "knife", "sword",
+  "human", "person", "people", "employee", "coworker", "manager", "ceo",
+  "planet", "moon", "sun", "star", "galaxy", "universe", "earth", "mars",
+  "country", "city", "state", "nation", "continent", "ocean", "river", "mountain",
+];
+
+function isObviouslyNotFood(name: string): boolean {
+  const lower = name.toLowerCase().trim();
+  return NON_FOOD_TERMS.some(term => {
+    // Match whole words or the entire input
+    const regex = new RegExp(`\\b${term}s?\\b`, "i");
+    return regex.test(lower);
+  });
+}
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -47,6 +95,14 @@ export async function POST(req: Request) {
       if (!body.snackName?.trim()) {
         return NextResponse.json(
           { error: "Snack name is required" },
+          { status: 400 }
+        );
+      }
+
+      // Block obviously non-food items
+      if (isObviouslyNotFood(body.snackName)) {
+        return NextResponse.json(
+          { error: "Nice try, but that doesn't look like a snack 🙄" },
           { status: 400 }
         );
       }

@@ -547,18 +547,32 @@ let inventoryStructuredCache: {
   fetchedAt: number;
 } | null = null;
 
+/** Clear the inventory cache (useful for debugging or forcing a refresh). */
+export function clearInventoryCache(): void {
+  inventoryStructuredCache = null;
+}
+
 /** Cached rows from the Kikoff Snack & Bev inventory sheet (not tied to Slack profile). */
-export async function getInventoryStructuredRows(): Promise<
-  SnackSheetProductRow[]
-> {
+export async function getInventoryStructuredRows(
+  forceRefresh = false
+): Promise<SnackSheetProductRow[]> {
+  if (forceRefresh) {
+    inventoryStructuredCache = null;
+  }
   if (
     inventoryStructuredCache &&
     Date.now() - inventoryStructuredCache.fetchedAt < SURVEY_CACHE_MS
   ) {
+    const bevCount = inventoryStructuredCache.rows.filter(r => r.tab === "beverages").length;
+    const snkCount = inventoryStructuredCache.rows.filter(r => r.tab === "snacks").length;
+    console.log(`[inventory] Returning cached data: ${bevCount} beverages, ${snkCount} snacks (age: ${Math.round((Date.now() - inventoryStructuredCache.fetchedAt) / 1000)}s)`);
     return inventoryStructuredCache.rows;
   }
   try {
     const rows = await fetchInventoryStructuredProducts();
+    const bevCount = rows.filter(r => r.tab === "beverages").length;
+    const snkCount = rows.filter(r => r.tab === "snacks").length;
+    console.log(`[inventory] Fetched fresh data: ${bevCount} beverages, ${snkCount} snacks`);
     inventoryStructuredCache = { rows, fetchedAt: Date.now() };
     return rows;
   } catch (e) {

@@ -139,13 +139,14 @@ export async function getSuggestions(
     try {
       const votesRes = await sheets.spreadsheets.values.get({
         spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-        range: `${escapeSheetTitle(TABS.SUGGESTION_VOTES)}!A:C`,
+        range: `${escapeSheetTitle(TABS.SUGGESTION_VOTES)}!A:D`,
       });
       const voteRows = votesRes.data.values || [];
       for (const row of voteRows) {
         const sid = row[0];
         const voter = row[1];
         const v = row[2] as string | undefined;
+        // row[3] is timestamp (not used here but stored for period tracking)
         if (!sid || !voter) continue;
 
         if (viewerUserId && voter === viewerUserId) {
@@ -229,14 +230,14 @@ export async function addSuggestion(
         },
       });
 
-      // Record the submitter's upvote in the votes tab
+      // Record the submitter's upvote in the votes tab with timestamp
       await sheets.spreadsheets.values.append({
         spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-        range: `${escapeSheetTitle(TABS.SUGGESTION_VOTES)}!A:C`,
+        range: `${escapeSheetTitle(TABS.SUGGESTION_VOTES)}!A:D`,
         valueInputOption: "USER_ENTERED",
         insertDataOption: "INSERT_ROWS",
         requestBody: {
-          values: [[id, submittedBy, "up"]],
+          values: [[id, submittedBy, "up", createdAt]],
         },
       });
     } catch (e) {
@@ -280,10 +281,10 @@ export async function voteSuggestion(
     const tab = escapeSheetTitle(TABS.SUGGESTION_VOTES);
     const suggestionsTab = escapeSheetTitle(TABS.SUGGESTIONS);
 
-    // Get all votes to find if user already voted
+    // Get all votes to find if user already voted (A:D includes timestamp)
     const votesRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-      range: `${tab}!A:C`,
+      range: `${tab}!A:D`,
     });
     const voteRows = votesRes.data.values || [];
 
@@ -353,9 +354,9 @@ export async function voteSuggestion(
       if (existingVoteIndex >= 0) {
         await sheets.spreadsheets.values.update({
           spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-          range: `${tab}!A${existingVoteIndex + 1}:C${existingVoteIndex + 1}`,
+          range: `${tab}!A${existingVoteIndex + 1}:D${existingVoteIndex + 1}`,
           valueInputOption: "USER_ENTERED",
-          requestBody: { values: [["", "", ""]] },
+          requestBody: { values: [["", "", "", ""]] },
         });
       }
     } else if (existingVote) {
@@ -368,25 +369,27 @@ export async function voteSuggestion(
         newDownvotes++;
       }
 
-      // Update the vote row
+      // Update the vote row with new timestamp
+      const now = new Date().toISOString();
       await sheets.spreadsheets.values.update({
         spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-        range: `${tab}!A${existingVoteIndex + 1}:C${existingVoteIndex + 1}`,
+        range: `${tab}!A${existingVoteIndex + 1}:D${existingVoteIndex + 1}`,
         valueInputOption: "USER_ENTERED",
-        requestBody: { values: [[suggestionId, userId, vote]] },
+        requestBody: { values: [[suggestionId, userId, vote, now]] },
       });
     } else {
       // New vote
       if (vote === "up") newUpvotes++;
       else newDownvotes++;
 
-      // Append new vote row
+      // Append new vote row with timestamp
+      const now = new Date().toISOString();
       await sheets.spreadsheets.values.append({
         spreadsheetId: SNACK_SHEETS_SPREADSHEET_ID,
-        range: `${tab}!A:C`,
+        range: `${tab}!A:D`,
         valueInputOption: "USER_ENTERED",
         insertDataOption: "INSERT_ROWS",
-        requestBody: { values: [[suggestionId, userId, vote]] },
+        requestBody: { values: [[suggestionId, userId, vote, now]] },
       });
     }
 

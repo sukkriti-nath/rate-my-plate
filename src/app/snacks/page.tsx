@@ -140,6 +140,7 @@ export default function SnacksPage() {
   const [suggestionText, setSuggestionText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -202,6 +203,7 @@ export default function SnacksPage() {
     if (!suggestionText.trim() || !user) return;
 
     setSubmitting(true);
+    setSuggestionError(null);
     try {
       const res = await fetch("/api/snacks/suggestions", {
         method: "POST",
@@ -212,9 +214,13 @@ export default function SnacksPage() {
       if (res.ok) {
         setSuggestionText("");
         await fetchData();
+      } else {
+        const data = await res.json();
+        setSuggestionError(data.error || "Failed to add suggestion");
       }
     } catch (err) {
       console.error("Failed to submit suggestion:", err);
+      setSuggestionError("Failed to add suggestion");
     } finally {
       setSubmitting(false);
     }
@@ -730,7 +736,10 @@ export default function SnacksPage() {
                         <input
                           type="text"
                           value={suggestionText}
-                          onChange={(e) => setSuggestionText(e.target.value)}
+                          onChange={(e) => {
+                            setSuggestionText(e.target.value);
+                            if (suggestionError) setSuggestionError(null);
+                          }}
                           placeholder="Enter any snack or drink name..."
                           className="w-full px-4 py-2.5 rounded-lg border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                         />
@@ -750,9 +759,15 @@ export default function SnacksPage() {
                         )}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1.5">
-                      We'll find an image for your suggestion automatically
-                    </p>
+                    {suggestionError ? (
+                      <p className="text-xs text-red-600 mt-1.5 font-medium">
+                        {suggestionError}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-1.5">
+                        We'll find an image for your suggestion automatically
+                      </p>
+                    )}
                   </form>
                 )}
                 </div>
@@ -764,14 +779,13 @@ export default function SnacksPage() {
                 {user &&
                 othersUpvotesUsed >= MAX_UPVOTES_ON_OTHERS_SUGGESTIONS ? (
                   <p className="text-xs text-amber-900/90 mb-3">
-                    You’ve used your {MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} upvotes on others’
-                    suggestions. Remove one to upvote another — your own suggestions don’t
-                    count toward this limit.
+                    You’ve used your {MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} upvotes for this 2-week period.
+                    Remove one to upvote another — your own suggestions don’t count toward this limit.
                   </p>
                 ) : (
                   <p className="text-xs text-gray-500 mb-3">
-                    Up to {MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} upvotes on teammates’ ideas
-                    (yours don’t count).
+                    Up to {MAX_UPVOTES_ON_OTHERS_SUGGESTIONS} upvotes on teammates’ ideas per 2 weeks
+                    (yours don’t count). You’ve used {othersUpvotesUsed}/{MAX_UPVOTES_ON_OTHERS_SUGGESTIONS}.
                   </p>
                 )}
                 {sortedSuggestions.length === 0 ? (
