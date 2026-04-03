@@ -626,6 +626,43 @@ export function buildSnackTop5ModalView(weekId: string, snackNames: string[]): o
 
 // ============== Post to Channel ==============
 
+// ============== Snack Roulette ==============
+
+export function buildRouletteResponse(
+  item: { category: string; brand: string; flavor: string },
+  type: "snack" | "beverage"
+): { response_type: string; blocks: object[] } {
+  const itemName = `${item.brand} ${item.flavor}`.trim();
+  const emoji = type === "beverage" ? "🥤" : "🍿";
+  const typeLabel = type === "beverage" ? "Beverage" : "Snack";
+
+  return {
+    response_type: "ephemeral",
+    blocks: [
+      {
+        type: "header",
+        text: { type: "plain_text", text: `🎰 ${typeLabel} Roulette!`, emoji: true },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `The wheel has spoken! Your random ${type} is:\n\n${emoji} *${itemName}*\n_Category: ${item.category}_`,
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: "🎲 Try again with `/snack-roulette snack` or `/snack-roulette beverage`",
+          },
+        ],
+      },
+    ],
+  };
+}
+
 export async function postSnackMessage(
   blocks: object[],
   text: string

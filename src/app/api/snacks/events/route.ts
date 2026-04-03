@@ -10,6 +10,7 @@ import {
   buildOutOfStockAlert,
   postSnackMessage,
   buildSnackTop5ModalView,
+  buildRouletteResponse,
 } from "@/lib/snack-bot";
 import {
   getProfileBySlackId,
@@ -22,7 +23,7 @@ import {
   getSnackNamesForSurveyWithinSlackDeadline,
   warmInventoryCache,
 } from "@/lib/snack-sheet";
-import { ALL_INVENTORY, getItemName, TOKENS_PER_CLICK, MAX_TOKENS } from "@/lib/snack-inventory";
+import { ALL_INVENTORY, getItemName, TOKENS_PER_CLICK, MAX_TOKENS, BEVERAGES, SNACKS } from "@/lib/snack-inventory";
 
 // Verify Slack request signature (raw body must match what Slack signed — form-urlencoded or JSON)
 function verifySlackSignature(
@@ -255,6 +256,37 @@ async function handleSlashCommand(body: Record<string, string>, slack: ReturnTyp
         response_type: "ephemeral",
         text,
       });
+    }
+
+    case "/snack-roulette": {
+      // Parse the argument (snack or beverage)
+      const arg = (body.text || "").toLowerCase().trim();
+
+      let items: typeof BEVERAGES;
+      let type: "snack" | "beverage";
+
+      if (arg === "beverage" || arg === "drink" || arg === "bev") {
+        items = BEVERAGES;
+        type = "beverage";
+      } else if (arg === "snack" || arg === "food") {
+        items = SNACKS;
+        type = "snack";
+      } else if (arg === "" || arg === "any") {
+        // Random choice between snack and beverage
+        const pickBeverage = Math.random() < 0.5;
+        items = pickBeverage ? BEVERAGES : SNACKS;
+        type = pickBeverage ? "beverage" : "snack";
+      } else {
+        return NextResponse.json({
+          response_type: "ephemeral",
+          text: "🎰 *Snack Roulette*\n\nUsage:\n• `/snack-roulette` - Random snack or beverage\n• `/snack-roulette snack` - Random snack\n• `/snack-roulette beverage` - Random beverage",
+        });
+      }
+
+      // Pick a random item
+      const randomItem = items[Math.floor(Math.random() * items.length)];
+
+      return NextResponse.json(buildRouletteResponse(randomItem, type));
     }
 
     default:
