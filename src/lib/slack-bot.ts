@@ -17,7 +17,7 @@ function getSlackTargetChannelForPost(): string {
   throw new Error("SLACK_CHANNEL_ID or SLACK_CHANNEL is not configured");
 }
 
-const DISH_CATEGORIES = [
+const WEEKDAY_DISH_CATEGORIES = [
   { key: "starch", field: "starch", emoji: "🍚", label: "Starch" },
   { key: "vegan_protein", field: "vegan_protein", emoji: "🌱", label: "Vegan Protein" },
   { key: "veg", field: "veg", emoji: "🥦", label: "Veg" },
@@ -25,6 +25,26 @@ const DISH_CATEGORIES = [
   { key: "protein_2", field: "protein_2", emoji: "🥩", label: "Protein 2" },
   { key: "sauce_sides", field: "sauce_sides", emoji: "🫙", label: "Sauce/Sides" },
 ] as const;
+
+const FRIDAY_DISH_CATEGORIES = [
+  { key: "starch", field: "starch", emoji: "🍽️", label: "Dish 1" },
+  { key: "vegan_protein", field: "vegan_protein", emoji: "🍽️", label: "Dish 2" },
+  { key: "veg", field: "veg", emoji: "🍽️", label: "Dish 3" },
+  { key: "protein_1", field: "protein_1", emoji: "🍽️", label: "Dish 4" },
+  { key: "protein_2", field: "protein_2", emoji: "🍽️", label: "Dish 5" },
+  { key: "dish_6", field: "dish_6", emoji: "🍽️", label: "Dish 6" },
+  { key: "dish_7", field: "dish_7", emoji: "🍽️", label: "Dish 7" },
+  { key: "dish_8", field: "dish_8", emoji: "🍽️", label: "Dish 8" },
+  { key: "dish_9", field: "dish_9", emoji: "🍽️", label: "Dish 9" },
+] as const;
+
+function getDishCategories(menu: Record<string, unknown>) {
+  const dayName = (menu.day_name as string) || "";
+  return dayName.toLowerCase() === "friday" ? FRIDAY_DISH_CATEGORIES : WEEKDAY_DISH_CATEGORIES;
+}
+
+// Keep legacy reference for code that uses DISH_CATEGORIES
+const DISH_CATEGORIES = WEEKDAY_DISH_CATEGORIES;
 
 // Emoji scale matching Kate's mockup
 const RATING_EMOJIS: Record<number, string> = {
@@ -179,7 +199,8 @@ export function buildInlineRatingBlocks(
     { type: "divider" },
   ];
 
-  for (const cat of DISH_CATEGORIES) {
+  const categories = getDishCategories(menu);
+  for (const cat of categories) {
     const dishName = menu[cat.field] as string | null;
     if (!dishName) continue;
 
@@ -286,7 +307,8 @@ export async function buildRatingModal(date: string, overallRating?: number | nu
     { text: { type: "plain_text" as const, text: "N/A - Didn't try it", emoji: true }, value: "na" },
   ];
 
-  for (const cat of DISH_CATEGORIES) {
+  const modalCategories = getDishCategories(menu as Record<string, unknown>);
+  for (const cat of modalCategories) {
     const dishName = menu[cat.field] as string | null;
     if (!dishName) continue;
     blocks.push({
@@ -323,6 +345,10 @@ export interface ParsedRating {
   ratingVeg: number | null;
   ratingProtein1: number | null;
   ratingProtein2: number | null;
+  ratingDish6: number | null;
+  ratingDish7: number | null;
+  ratingDish8: number | null;
+  ratingDish9: number | null;
   comment: string | null;
   commentStarch: string | null;
   commentVeganProtein: string | null;
@@ -364,6 +390,10 @@ export function parseModalSubmission(view: Record<string, unknown>): ParsedRatin
     ratingVeg: extractRadioRating(stateValues, "rating_veg", "radio_rating_veg"),
     ratingProtein1: extractRadioRating(stateValues, "rating_protein_1", "radio_rating_protein_1"),
     ratingProtein2: extractRadioRating(stateValues, "rating_protein_2", "radio_rating_protein_2"),
+    ratingDish6: extractRadioRating(stateValues, "rating_dish_6", "radio_rating_dish_6"),
+    ratingDish7: extractRadioRating(stateValues, "rating_dish_7", "radio_rating_dish_7"),
+    ratingDish8: extractRadioRating(stateValues, "rating_dish_8", "radio_rating_dish_8"),
+    ratingDish9: extractRadioRating(stateValues, "rating_dish_9", "radio_rating_dish_9"),
     comment: extractText(stateValues, "comment_general", "input_comment_general"),
     commentStarch: extractText(stateValues, "comment_starch", "input_comment_starch"),
     commentVeganProtein: extractText(stateValues, "comment_vegan_protein", "input_comment_vegan_protein"),

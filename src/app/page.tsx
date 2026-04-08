@@ -95,13 +95,27 @@ export default async function Home({ searchParams }: PageProps) {
     );
   }
 
-  const dishes = [
-    { key: "starch", label: "Starch", name: menu.starch as string | null },
-    { key: "vegan_protein", label: "Vegan Protein", name: menu.vegan_protein as string | null },
-    { key: "veg", label: "Veg", name: menu.veg as string | null },
-    { key: "protein_1", label: "Protein 1", name: menu.protein_1 as string | null },
-    { key: "protein_2", label: "Protein 2", name: menu.protein_2 as string | null },
-  ];
+  const isFriday = (menu.day_name as string)?.toLowerCase() === "friday";
+
+  const dishes = isFriday
+    ? [
+        { key: "starch", label: "Dish 1", name: menu.starch as string | null },
+        { key: "vegan_protein", label: "Dish 2", name: menu.vegan_protein as string | null },
+        { key: "veg", label: "Dish 3", name: menu.veg as string | null },
+        { key: "protein_1", label: "Dish 4", name: menu.protein_1 as string | null },
+        { key: "protein_2", label: "Dish 5", name: menu.protein_2 as string | null },
+        { key: "dish_6", label: "Dish 6", name: menu.dish_6 as string | null },
+        { key: "dish_7", label: "Dish 7", name: menu.dish_7 as string | null },
+        { key: "dish_8", label: "Dish 8", name: menu.dish_8 as string | null },
+        { key: "dish_9", label: "Dish 9", name: menu.dish_9 as string | null },
+      ]
+    : [
+        { key: "starch", label: "Starch", name: menu.starch as string | null },
+        { key: "vegan_protein", label: "Vegan Protein", name: menu.vegan_protein as string | null },
+        { key: "veg", label: "Veg", name: menu.veg as string | null },
+        { key: "protein_1", label: "Protein 1", name: menu.protein_1 as string | null },
+        { key: "protein_2", label: "Protein 2", name: menu.protein_2 as string | null },
+      ];
 
   let existingVote = null;
   let userAvatarUrl: string | null = null;

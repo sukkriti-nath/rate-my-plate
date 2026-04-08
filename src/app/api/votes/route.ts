@@ -57,6 +57,10 @@ export async function POST(request: Request) {
     ratingVeg,
     ratingProtein1,
     ratingProtein2,
+    ratingDish6,
+    ratingDish7,
+    ratingDish8,
+    ratingDish9,
     comment,
     commentStarch,
     commentVeganProtein,
@@ -109,6 +113,10 @@ export async function POST(request: Request) {
   const parsedVeg = validateRating(ratingVeg);
   const parsedProtein1 = validateRating(ratingProtein1);
   const parsedProtein2 = validateRating(ratingProtein2);
+  const parsedDish6 = validateRating(ratingDish6);
+  const parsedDish7 = validateRating(ratingDish7);
+  const parsedDish8 = validateRating(ratingDish8);
+  const parsedDish9 = validateRating(ratingDish9);
 
   // At least one rating must be provided
   if (
@@ -117,7 +125,11 @@ export async function POST(request: Request) {
     parsedVeganProtein === null &&
     parsedVeg === null &&
     parsedProtein1 === null &&
-    parsedProtein2 === null
+    parsedProtein2 === null &&
+    parsedDish6 === null &&
+    parsedDish7 === null &&
+    parsedDish8 === null &&
+    parsedDish9 === null
   ) {
     return NextResponse.json(
       { error: "At least one rating is required" },
@@ -145,6 +157,10 @@ export async function POST(request: Request) {
     ratingVeg: parsedVeg,
     ratingProtein1: parsedProtein1,
     ratingProtein2: parsedProtein2,
+    ratingDish6: parsedDish6,
+    ratingDish7: parsedDish7,
+    ratingDish8: parsedDish8,
+    ratingDish9: parsedDish9,
     comment: comment || null,
     commentStarch: commentStarch || null,
     commentVeganProtein: commentVeganProtein || null,
@@ -170,6 +186,14 @@ export async function POST(request: Request) {
     ratingProtein1: parsedProtein1,
     protein2: (menu.protein_2 as string) || null,
     ratingProtein2: parsedProtein2,
+    dish6: (menu.dish_6 as string) || null,
+    ratingDish6: parsedDish6,
+    dish7: (menu.dish_7 as string) || null,
+    ratingDish7: parsedDish7,
+    dish8: (menu.dish_8 as string) || null,
+    ratingDish8: parsedDish8,
+    dish9: (menu.dish_9 as string) || null,
+    ratingDish9: parsedDish9,
     comment: comment || null,
     timestamp: new Date().toISOString(),
   }).catch((err) => console.error("Google Sheets sync failed:", err));
@@ -182,6 +206,10 @@ export async function POST(request: Request) {
       { name: (menu.veg as string) || "Veg", avg: stats.dishRatings.veg.avg },
       { name: (menu.protein_1 as string) || "Protein 1", avg: stats.dishRatings.protein1.avg },
       { name: (menu.protein_2 as string) || "Protein 2", avg: stats.dishRatings.protein2.avg },
+      { name: (menu.dish_6 as string) || "Dish 6", avg: stats.dishRatings.dish6.avg },
+      { name: (menu.dish_7 as string) || "Dish 7", avg: stats.dishRatings.dish7.avg },
+      { name: (menu.dish_8 as string) || "Dish 8", avg: stats.dishRatings.dish8.avg },
+      { name: (menu.dish_9 as string) || "Dish 9", avg: stats.dishRatings.dish9.avg },
     ].filter((d) => d.avg > 0);
     const topDish = dishAvgs.length ? dishAvgs.reduce((a, b) => (a.avg >= b.avg ? a : b)) : { name: "N/A", avg: 0 };
     const bottomDish = dishAvgs.length ? dishAvgs.reduce((a, b) => (a.avg <= b.avg ? a : b)) : { name: "N/A", avg: 0 };

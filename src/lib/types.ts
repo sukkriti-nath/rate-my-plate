@@ -9,6 +9,10 @@ export interface MenuItem {
   protein2: string | null;
   sauceSides: string | null;
   restaurant: string | null;
+  dish6?: string | null;
+  dish7?: string | null;
+  dish8?: string | null;
+  dish9?: string | null;
   noService: boolean;
 }
 

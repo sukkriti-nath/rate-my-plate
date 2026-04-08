@@ -87,6 +87,14 @@ export interface VoteRow {
   ratingProtein1: number | null;
   protein2: string | null;
   ratingProtein2: number | null;
+  dish6?: string | null;
+  ratingDish6?: number | null;
+  dish7?: string | null;
+  ratingDish7?: number | null;
+  dish8?: string | null;
+  ratingDish8?: number | null;
+  dish9?: string | null;
+  ratingDish9?: number | null;
   comment: string | null;
   timestamp: string;
 }
@@ -115,7 +123,7 @@ async function _syncVoteToSheet(vote: VoteRow): Promise<void> {
   // Read existing data to find if this (date, email) row exists
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
-    range: `${range}!A:R`,
+    range: `${range}!A:Y`,
   });
 
   const rows = existing.data.values || [];
@@ -135,6 +143,14 @@ async function _syncVoteToSheet(vote: VoteRow): Promise<void> {
     vote.ratingProtein1 ?? "",
     vote.protein2 ?? "",
     vote.ratingProtein2 ?? "",
+    vote.dish6 ?? "",
+    vote.ratingDish6 ?? "",
+    vote.dish7 ?? "",
+    vote.ratingDish7 ?? "",
+    vote.dish8 ?? "",
+    vote.ratingDish8 ?? "",
+    vote.dish9 ?? "",
+    vote.ratingDish9 ?? "",
     vote.comment ?? "",
     vote.timestamp,
   ];
@@ -152,7 +168,7 @@ async function _syncVoteToSheet(vote: VoteRow): Promise<void> {
     // Update existing row
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `${range}!A${existingRowIndex}:Q${existingRowIndex}`,
+      range: `${range}!A${existingRowIndex}:Y${existingRowIndex}`,
       valueInputOption: "RAW",
       requestBody: { values: [rowValues] },
     });
@@ -160,7 +176,7 @@ async function _syncVoteToSheet(vote: VoteRow): Promise<void> {
     // Append new row
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: `${range}!A:Q`,
+      range: `${range}!A:Y`,
       valueInputOption: "RAW",
       requestBody: { values: [rowValues] },
     });
@@ -242,9 +258,12 @@ export async function initializeSheetTabs(): Promise<void> {
       name: "Raw Votes",
       headers: [
         "Date", "Day", "User Name", "User Email", "Overall Rating",
-        "Starch", "Starch Rating", "Vegan Protein", "VP Rating",
-        "Veg", "Veg Rating", "Protein 1", "P1 Rating",
-        "Protein 2", "P2 Rating", "Comment", "Timestamp",
+        "Starch/Dish 1", "Starch Rating", "Vegan Protein/Dish 2", "VP Rating",
+        "Veg/Dish 3", "Veg Rating", "Protein 1/Dish 4", "P1 Rating",
+        "Protein 2/Dish 5", "P2 Rating",
+        "Dish 6", "D6 Rating", "Dish 7", "D7 Rating",
+        "Dish 8", "D8 Rating", "Dish 9", "D9 Rating",
+        "Comment", "Timestamp",
       ],
     },
     {
@@ -268,8 +287,11 @@ export async function initializeSheetTabs(): Promise<void> {
       headers: [
         "Date", "Restaurant", "Overall Rating", "Total Votes",
         "Top Dish", "Top Dish Rating", "Bottom Dish", "Bottom Dish Rating",
-        "Starch", "Starch Rating", "Vegan Protein", "VP Rating",
-        "Protein 1", "P1 Rating", "Protein 2", "P2 Rating",
+        "Dish 1", "D1 Rating", "Dish 2", "D2 Rating",
+        "Dish 3", "D3 Rating", "Dish 4", "D4 Rating",
+        "Dish 5", "D5 Rating", "Dish 6", "D6 Rating",
+        "Dish 7", "D7 Rating", "Dish 8", "D8 Rating",
+        "Dish 9", "D9 Rating",
       ],
     },
     {
@@ -427,14 +449,7 @@ export interface FridayCateringRow {
   topDishRating: number;
   bottomDish: string;
   bottomDishRating: number;
-  starch: string | null;
-  starchRating: number | null;
-  veganProtein: string | null;
-  vpRating: number | null;
-  protein1: string | null;
-  p1Rating: number | null;
-  protein2: string | null;
-  p2Rating: number | null;
+  dishes: { name: string | null; rating: number | null }[]; // up to 9 dishes
 }
 
 export async function syncFridayCatering(row: FridayCateringRow): Promise<void> {
@@ -448,6 +463,13 @@ export async function syncFridayCatering(row: FridayCateringRow): Promise<void> 
   });
   const rows = existing.data.values || [];
 
+  // Build dish columns (up to 9 dishes, 2 columns each = 18)
+  const dishValues: (string | number | null)[] = [];
+  for (let i = 0; i < 9; i++) {
+    const dish = row.dishes[i];
+    dishValues.push(dish?.name ?? "", dish?.rating != null ? Math.round(dish.rating * 100) / 100 : "");
+  }
+
   const rowValues = [
     row.date,
     row.restaurant,
@@ -457,14 +479,7 @@ export async function syncFridayCatering(row: FridayCateringRow): Promise<void> 
     Math.round(row.topDishRating * 100) / 100,
     row.bottomDish,
     Math.round(row.bottomDishRating * 100) / 100,
-    row.starch ?? "",
-    row.starchRating ?? "",
-    row.veganProtein ?? "",
-    row.vpRating ?? "",
-    row.protein1 ?? "",
-    row.p1Rating ?? "",
-    row.protein2 ?? "",
-    row.p2Rating ?? "",
+    ...dishValues,
   ];
 
   // Upsert by date
@@ -476,17 +491,19 @@ export async function syncFridayCatering(row: FridayCateringRow): Promise<void> 
     }
   }
 
+  const endCol = String.fromCharCode(64 + rowValues.length); // dynamic end column
+
   if (existingRowIndex > 0) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `'${range}'!A${existingRowIndex}:P${existingRowIndex}`,
+      range: `'${range}'!A${existingRowIndex}:${endCol}${existingRowIndex}`,
       valueInputOption: "RAW",
       requestBody: { values: [rowValues] },
     });
   } else {
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: `'${range}'!A:P`,
+      range: `'${range}'!A:${endCol}`,
       valueInputOption: "RAW",
       requestBody: { values: [rowValues] },
     });

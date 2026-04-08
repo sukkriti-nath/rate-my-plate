@@ -83,12 +83,24 @@ function parseMenuRows(rows: string[], colCount: number, colOffset: number): Men
     }
   }
 
-  const starch = rowData[dataStart]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
-  const veganProtein = rowData[dataStart + 1]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
-  const veg = rowData[dataStart + 2]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
-  const protein1 = rowData[dataStart + 3]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
-  const protein2 = rowData[dataStart + 4]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
-  const sauceSides = rowData[dataStart + 5]?.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)) ?? [];
+  // Read all data rows (up to 9 for Friday generic dishes)
+  const allDishRows: (string | null)[][] = [];
+  for (let r = 0; r < 9; r++) {
+    const row = rowData[dataStart + r];
+    if (!row) break;
+    allDishRows.push(row.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)));
+  }
+
+  // Map to named slots: first 5 use legacy column names, 6-9 use generic
+  const starch = allDishRows[0] ?? [];
+  const veganProtein = allDishRows[1] ?? [];
+  const veg = allDishRows[2] ?? [];
+  const protein1 = allDishRows[3] ?? [];
+  const protein2 = allDishRows[4] ?? [];
+  const sauceSides = allDishRows[5] ?? [];
+  const dish7Row = allDishRows[6] ?? [];
+  const dish8Row = allDishRows[7] ?? [];
+  const dish9Row = allDishRows[8] ?? [];
 
   const menuItems: MenuItem[] = [];
 
@@ -102,8 +114,10 @@ function parseMenuRows(rows: string[], colCount: number, colOffset: number): Men
       false;
 
     // Skip if all dishes are null (empty column)
-    const hasDishes = starch[i] || veganProtein[i] || veg[i] || protein1[i] || protein2[i];
+    const hasDishes = starch[i] || veganProtein[i] || veg[i] || protein1[i] || protein2[i] || sauceSides[i] || dish7Row[i] || dish8Row[i] || dish9Row[i];
     if (!hasDishes && !isNoService) continue;
+
+    const isFriday = (dayNames[i] || "").toLowerCase() === "friday";
 
     menuItems.push({
       date,
@@ -114,8 +128,14 @@ function parseMenuRows(rows: string[], colCount: number, colOffset: number): Men
       veg: isNoService ? null : (veg[i] || null),
       protein1: isNoService ? null : (protein1[i] || null),
       protein2: isNoService ? null : (protein2[i] || null),
-      sauceSides: isNoService ? null : (sauceSides[i] || null),
+      // On Friday, sauce_sides slot becomes dish 6 (ratable); on weekdays it's informational only
+      sauceSides: isFriday || isNoService ? null : (sauceSides[i] || null),
       restaurant: restaurantRow[i] || null,
+      // Dishes 6-9 only populated for Friday
+      dish6: isFriday && !isNoService ? (sauceSides[i] || null) : null,
+      dish7: isFriday && !isNoService ? (dish7Row[i] || null) : null,
+      dish8: isFriday && !isNoService ? (dish8Row[i] || null) : null,
+      dish9: isFriday && !isNoService ? (dish9Row[i] || null) : null,
       noService: isNoService,
     });
   }
@@ -179,6 +199,10 @@ export function getMenuItemsList(menu: Record<string, unknown>): string[] {
     "protein_1",
     "protein_2",
     "sauce_sides",
+    "dish_6",
+    "dish_7",
+    "dish_8",
+    "dish_9",
   ];
   for (const field of fields) {
     const val = menu[field];

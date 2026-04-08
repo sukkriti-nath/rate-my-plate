@@ -92,6 +92,15 @@ async function initDb() {
     `ALTER TABLE votes ADD COLUMN IF NOT EXISTS comment_protein_2 TEXT`,
     `ALTER TABLE menu_days ADD COLUMN IF NOT EXISTS restaurant TEXT`,
     `ALTER TABLE votes ADD COLUMN IF NOT EXISTS avatar_url TEXT`,
+    // Friday generic dishes (up to 9 total — first 5 reuse existing columns)
+    `ALTER TABLE menu_days ADD COLUMN IF NOT EXISTS dish_6 TEXT`,
+    `ALTER TABLE menu_days ADD COLUMN IF NOT EXISTS dish_7 TEXT`,
+    `ALTER TABLE menu_days ADD COLUMN IF NOT EXISTS dish_8 TEXT`,
+    `ALTER TABLE menu_days ADD COLUMN IF NOT EXISTS dish_9 TEXT`,
+    `ALTER TABLE votes ADD COLUMN IF NOT EXISTS rating_dish_6 INTEGER CHECK (rating_dish_6 BETWEEN 1 AND 5)`,
+    `ALTER TABLE votes ADD COLUMN IF NOT EXISTS rating_dish_7 INTEGER CHECK (rating_dish_7 BETWEEN 1 AND 5)`,
+    `ALTER TABLE votes ADD COLUMN IF NOT EXISTS rating_dish_8 INTEGER CHECK (rating_dish_8 BETWEEN 1 AND 5)`,
+    `ALTER TABLE votes ADD COLUMN IF NOT EXISTS rating_dish_9 INTEGER CHECK (rating_dish_9 BETWEEN 1 AND 5)`,
   ];
 
   for (const sql of migrations) {
@@ -118,6 +127,10 @@ async function initDb() {
       dish_veg INTEGER CHECK (dish_veg BETWEEN 1 AND 5),
       dish_protein_1 INTEGER CHECK (dish_protein_1 BETWEEN 1 AND 5),
       dish_protein_2 INTEGER CHECK (dish_protein_2 BETWEEN 1 AND 5),
+      dish_dish_6 INTEGER CHECK (dish_dish_6 BETWEEN 1 AND 5),
+      dish_dish_7 INTEGER CHECK (dish_dish_7 BETWEEN 1 AND 5),
+      dish_dish_8 INTEGER CHECK (dish_dish_8 BETWEEN 1 AND 5),
+      dish_dish_9 INTEGER CHECK (dish_dish_9 BETWEEN 1 AND 5),
       updated_at TEXT DEFAULT (NOW()::text),
       PRIMARY KEY (slack_user_id, menu_date)
     );
@@ -135,12 +148,16 @@ export async function upsertMenuDay(menu: {
   protein2: string | null;
   sauceSides: string | null;
   restaurant?: string | null;
+  dish6?: string | null;
+  dish7?: string | null;
+  dish8?: string | null;
+  dish9?: string | null;
   noService: boolean;
 }) {
   const db = await getDb();
   await db.query(
-    `INSERT INTO menu_days (date, day_name, breakfast, starch, vegan_protein, veg, protein_1, protein_2, sauce_sides, restaurant, no_service)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `INSERT INTO menu_days (date, day_name, breakfast, starch, vegan_protein, veg, protein_1, protein_2, sauce_sides, restaurant, dish_6, dish_7, dish_8, dish_9, no_service)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     ON CONFLICT (date) DO UPDATE SET
       day_name = EXCLUDED.day_name,
       breakfast = EXCLUDED.breakfast,
@@ -151,6 +168,10 @@ export async function upsertMenuDay(menu: {
       protein_2 = EXCLUDED.protein_2,
       sauce_sides = EXCLUDED.sauce_sides,
       restaurant = EXCLUDED.restaurant,
+      dish_6 = EXCLUDED.dish_6,
+      dish_7 = EXCLUDED.dish_7,
+      dish_8 = EXCLUDED.dish_8,
+      dish_9 = EXCLUDED.dish_9,
       no_service = EXCLUDED.no_service,
       synced_at = NOW()::text`,
     [
@@ -164,6 +185,10 @@ export async function upsertMenuDay(menu: {
       menu.protein2,
       menu.sauceSides,
       menu.restaurant ?? null,
+      menu.dish6 ?? null,
+      menu.dish7 ?? null,
+      menu.dish8 ?? null,
+      menu.dish9 ?? null,
       menu.noService ? 1 : 0,
     ]
   );
@@ -196,6 +221,10 @@ export async function upsertVote(vote: {
   ratingVeg: number | null;
   ratingProtein1: number | null;
   ratingProtein2: number | null;
+  ratingDish6?: number | null;
+  ratingDish7?: number | null;
+  ratingDish8?: number | null;
+  ratingDish9?: number | null;
   comment: string | null;
   commentStarch?: string | null;
   commentVeganProtein?: string | null;
@@ -205,8 +234,8 @@ export async function upsertVote(vote: {
 }) {
   const db = await getDb();
   return await db.query(
-    `INSERT INTO votes (menu_date, user_name, user_email, slack_user_id, avatar_url, rating_overall, rating_starch, rating_vegan_protein, rating_veg, rating_protein_1, rating_protein_2, comment, comment_starch, comment_vegan_protein, comment_veg, comment_protein_1, comment_protein_2)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+    `INSERT INTO votes (menu_date, user_name, user_email, slack_user_id, avatar_url, rating_overall, rating_starch, rating_vegan_protein, rating_veg, rating_protein_1, rating_protein_2, rating_dish_6, rating_dish_7, rating_dish_8, rating_dish_9, comment, comment_starch, comment_vegan_protein, comment_veg, comment_protein_1, comment_protein_2)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
     ON CONFLICT (menu_date, user_email) DO UPDATE SET
       rating_overall = EXCLUDED.rating_overall,
       rating_starch = EXCLUDED.rating_starch,
@@ -214,6 +243,10 @@ export async function upsertVote(vote: {
       rating_veg = EXCLUDED.rating_veg,
       rating_protein_1 = EXCLUDED.rating_protein_1,
       rating_protein_2 = EXCLUDED.rating_protein_2,
+      rating_dish_6 = EXCLUDED.rating_dish_6,
+      rating_dish_7 = EXCLUDED.rating_dish_7,
+      rating_dish_8 = EXCLUDED.rating_dish_8,
+      rating_dish_9 = EXCLUDED.rating_dish_9,
       comment = EXCLUDED.comment,
       comment_starch = EXCLUDED.comment_starch,
       comment_vegan_protein = EXCLUDED.comment_vegan_protein,
@@ -235,6 +268,10 @@ export async function upsertVote(vote: {
       vote.ratingVeg,
       vote.ratingProtein1,
       vote.ratingProtein2,
+      vote.ratingDish6 ?? null,
+      vote.ratingDish7 ?? null,
+      vote.ratingDish8 ?? null,
+      vote.ratingDish9 ?? null,
       vote.comment,
       vote.commentStarch ?? null,
       vote.commentVeganProtein ?? null,
@@ -265,11 +302,19 @@ export async function getVoteStatsForDate(date: string) {
       AVG(rating_veg) as avg_veg,
       AVG(rating_protein_1) as avg_protein_1,
       AVG(rating_protein_2) as avg_protein_2,
+      AVG(rating_dish_6) as avg_dish_6,
+      AVG(rating_dish_7) as avg_dish_7,
+      AVG(rating_dish_8) as avg_dish_8,
+      AVG(rating_dish_9) as avg_dish_9,
       COUNT(rating_starch) as votes_starch,
       COUNT(rating_vegan_protein) as votes_vegan_protein,
       COUNT(rating_veg) as votes_veg,
       COUNT(rating_protein_1) as votes_protein_1,
-      COUNT(rating_protein_2) as votes_protein_2
+      COUNT(rating_protein_2) as votes_protein_2,
+      COUNT(rating_dish_6) as votes_dish_6,
+      COUNT(rating_dish_7) as votes_dish_7,
+      COUNT(rating_dish_8) as votes_dish_8,
+      COUNT(rating_dish_9) as votes_dish_9
     FROM votes WHERE menu_date = $1`,
     [date]
   );
@@ -292,6 +337,10 @@ export async function getVoteStatsForDate(date: string) {
       veg: { avg: Number(stats.avg_veg) || 0, votes: Number(stats.votes_veg) || 0 },
       protein1: { avg: Number(stats.avg_protein_1) || 0, votes: Number(stats.votes_protein_1) || 0 },
       protein2: { avg: Number(stats.avg_protein_2) || 0, votes: Number(stats.votes_protein_2) || 0 },
+      dish6: { avg: Number(stats.avg_dish_6) || 0, votes: Number(stats.votes_dish_6) || 0 },
+      dish7: { avg: Number(stats.avg_dish_7) || 0, votes: Number(stats.votes_dish_7) || 0 },
+      dish8: { avg: Number(stats.avg_dish_8) || 0, votes: Number(stats.votes_dish_8) || 0 },
+      dish9: { avg: Number(stats.avg_dish_9) || 0, votes: Number(stats.votes_dish_9) || 0 },
     },
     distribution: Object.fromEntries(distribution.map((d) => [d.rating, Number(d.count)])),
   };
@@ -732,7 +781,7 @@ export interface CachedRating {
   dishes: Record<string, number | null>;
 }
 
-const DISH_COLUMNS = ["starch", "vegan_protein", "veg", "protein_1", "protein_2"] as const;
+const DISH_COLUMNS = ["starch", "vegan_protein", "veg", "protein_1", "protein_2", "dish_6", "dish_7", "dish_8", "dish_9"] as const;
 
 export async function setCachedOverall(userId: string, date: string, overall: number | null): Promise<void> {
   try {

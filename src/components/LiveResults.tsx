@@ -10,13 +10,7 @@ interface DishRating {
 interface Stats {
   totalVotes: number;
   averageOverall: number;
-  dishRatings: {
-    starch: DishRating;
-    veganProtein: DishRating;
-    veg: DishRating;
-    protein1: DishRating;
-    protein2: DishRating;
-  };
+  dishRatings: Record<string, DishRating>;
   distribution: Record<number, number>;
 }
 
@@ -29,11 +23,16 @@ interface Vote {
 }
 
 interface MenuData {
+  day_name?: string;
   starch?: string;
   vegan_protein?: string;
   veg?: string;
   protein_1?: string;
   protein_2?: string;
+  dish_6?: string;
+  dish_7?: string;
+  dish_8?: string;
+  dish_9?: string;
 }
 
 function ratingEmoji(avg: number): string {
@@ -130,13 +129,29 @@ export default function LiveResults({
     );
   }
 
-  const dishEntries = ([
-    { key: "starch" as const, label: "Starch", name: menu?.starch?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-    { key: "veganProtein" as const, label: "Vegan Protein", name: menu?.vegan_protein?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-    { key: "veg" as const, label: "Veg", name: menu?.veg?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-    { key: "protein1" as const, label: "Protein 1", name: menu?.protein_1?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-    { key: "protein2" as const, label: "Protein 2", name: menu?.protein_2?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim() },
-  ] as const).filter((d) => d.name);
+  const isFriday = menu?.day_name?.toLowerCase() === "friday";
+  const clean = (s?: string) => s?.replace(/\(V\)/g, "").replace(/\(Gf\)/g, "").trim();
+
+  const dishEntries = (isFriday
+    ? [
+        { key: "starch", label: "Dish 1", name: clean(menu?.starch) },
+        { key: "veganProtein", label: "Dish 2", name: clean(menu?.vegan_protein) },
+        { key: "veg", label: "Dish 3", name: clean(menu?.veg) },
+        { key: "protein1", label: "Dish 4", name: clean(menu?.protein_1) },
+        { key: "protein2", label: "Dish 5", name: clean(menu?.protein_2) },
+        { key: "dish6", label: "Dish 6", name: clean(menu?.dish_6) },
+        { key: "dish7", label: "Dish 7", name: clean(menu?.dish_7) },
+        { key: "dish8", label: "Dish 8", name: clean(menu?.dish_8) },
+        { key: "dish9", label: "Dish 9", name: clean(menu?.dish_9) },
+      ]
+    : [
+        { key: "starch", label: "Starch", name: clean(menu?.starch) },
+        { key: "veganProtein", label: "Vegan Protein", name: clean(menu?.vegan_protein) },
+        { key: "veg", label: "Veg", name: clean(menu?.veg) },
+        { key: "protein1", label: "Protein 1", name: clean(menu?.protein_1) },
+        { key: "protein2", label: "Protein 2", name: clean(menu?.protein_2) },
+      ]
+  ).filter((d) => d.name);
 
   const rankedDishes = dishEntries
     .filter((d) => stats.dishRatings[d.key] && stats.dishRatings[d.key].votes > 0)

@@ -77,6 +77,10 @@ export default function RatingForm({
           ratingVeg: dishNAs.veg ? null : (dishHasValues.veg ? dishRatings.veg : null),
           ratingProtein1: dishNAs.protein_1 ? null : (dishHasValues.protein_1 ? dishRatings.protein_1 : null),
           ratingProtein2: dishNAs.protein_2 ? null : (dishHasValues.protein_2 ? dishRatings.protein_2 : null),
+          ratingDish6: dishNAs.dish_6 ? null : (dishHasValues.dish_6 ? dishRatings.dish_6 : null),
+          ratingDish7: dishNAs.dish_7 ? null : (dishHasValues.dish_7 ? dishRatings.dish_7 : null),
+          ratingDish8: dishNAs.dish_8 ? null : (dishHasValues.dish_8 ? dishRatings.dish_8 : null),
+          ratingDish9: dishNAs.dish_9 ? null : (dishHasValues.dish_9 ? dishRatings.dish_9 : null),
           comment: comment || null,
         }),
       });

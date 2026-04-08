@@ -60,6 +60,10 @@ async function syncVoteToSheetSafe(
     veg: number | null;
     protein1: number | null;
     protein2: number | null;
+    dish6?: number | null;
+    dish7?: number | null;
+    dish8?: number | null;
+    dish9?: number | null;
   },
   comment: string | null,
 ) {
@@ -79,6 +83,14 @@ async function syncVoteToSheetSafe(
     ratingProtein1: ratings.protein1,
     protein2: (menu.protein_2 as string) || null,
     ratingProtein2: ratings.protein2,
+    dish6: (menu.dish_6 as string) || null,
+    ratingDish6: ratings.dish6 ?? null,
+    dish7: (menu.dish_7 as string) || null,
+    ratingDish7: ratings.dish7 ?? null,
+    dish8: (menu.dish_8 as string) || null,
+    ratingDish8: ratings.dish8 ?? null,
+    dish9: (menu.dish_9 as string) || null,
+    ratingDish9: ratings.dish9 ?? null,
     comment,
     timestamp: new Date().toISOString(),
   }).catch((err) => console.error("Google Sheets sync failed:", err));
@@ -91,6 +103,10 @@ async function syncVoteToSheetSafe(
       { name: (menu.veg as string) || "Veg", avg: stats.dishRatings.veg.avg },
       { name: (menu.protein_1 as string) || "Protein 1", avg: stats.dishRatings.protein1.avg },
       { name: (menu.protein_2 as string) || "Protein 2", avg: stats.dishRatings.protein2.avg },
+      { name: (menu.dish_6 as string) || "Dish 6", avg: stats.dishRatings.dish6.avg },
+      { name: (menu.dish_7 as string) || "Dish 7", avg: stats.dishRatings.dish7.avg },
+      { name: (menu.dish_8 as string) || "Dish 8", avg: stats.dishRatings.dish8.avg },
+      { name: (menu.dish_9 as string) || "Dish 9", avg: stats.dishRatings.dish9.avg },
     ].filter((d) => d.avg > 0);
     const topDish = dishAvgs.length ? dishAvgs.reduce((a, b) => (a.avg >= b.avg ? a : b)) : { name: "N/A", avg: 0 };
     const bottomDish = dishAvgs.length ? dishAvgs.reduce((a, b) => (a.avg <= b.avg ? a : b)) : { name: "N/A", avg: 0 };
@@ -368,6 +384,10 @@ async function handleBlockAction(payload: Record<string, unknown>) {
         ratingVeg: dishVal("veg"),
         ratingProtein1: dishVal("protein_1"),
         ratingProtein2: dishVal("protein_2"),
+        ratingDish6: dishVal("dish_6"),
+        ratingDish7: dishVal("dish_7"),
+        ratingDish8: dishVal("dish_8"),
+        ratingDish9: dishVal("dish_9"),
         comment: (existing?.comment as string | null) ?? null,
         commentStarch: (existing?.comment_starch as string | null) ?? null,
         commentVeganProtein: (existing?.comment_vegan_protein as string | null) ?? null,
@@ -386,6 +406,10 @@ async function handleBlockAction(payload: Record<string, unknown>) {
           veg: dishVal("veg"),
           protein1: dishVal("protein_1"),
           protein2: dishVal("protein_2"),
+          dish6: dishVal("dish_6"),
+          dish7: dishVal("dish_7"),
+          dish8: dishVal("dish_8"),
+          dish9: dishVal("dish_9"),
         }, (existing?.comment as string | null) ?? null);
       }
 
@@ -507,6 +531,10 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         veg: cached?.dishes.veg ?? (existing?.rating_veg as number | null) ?? null,
         protein1: cached?.dishes.protein_1 ?? (existing?.rating_protein_1 as number | null) ?? null,
         protein2: cached?.dishes.protein_2 ?? (existing?.rating_protein_2 as number | null) ?? null,
+        dish6: cached?.dishes.dish_6 ?? (existing?.rating_dish_6 as number | null) ?? null,
+        dish7: cached?.dishes.dish_7 ?? (existing?.rating_dish_7 as number | null) ?? null,
+        dish8: cached?.dishes.dish_8 ?? (existing?.rating_dish_8 as number | null) ?? null,
+        dish9: cached?.dishes.dish_9 ?? (existing?.rating_dish_9 as number | null) ?? null,
       };
 
       await upsertVote({
@@ -521,6 +549,10 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         ratingVeg: mergedRatings.veg,
         ratingProtein1: mergedRatings.protein1,
         ratingProtein2: mergedRatings.protein2,
+        ratingDish6: mergedRatings.dish6,
+        ratingDish7: mergedRatings.dish7,
+        ratingDish8: mergedRatings.dish8,
+        ratingDish9: mergedRatings.dish9,
         comment,
         commentStarch: (existing?.comment_starch as string | null) ?? null,
         commentVeganProtein: (existing?.comment_vegan_protein as string | null) ?? null,
@@ -561,7 +593,11 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         parsed.ratingVeganProtein === null &&
         parsed.ratingVeg === null &&
         parsed.ratingProtein1 === null &&
-        parsed.ratingProtein2 === null
+        parsed.ratingProtein2 === null &&
+        parsed.ratingDish6 === null &&
+        parsed.ratingDish7 === null &&
+        parsed.ratingDish8 === null &&
+        parsed.ratingDish9 === null
       ) {
         return NextResponse.json({
           response_action: "errors",
@@ -581,6 +617,10 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
         ratingVeg: parsed.ratingVeg,
         ratingProtein1: parsed.ratingProtein1,
         ratingProtein2: parsed.ratingProtein2,
+        ratingDish6: parsed.ratingDish6,
+        ratingDish7: parsed.ratingDish7,
+        ratingDish8: parsed.ratingDish8,
+        ratingDish9: parsed.ratingDish9,
         comment: parsed.comment,
         commentStarch: parsed.commentStarch,
         commentVeganProtein: parsed.commentVeganProtein,
@@ -599,6 +639,10 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
           veg: parsed.ratingVeg,
           protein1: parsed.ratingProtein1,
           protein2: parsed.ratingProtein2,
+          dish6: parsed.ratingDish6,
+          dish7: parsed.ratingDish7,
+          dish8: parsed.ratingDish8,
+          dish9: parsed.ratingDish9,
         }, parsed.comment);
       }
 
