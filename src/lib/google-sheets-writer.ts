@@ -318,33 +318,7 @@ export async function initializeSheetTabs(): Promise<void> {
     }
 
     try {
-      // Insert a row at the top for headers
-      const spreadsheet = await sheets.spreadsheets.get({
-        spreadsheetId: sheetId,
-      });
-      const sheetTab = spreadsheet.data.sheets?.find(
-        (s) => s.properties?.title === tab.name
-      );
-      if (sheetTab?.properties?.sheetId != null) {
-        // Insert a blank row at position 0 to push existing data down
-        await sheets.spreadsheets.batchUpdate({
-          spreadsheetId: sheetId,
-          requestBody: {
-            requests: [{
-              insertDimension: {
-                range: {
-                  sheetId: sheetTab.properties.sheetId,
-                  dimension: "ROWS",
-                  startIndex: 0,
-                  endIndex: 1,
-                },
-              },
-            }],
-          },
-        });
-      }
-
-      // Write headers to row 1
+      // Overwrite row 1 with headers (no row insertion to avoid pushing data down)
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheetId,
         range: `'${tab.name}'!A1`,
