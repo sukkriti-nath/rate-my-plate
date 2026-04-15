@@ -12,7 +12,7 @@ import {
   clearCachedRating,
 } from "@/lib/slack-bot";
 import { upsertVote, getMenuForDate, getUserVoteForDate, getVoteStatsForDate, warmDb } from "@/lib/db";
-import { syncVoteToSheet, syncDailySummary, syncSuperReviewers } from "@/lib/google-sheets-writer";
+import { syncVoteToSheet, syncDailySummary, syncFridayCatering, syncSuperReviewers } from "@/lib/google-sheets-writer";
 import { getUserBadgeData, computeBadge } from "@/lib/db";
 
 // Eagerly start DB connection on module load (reduces cold start latency)
@@ -121,6 +121,37 @@ async function syncVoteToSheetSafe(
       bottomDishRating: bottomDish.avg,
     });
   }).catch((err) => console.error("Daily Summary sync failed:", err));
+
+  // Sync Friday Catering tab if it's a Friday
+  if ((menu.day_name as string)?.toLowerCase() === "friday") {
+    getVoteStatsForDate(date).then(async (stats) => {
+      const dishes = [
+        { name: menu.starch as string | null, rating: stats.dishRatings.starch.avg },
+        { name: menu.vegan_protein as string | null, rating: stats.dishRatings.veganProtein.avg },
+        { name: menu.veg as string | null, rating: stats.dishRatings.veg.avg },
+        { name: menu.protein_1 as string | null, rating: stats.dishRatings.protein1.avg },
+        { name: menu.protein_2 as string | null, rating: stats.dishRatings.protein2.avg },
+        { name: (menu.dish_6 as string) || null, rating: stats.dishRatings.dish6.avg },
+        { name: (menu.dish_7 as string) || null, rating: stats.dishRatings.dish7.avg },
+        { name: (menu.dish_8 as string) || null, rating: stats.dishRatings.dish8.avg },
+        { name: (menu.dish_9 as string) || null, rating: stats.dishRatings.dish9.avg },
+      ].filter((d) => d.name);
+      const rated = dishes.filter((d) => d.rating > 0);
+      const topDish = rated.length ? rated.reduce((a, b) => (a.rating >= b.rating ? a : b)) : { name: "N/A", rating: 0 };
+      const bottomDish = rated.length ? rated.reduce((a, b) => (a.rating <= b.rating ? a : b)) : { name: "N/A", rating: 0 };
+      await syncFridayCatering({
+        date,
+        restaurant: (menu.restaurant as string) || "",
+        overallRating: stats.averageOverall,
+        totalVotes: stats.totalVotes,
+        topDish: topDish.name || "N/A",
+        topDishRating: topDish.rating,
+        bottomDish: bottomDish.name || "N/A",
+        bottomDishRating: bottomDish.rating,
+        dishes,
+      });
+    }).catch((err) => console.error("Friday Catering sync failed:", err));
+  }
 
   // Also sync Super Reviewers leaderboard
   getUserBadgeData().then((badgeData) => {

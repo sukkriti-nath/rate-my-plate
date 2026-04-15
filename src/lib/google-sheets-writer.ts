@@ -452,7 +452,11 @@ export interface FridayCateringRow {
   dishes: { name: string | null; rating: number | null }[]; // up to 9 dishes
 }
 
-export async function syncFridayCatering(row: FridayCateringRow): Promise<void> {
+export function syncFridayCatering(row: FridayCateringRow): Promise<void> {
+  return enqueue(() => _syncFridayCatering(row));
+}
+
+async function _syncFridayCatering(row: FridayCateringRow): Promise<void> {
   const sheets = getSheetsClient();
   const sheetId = getOutputSheetId();
   const range = "Friday Catering";
