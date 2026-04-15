@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/slack/post-daily?secret=${CRON_SECRET}",
-      "schedule": "0 21 * * 1-5"
+      "schedule": "0 19 * * 1-5"
     },
     {
       "path": "/api/slack/power-rankings?secret=${CRON_SECRET}",

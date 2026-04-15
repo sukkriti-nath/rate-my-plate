@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildDailyMenuBlocks, postToChannel } from "@/lib/slack-bot";
 import { fetchAllMenus } from "@/lib/google-sheets";
-import { upsertMenuDay, getMenuForDate } from "@/lib/db";
+import { upsertMenuDay, getMenuForDate, getDb } from "@/lib/db";
 
 export async function GET(request: Request) {
   // Verify cron secret
@@ -50,6 +50,15 @@ export async function GET(request: Request) {
       });
     }
 
+    // Prevent duplicate posts for the same day
+    if (menu.daily_post_ts) {
+      return NextResponse.json({
+        message: "Already posted today",
+        date: today,
+        existingTs: menu.daily_post_ts,
+      });
+    }
+
     // Build and post the message
     const blocks = await buildDailyMenuBlocks(today);
     if (!blocks) {
@@ -62,6 +71,13 @@ export async function GET(request: Request) {
     const ts = await postToChannel(
       blocks,
       `Lunch just dropped. Rate it now 🍽️`
+    );
+
+    // Record that we posted so duplicate triggers are skipped
+    const db = await getDb();
+    await db.query(
+      "UPDATE menu_days SET daily_post_ts = $1 WHERE date = $2",
+      [ts, today]
     );
 
     return NextResponse.json({

@@ -101,6 +101,7 @@ async function initDb() {
     `ALTER TABLE votes ADD COLUMN IF NOT EXISTS rating_dish_7 INTEGER CHECK (rating_dish_7 BETWEEN 1 AND 5)`,
     `ALTER TABLE votes ADD COLUMN IF NOT EXISTS rating_dish_8 INTEGER CHECK (rating_dish_8 BETWEEN 1 AND 5)`,
     `ALTER TABLE votes ADD COLUMN IF NOT EXISTS rating_dish_9 INTEGER CHECK (rating_dish_9 BETWEEN 1 AND 5)`,
+    `ALTER TABLE menu_days ADD COLUMN IF NOT EXISTS daily_post_ts TEXT`,
   ];
 
   for (const sql of migrations) {

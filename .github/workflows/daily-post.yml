@@ -1,0 +1,16 @@
+name: Daily Lunch Post
+
+on:
+  schedule:
+    # Noon PT (19:00 UTC during PDT, 20:00 UTC during PST)
+    # Using 19:00 UTC for PDT (current). Adjust to 20:00 UTC when PST resumes in November.
+    - cron: "0 19 * * 1-5"
+  workflow_dispatch: {} # Allow manual trigger
+
+jobs:
+  post-daily:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger daily lunch post
+        run: |
+          curl -sf "${{ secrets.APP_URL }}/api/slack/post-daily?secret=${{ secrets.CRON_SECRET }}"
