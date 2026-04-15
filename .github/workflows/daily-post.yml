@@ -12,6 +12,13 @@ jobs:
   post-daily:
     runs-on: ubuntu-latest
     steps:
+      - name: Check if it's noon PT
+        id: check
+        run: |
+          PT_HOUR=$(TZ=America/Los_Angeles date +%H)
+          echo "pt_hour=$PT_HOUR" >> "$GITHUB_OUTPUT"
+          if [ "$PT_HOUR" = "12" ]; then echo "is_noon=true" >> "$GITHUB_OUTPUT"; else echo "is_noon=false" >> "$GITHUB_OUTPUT"; fi
       - name: Trigger daily lunch post
+        if: steps.check.outputs.is_noon == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           curl -sf "${{ secrets.APP_URL }}/api/slack/post-daily?secret=${{ secrets.CRON_SECRET }}"
