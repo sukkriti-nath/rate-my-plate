@@ -2,9 +2,10 @@ name: Daily Lunch Post
 
 on:
   schedule:
-    # Noon PT (19:00 UTC during PDT, 20:00 UTC during PST)
-    # Using 19:00 UTC for PDT (current). Adjust to 20:00 UTC when PST resumes in November.
+    # Noon PT = 19:00 UTC (PDT, Mar-Nov) or 20:00 UTC (PST, Nov-Mar)
+    # Both are scheduled; the duplicate-post guard in the API prevents double posts.
     - cron: "0 19 * * 1-5"
+    - cron: "0 20 * * 1-5"
   workflow_dispatch: {} # Allow manual trigger
 
 jobs:
