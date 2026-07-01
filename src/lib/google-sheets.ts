@@ -34,6 +34,58 @@ function normalizeDish(val: string | null | undefined): string | null {
   return trimmed;
 }
 
+/**
+ * Split a cell that may contain multiple dishes into individual dish strings.
+ *
+ * Each dish starts with a "- " bullet on its own line; continuation lines
+ * (e.g. "(v & gf)" wrapped to the next line) are joined back to the dish.
+ *
+ *   "- Steamed White Rice\n(v & gf)"          → ["Steamed White Rice (v & gf)"]
+ *   "- Tom Kha Tofu (v & gf)\n- Roasted Gai Lan\n(v & gf)"
+ *                                              → ["Tom Kha Tofu (v & gf)", "Roasted Gai Lan (v & gf)"]
+ *
+ * Returns [] for empty/N/A cells.
+ */
+function splitDishCell(val: string | null | undefined): string[] {
+  const trimmed = val?.trim();
+  if (!trimmed || trimmed.toLowerCase() === "n/a") return [];
+  // Strip surrounding * characters in case of markup artifacts
+  const stripped = trimmed.replace(/^\*+/, "").replace(/\*+$/, "").trim();
+  if (!stripped) return [];
+
+  const lines = stripped.split(/\n/);
+  const dishes: string[] = [];
+  let current: string[] = [];
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) continue;
+    if (t.startsWith("-")) {
+      // New dish bullet — flush the previous one
+      if (current.length > 0) {
+        const dish = current.join(" ").replace(/^[-\s]+/, "").trim();
+        if (dish && dish.toLowerCase() !== "n/a") dishes.push(dish);
+      }
+      current = [t];
+    } else {
+      // Continuation line — append to current dish
+      current.push(t);
+    }
+  }
+  if (current.length > 0) {
+    const dish = current.join(" ").replace(/^[-\s]+/, "").trim();
+    if (dish && dish.toLowerCase() !== "n/a") dishes.push(dish);
+  }
+
+  // Fallback: no bullet markers found — treat whole cell as one dish
+  if (dishes.length === 0) {
+    const fallback = stripped.replace(/^[-\s*]+/, "").trim();
+    if (fallback && fallback.toLowerCase() !== "n/a") return [fallback];
+  }
+
+  return dishes;
+}
+
 async function fetchCsv(sheetId: string, gid: string): Promise<string[][]> {
   const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
   const response = await fetch(csvUrl, { redirect: "follow" });
@@ -83,12 +135,20 @@ function parseMenuRows(rows: string[], colCount: number, colOffset: number): Men
     }
   }
 
-  // Read all data rows (up to 9 for Friday generic dishes)
+  // Read all data rows (up to 9 for Friday generic dishes).
+  // Multi-dish cells (e.g. "- Seitan\n- Bell Pepper") are split and each dish
+  // becomes its own virtual row, preserving the starch/veganProtein/veg/... mapping.
   const allDishRows: (string | null)[][] = [];
   for (let r = 0; r < 9; r++) {
     const row = rowData[dataStart + r];
     if (!row) break;
-    allDishRows.push(row.slice(colOffset, colOffset + colCount).map((s) => normalizeDish(s)));
+    const colArrays: string[][] = row
+      .slice(colOffset, colOffset + colCount)
+      .map(splitDishCell);
+    const maxDishes = Math.max(1, ...colArrays.map((arr) => arr.length));
+    for (let d = 0; d < maxDishes; d++) {
+      allDishRows.push(colArrays.map((arr) => arr[d] ?? null));
+    }
   }
 
   // Map to named slots: first 5 use legacy column names, 6-9 use generic
